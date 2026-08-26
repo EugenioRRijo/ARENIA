@@ -1,0 +1,29 @@
+# Entornos y caches de Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Bases de datos locales (SQLite se regenera con scripts/seed.py)
+*.db
+*.sqlite
+*.sqlite3
+
+# Modelos y artefactos de ML pesados
+ml/**/*.bin
+ml/**/*.joblib
+ml/**/*.pkl
+
+# Secretos y configuracion local
+.env
+.env.*
+
+# Sistema operativo / Office (archivos de bloqueo de Word y Excel en OneDrive)
+Thumbs.db
+.DS_Store
+~$*
