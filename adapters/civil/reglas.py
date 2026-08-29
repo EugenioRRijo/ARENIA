@@ -120,11 +120,11 @@ def computar_zanja(
 ) -> list[ItemComputo]:
     """Excavación de zanja (m3) y tubería con desperdicio (m), en ese orden.
 
-    `diametro` (metros) no participa en ninguna de las dos reglas de este par: se conserva como
-    especificación trazable de la tubería bajo la clave `diametro_m`, distinta de la clave textual
-    `diametro` que pueda traer `especificaciones` (por ejemplo "4 pulg"), para no chocar con ella.
-    El cálculo del volumen de tubería (`REGLA_VOLUMEN_TUBERIA`) lo usa el llamador (el adaptador
-    tabular) para construir el balance de `computar_relleno`.
+    `diametro` (metros) no participa en ninguna de las dos reglas de este par ni se persiste en
+    `especificaciones`: una clave como "diametro_m" no tiene contraparte en el texto del APU y R4
+    (Sesión I4) la marcaría como un hallazgo falso. El llamador (el adaptador tabular) sigue
+    teniendo `diametro` disponible para calcular el volumen de tubería (`REGLA_VOLUMEN_TUBERIA`) y
+    construir el balance de `computar_relleno`.
     """
     especificaciones = dict(especificaciones or {})
 
@@ -143,7 +143,6 @@ def computar_zanja(
     )
 
     parametros_tuberia = {"longitud": longitud, "desperdicio": desperdicio}
-    especificaciones_tuberia = {"diametro_m": str(diametro), **especificaciones}
     tuberia = ItemComputo(
         codigo_partida=codigos["tuberia"],
         descripcion="Suministro e instalacion de tuberia",
@@ -154,7 +153,7 @@ def computar_zanja(
         dominio=Dominio.CIVIL,
         regla=REGLA_TUBERIA,
         parametros=parametros_tuberia,
-        especificaciones=especificaciones_tuberia,
+        especificaciones=especificaciones,
     )
 
     return [excavacion, tuberia]
