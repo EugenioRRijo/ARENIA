@@ -1,0 +1,177 @@
+"""Pruebas de `scripts/meta_alpha.py` (Task 1 del sprint alpha).
+
+Solo se ejercitan funciones puras: parseo de JUnit y las funciones `estado_*` y `render_tabla`.
+Nunca se ejecuta el pytest real (ni ruff ni git) desde estas pruebas: eso lo hace `main()`, que
+el cierre de la tarea ejercita manualmente con `uv run python scripts/meta_alpha.py`.
+"""
+
+from decimal import Decimal
+
+from scripts import meta_alpha
+
+XML_DOS_ARCHIVOS_CLASE_ANIDADA_UN_FALLO = """<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="pytest" errors="0" failures="1" skipped="0" tests="3" time="0.12">
+    <testcase classname="tests.unit.test_a" name="test_uno" time="0.01" />
+    <testcase classname="tests.unit.test_a.TestGrupo.TestAnidada" name="test_dos" time="0.01" />
+    <testcase classname="tests.unit.test_b" name="test_tres" time="0.01">
+      <failure message="boom">AssertionError: boom</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
+"""
+
+
+def test_parsear_junit_asigna_cada_testcase_al_archivo_conocido_mas_especifico():
+    archivos_conocidos = ["tests/unit/test_a.py", "tests/unit/test_b.py"]
+
+    resumenes = meta_alpha.parsear_junit(
+        XML_DOS_ARCHIVOS_CLASE_ANIDADA_UN_FALLO, archivos_conocidos
+    )
+
+    assert resumenes["tests/unit/test_a.py"] == meta_alpha.ResumenArchivo(
+        pasadas=2, fallidas=0, errores=0, omitidas=0
+    )
+    assert resumenes["tests/unit/test_b.py"] == meta_alpha.ResumenArchivo(
+        pasadas=0, fallidas=1, errores=0, omitidas=0
+    )
+
+
+def test_parsear_junit_no_pierde_archivos_conocidos_sin_testcases():
+    archivos_conocidos = ["tests/unit/test_a.py", "tests/unit/test_b.py", "tests/unit/test_c.py"]
+
+    resumenes = meta_alpha.parsear_junit(
+        XML_DOS_ARCHIVOS_CLASE_ANIDADA_UN_FALLO, archivos_conocidos
+    )
+
+    assert resumenes["tests/unit/test_c.py"] == meta_alpha.ResumenArchivo(
+        pasadas=0, fallidas=0, errores=0, omitidas=0
+    )
+
+
+def test_estado_pruebas_pendiente_si_falta_el_archivo_en_disco(tmp_path):
+    archivo_inexistente = str(tmp_path / "no_existe" / "test_x.py")
+
+    estado, detalle = meta_alpha.estado_pruebas({}, [archivo_inexistente])
+
+    assert estado is meta_alpha.Estado.PENDIENTE
+    assert archivo_inexistente in detalle
+
+
+def test_estado_pruebas_falla_si_algun_archivo_tiene_fallidas_o_errores(tmp_path):
+    archivo = tmp_path / "test_x.py"
+    archivo.write_text("# archivo de prueba, contenido irrelevante\n", encoding="utf-8")
+    resumenes = {
+        str(archivo): meta_alpha.ResumenArchivo(pasadas=4, fallidas=1, errores=0, omitidas=0)
+    }
+
+    estado, detalle = meta_alpha.estado_pruebas(resumenes, [str(archivo)])
+
+    assert estado is meta_alpha.Estado.FALLA
+    assert "4 pasadas" in detalle
+
+
+def test_estado_pruebas_ok_si_ningun_archivo_tiene_fallidas_ni_errores(tmp_path):
+    archivo = tmp_path / "test_y.py"
+    archivo.write_text("# archivo de prueba, contenido irrelevante\n", encoding="utf-8")
+    resumenes = {
+        str(archivo): meta_alpha.ResumenArchivo(pasadas=5, fallidas=0, errores=0, omitidas=0)
+    }
+
+    estado, _ = meta_alpha.estado_pruebas(resumenes, [str(archivo)])
+
+    assert estado is meta_alpha.Estado.OK
+
+
+def test_estado_nucleo_intacto_falla_con_un_commit_que_toca_adapters_y_core():
+    commits = [("abc123def", ["adapters/civil/extractor.py", "core/costing/motor.py"])]
+
+    estado, detalle = meta_alpha.estado_nucleo_intacto(commits)
+
+    assert estado is meta_alpha.Estado.FALLA
+    assert "abc123de" in detalle
+
+
+def test_estado_nucleo_intacto_ok_con_commits_que_solo_tocan_adapters():
+    commits = [
+        ("abc123def", ["adapters/civil/extractor.py"]),
+        ("fed321cba", ["ml/anomaly/deteccion.py"]),
+    ]
+
+    estado, detalle = meta_alpha.estado_nucleo_intacto(commits)
+
+    assert estado is meta_alpha.Estado.OK
+    assert "2 commits" in detalle
+
+
+def test_estado_nucleo_intacto_pendiente_sin_commits():
+    estado, _ = meta_alpha.estado_nucleo_intacto([])
+
+    assert estado is meta_alpha.Estado.PENDIENTE
+
+
+def test_estado_cobertura_falla_bajo_el_umbral():
+    estado, _ = meta_alpha.estado_cobertura(Decimal("79.9"), 80)
+
+    assert estado is meta_alpha.Estado.FALLA
+
+
+def test_estado_cobertura_ok_exactamente_en_el_umbral():
+    estado, _ = meta_alpha.estado_cobertura(Decimal("80"), 80)
+
+    assert estado is meta_alpha.Estado.OK
+
+
+def test_estado_ruff_ok_con_ambos_codigos_en_cero():
+    estado, _ = meta_alpha.estado_ruff(0, 0)
+
+    assert estado is meta_alpha.Estado.OK
+
+
+def test_estado_ruff_falla_si_algun_codigo_no_es_cero():
+    estado, detalle = meta_alpha.estado_ruff(1, 0)
+
+    assert estado is meta_alpha.Estado.FALLA
+    assert "ruff check" in detalle
+
+
+def test_estado_suite_pendiente_sin_pruebas():
+    estado, _ = meta_alpha.estado_suite(0, 0, 0)
+
+    assert estado is meta_alpha.Estado.PENDIENTE
+
+
+def test_estado_suite_falla_con_fallidas_o_errores():
+    estado, _ = meta_alpha.estado_suite(95, 2, 1)
+
+    assert estado is meta_alpha.Estado.FALLA
+
+
+def test_estado_suite_ok_sin_fallidas_ni_errores():
+    estado, _ = meta_alpha.estado_suite(95, 0, 0)
+
+    assert estado is meta_alpha.Estado.OK
+
+
+def test_render_tabla_contiene_los_12_codigos_y_la_linea_resultado():
+    filas = [
+        meta_alpha.Fila(meta.codigo, meta.titulo, meta_alpha.Estado.PENDIENTE, "sin evidencia")
+        for meta in meta_alpha.METAS
+    ]
+
+    tabla = meta_alpha.render_tabla(filas)
+
+    for codigo in (f"M{n}" for n in range(1, 13)):
+        assert codigo in tabla
+    assert "RESULTADO" in tabla
+
+
+def test_render_tabla_cuenta_las_metas_en_ok_en_la_linea_resultado():
+    filas = [
+        meta_alpha.Fila("M1", "titulo", meta_alpha.Estado.OK, "ev"),
+        meta_alpha.Fila("M2", "titulo", meta_alpha.Estado.FALLA, "ev"),
+    ]
+
+    tabla = meta_alpha.render_tabla(filas)
+
+    assert "RESULTADO: 1/2 metas OK" in tabla
