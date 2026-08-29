@@ -1,5 +1,9 @@
 """Motor de costos: calcular_apu(composicion, parametros) -> ResultadoAPU.
 
-Función pura, sin base de datos. Se implementa en la Sesión I0.3 para que pasen
-tests/unit/test_costing.py sin modificarlas.
+Función pura, sin base de datos. Implementado en la Sesión I0.3; ver core/costing/motor.py
+para la fórmula (CLAUDE.md §4).
 """
+
+from core.costing.motor import calcular_apu
+
+__all__ = ["calcular_apu"]
