@@ -4,7 +4,7 @@
 
 > Estado: **completo, pendiente de revisión del tutor (compuerta G0, [docs/metodologia.md §2.2](metodologia.md#22-compuertas))**.
 > Redactado en la Sesión 0.1 de [PLAN_DESARROLLO.md](../PLAN_DESARROLLO.md). Criterio de cierre exigido:
-> al menos 20 RF numerados con prioridad y trazabilidad al caso de uso, y matriz de trazabilidad
+> al menos 23 RF numerados con prioridad y trazabilidad al caso de uso, y matriz de trazabilidad
 > completa. Resultado: **31 RF** (sección 3.2) y matriz de la sección 4.
 > Este documento no reproduce datos que tienen fuente única: enlaza [CLAUDE.md](../CLAUDE.md),
 > [docs/linea_base.md](linea_base.md) y [docs/metodologia.md](metodologia.md) (principio DRY,
@@ -116,7 +116,7 @@ implementados en `core/contracts/`.
   - *3b. Partida sin rendimiento vigente:* el sistema propone el del histórico con su dispersión (UC‑06) y
     exige declarar si es estimado o medido.
   - *6a. Sin plan de trabajo:* el presupuesto se emite sin curva y el informe registra que R2 no es aplicable.
-  - *7a. Hallazgos de severidad CRÍTICO:* el presupuesto se emite igualmente, con esos hallazgos al frente
+  - *7a. Hallazgos de severidad `CRITICO`:* el presupuesto se emite igualmente, con esos hallazgos al frente
     del informe. La verificación audita, no bloquea.
 - **Postcondiciones:** presupuesto persistido con referencia a la lista de precios que lo valoró; curva
   cerrada al 100 %; informe de auditoría persistido; toda cantidad conserva su origen.
@@ -328,38 +328,44 @@ ascendente de UC. Los números no se reutilizan: si un RF se retira, su número 
 |---|---|---|---|---|---|
 | RF‑01 | El sistema calculará el precio unitario de una partida a partir de su composición y los parámetros de costo según la fórmula de CLAUDE.md §4 | Esencial | UC‑01 | I0.3 | `test_costing.py` en verde (5 APU ± 0,01) |
 | RF‑02 | El sistema generará siempre el informe de auditoría al producir o cargar un presupuesto | Esencial | UC‑05 | I4 | 7 de 7 inconsistencias detectadas |
-| RF‑03 | Toda cantidad de obra conservará `origen_id`, `origen_tipo` y, si aplica, la regla que la produjo | Esencial | UC‑01, 04 | I0.1 | `test_contracts.py` |
-| RF‑04 | El sistema obtendrá las cantidades de obra invocando `AdaptadorDominio.extraer(fuente)`, sin que el núcleo conozca el dominio ni el formato de la fuente | Esencial | UC‑01 | I0.1, I3.1 | `test_arquitectura.py` verde y `tests/integration/test_adaptador_civil.py` produce `ItemComputo` con `origen_id` = GlobalId |
-| RF‑05 | El sistema persistirá partidas, insumos, composiciones y rendimientos en SQLite, y `scripts/seed.py` reproducirá la línea base completa desde la base de datos | Esencial | UC‑01 | I0.4 | `tests/integration/test_catalogo.py`: los cinco APU recuperados de la base dan los mismos precios unitarios que el fixture |
-| RF‑06 | El sistema construirá el presupuesto asociando cada `ItemComputo` a su `ComposicionAPU`, calculando su `ResultadoAPU` y emitiendo una `PartidaPresupuestada` por ítem, con total por partida y total general | Esencial | UC‑01 | I0.5 | `tests/unit/test_budget.py`: el presupuesto de la línea base corregida se reproduce partida por partida |
-| RF‑07 | El sistema generará la curva de inversión de modo que su acumulado final sea exactamente igual al total del presupuesto | Esencial | UC‑01 | I0.5 | `tests/unit/test_budget.py`: `total_curva == total` sin tolerancia (el caso real cerraba en 99,30 %) |
-| RF‑08 | El sistema exportará presupuesto y curva a XLSX, redondeando a dos decimales solo en la celda presentada y nunca en el cálculo | Deseable | UC‑01 | I0.5 | `tests/integration/test_exportacion_excel.py`: los totales del archivo coinciden con los del presupuesto en memoria |
-| RF‑09 | El sistema admitirá un dominio nuevo agregando un adaptador bajo `adapters/` que solo importe `core.contracts`, sin modificar `core/` | Esencial | UC‑01 | I5 | `git diff --stat core/` vacío tras I5 y `test_arquitectura.py` verde (indicador 4) |
+| RF‑03 | Toda cantidad de obra conservará `origen_id`, `origen_tipo` y, si aplica, la regla que la produjo | Esencial | UC‑01, 04 | I0.1 | `tests/unit/test_contracts.py` y `tests/unit/test_linea_base.py`: ningún `ItemComputo` sin `origen_id`, y un ítem de origen REGLA sin expresión es rechazado |
+| RF‑04 | El sistema obtendrá las cantidades de obra invocando `AdaptadorDominio.extraer(fuente)`, sin que el núcleo conozca el dominio ni el formato de la fuente | Esencial | UC‑01 | I0.1, I3.1 | `tests/unit/test_arquitectura.py` verde (ningún adaptador importa de `core` fuera de `core.contracts`) y `tests/unit/test_linea_base.py`: todo `ItemComputo` trae `origen_id` y `origen_tipo`; la extracción IFC con `origen_id` = GlobalId, pendiente (Sesión I3.1) |
+| RF‑05 | El sistema persistirá partidas, insumos, composiciones y rendimientos en SQLite; `scripts/seed.py` cargará la línea base en la base de datos, de modo que el presupuesto se reproduzca completo desde ella | Esencial | UC‑01 | I0.4 | `tests/integration/test_persistencia.py`: los cinco APU recuperados de la base dan los mismos precios unitarios que el fixture |
+| RF‑06 | El sistema construirá el presupuesto asociando cada `ItemComputo` a su `ComposicionAPU`, calculando su `ResultadoAPU` y emitiendo una `PartidaPresupuestada` por ítem, con total por partida y total general | Esencial | UC‑01 | I0.5 | `tests/unit/test_budget.py` y `tests/integration/test_presupuesto_linea_base.py`: el presupuesto de la línea base corregida se reproduce partida por partida desde el catálogo persistido |
+| RF‑07 | El sistema generará la curva de inversión de modo que su acumulado final sea exactamente igual al total del presupuesto | Esencial | UC‑01 | I0.5 | `tests/unit/test_budget.py` y `tests/integration/test_presupuesto_linea_base.py`: `total_curva == total` sin tolerancia (el caso real cerraba en 99,30 %) |
+| RF‑08 | El sistema exportará presupuesto y curva a XLSX, redondeando a dos decimales solo en la celda presentada y nunca en el cálculo | Deseable | UC‑01 | I0.5 | `tests/unit/test_budget.py::test_exportar_excel_escribe_cuatro_hojas`: el libro se escribe completo y sus totales coinciden con los del presupuesto en memoria |
+| RF‑09 | El sistema admitirá un dominio nuevo agregando un adaptador bajo `adapters/` que solo importe `core.contracts`, sin modificar `core/` | Esencial | UC‑01 | I5 | `git diff --stat core/` vacío tras I5, `tests/unit/test_arquitectura.py` verde y `tests/unit/test_adapter_telecom.py`, `tests/unit/test_adapter_industrial.py` y `tests/unit/test_adapter_sistemas.py` en verde (indicador 4) |
 | RF‑10 | El sistema cargará una lista de precios en CSV o XLSX, la validará (columnas, tipos y unidades) e identificará los insumos cuyo precio difiere del vigente y las partidas donde participan | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: la lista de prueba identifica exactamente los insumos modificados |
 | RF‑11 | El sistema recalculará todos los APU afectados por la lista nueva y producirá una versión nueva del presupuesto sin editar ninguna composición | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: las composiciones quedan idénticas y los precios unitarios cambian solo en las partidas afectadas |
 | RF‑12 | El sistema persistirá cada cambio de precio con insumo, precio anterior, precio nuevo, variación porcentual, incidencia por partida y fecha | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: un registro por insumo modificado, recuperable tras cerrar la sesión |
 | RF‑13 | El sistema emitirá un informe comparativo entre la versión anterior y la nueva, por partida y total, en variación absoluta y porcentual | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: la suma de las variaciones por partida iguala la variación del total |
-| RF‑14 | El sistema reconstruirá cualquier presupuesto con los precios vigentes en la fecha en que fue elaborado | Esencial | UC‑02 | I1 | `tests/integration/test_reconstruccion_fecha.py`: reconstrucción idéntica al presupuesto original (RNF‑02) |
-| RF‑15 | El sistema devolverá, para una descripción en texto libre, las tres partidas del catálogo más similares con su puntaje de similitud del coseno | Esencial | UC‑03 | I2 | `tests/unit/test_normalizacion.py`: las tres propuestas salen ordenadas por puntaje descendente |
-| RF‑16 | Al aceptar una propuesta, el sistema precargará su composición y su rendimiento, conservando la referencia a la partida de origen y el puntaje que la propuso | Esencial | UC‑03 | I2 | `tests/unit/test_normalizacion.py`: la partida creada declara `codigo_partida` de origen y puntaje |
-| RF‑17 | El sistema reconocerá al menos el 80 % de las partidas de un presupuesto conocido al normalizar sus descripciones | Esencial | UC‑03 | I2 | `tests/unit/test_normalizacion.py`: tasa de reconocimiento ≥ 0,80 sobre el presupuesto de prueba |
+| RF‑14 | El sistema reconstruirá cualquier presupuesto con los precios vigentes en la fecha en que fue elaborado | Esencial | UC‑02 | I1 | `tests/integration/test_persistencia.py::test_precios_se_reconstruyen_a_fecha` y `tests/integration/test_actualizacion_precios.py`: la reconstrucción a la fecha original es idéntica al presupuesto emitido (RNF‑02) |
+| RF‑15 | El sistema devolverá, para una descripción en texto libre, las tres partidas del catálogo más similares con su puntaje de similitud del coseno | Esencial | UC‑03 | I2 | las tres propuestas salen ordenadas por puntaje descendente y ninguna por debajo del umbral declarado; prueba pendiente (Sesión I2) |
+| RF‑16 | Al aceptar una propuesta, el sistema precargará su composición y su rendimiento, conservando la referencia a la partida de origen y el puntaje que la propuso | Esencial | UC‑03 | I2 | la partida creada declara el `codigo_partida` de origen y el puntaje que la propuso; prueba pendiente (Sesión I2) |
+| RF‑17 | El sistema reconocerá al menos el 80 % de las partidas de un presupuesto conocido al normalizar sus descripciones | Esencial | UC‑03 | I2 | tasa de reconocimiento ≥ 0,80 sobre un presupuesto conocido; prueba pendiente (Sesión I2) |
 | RF‑18 | El sistema derivará las cantidades del dominio civil de reglas paramétricas declaradas, registrando en cada `ItemComputo` la expresión evaluada y los parámetros usados | Esencial | UC‑04 | I3.2 | `tests/unit/test_reglas_civil.py`: con a = 0,80, h = 0,80, e = 0,10 el concreto da 0,224 m3 y el encofrado 4,48 m2, y ambos ítems traen `regla` y `parametros` |
-| RF‑19 | Al modificar un parámetro dimensional o el conteo de elementos, el sistema reevaluará las reglas afectadas y recalculará cantidades, precios y curva sin intervención manual | Esencial | UC‑04 | I3.2 | `tests/integration/test_recalculo_alcance.py`: cambiar el ancho de la tanquilla altera solo las partidas dependientes |
-| RF‑20 | El sistema presentará el diferencial entre la versión anterior y la recalculada: cantidad, precio unitario y total por partida | Deseable | UC‑04 | I3.2 | `tests/integration/test_recalculo_alcance.py`: la suma de los diferenciales por partida iguala la diferencia de totales |
+| RF‑19 | Al modificar un parámetro dimensional o el conteo de elementos, el sistema reevaluará las reglas afectadas y recalculará cantidades, precios y curva sin intervención manual | Esencial | UC‑04 | I3.2 | `tests/unit/test_reglas_civil.py`: cambiar el ancho de la tanquilla altera las cantidades derivadas de esa dimensión y ninguna otra |
+| RF‑20 | El sistema presentará el diferencial entre la versión anterior y la recalculada: cantidad, precio unitario y total por partida | Deseable | UC‑04 | I3.2 | `tests/unit/test_budget.py`: la suma de los diferenciales por partida iguala la diferencia de totales |
 | RF‑21 | El sistema ejecutará las siete reglas R1–R7 sobre cualquier `Presupuesto` y devolverá `Hallazgo` con severidad, descripción, impacto cuantificado y los `origen_id` involucrados | Esencial | UC‑05 | I4 | `tests/unit/test_verification.py`: cada regla devuelve hallazgos completos y lista vacía cuando el presupuesto cumple |
-| RF‑22 | El sistema detectará las siete inconsistencias de la línea base sobre el presupuesto de prueba que las reproduce | Esencial | UC‑05 | I4 | `tests/unit/test_verification.py`: 7 de 7, una por regla (indicador 1) |
+| RF‑22 | El sistema detectará las siete inconsistencias de la línea base sobre el presupuesto de prueba que las reproduce | Esencial | UC‑05 | I4 | `tests/integration/test_auditoria_7_de_7.py`: 7 de 7 hallazgos sobre el presupuesto de prueba, uno por regla, con `tests/unit/test_verification.py` cubriendo cada regla por separado (indicador 1) |
 | RF‑23 | El sistema ordenará el informe por severidad descendente y no modificará el presupuesto auditado; una regla que no pueda evaluarse se reportará como hallazgo INFO sin interrumpir a las demás | Esencial | UC‑05 | I4 | `tests/unit/test_verification.py`: el presupuesto de entrada es idéntico antes y después, y una regla sin datos no aborta el informe |
-| RF‑24 | El sistema importará un presupuesto de un tercero en formato tabular, conservando las unidades originales escritas por su autor, para poder auditarlo | Esencial | UC‑05 | I4 | `tests/integration/test_auditoria_externa.py`: la unidad "mts" del cómputo llega intacta a la regla R3 |
-| RF‑25 | El sistema registrará rendimientos medidos con partida, valor, condiciones, fecha y referencia a la ejecución, y rechazará un rendimiento medido sin esa referencia | Esencial | UC‑06 | I6.2 | `tests/unit/test_rendimientos.py`: `TipoRendimiento.MEDIDO` sin `referencia_ejecucion` lanza error |
-| RF‑26 | Al componer un APU, el sistema propondrá el rendimiento del histórico de la partida con su dispersión (número de observaciones, media, mínimo y máximo) | Esencial | UC‑06 | I6.2 | `tests/unit/test_rendimientos.py`: la propuesta trae los cuatro estadísticos y distingue estimado de medido |
-| RF‑27 | El sistema advertirá cuando el rendimiento introducido se aparte del comportamiento observado, sin impedir el registro | Esencial | UC‑06 | I6.1, I6.2 | `tests/unit/test_anomalias.py`: un rendimiento fuera del histórico produce advertencia y el registro se completa |
-| RF‑28 | El sistema estimará el precio de mercado de una partida con la técnica que corresponda al conteo de registros del dominio y reportará MAPE, RMSE y R² de la técnica empleada | Esencial | UC‑07 | I6.3 | `tests/unit/test_prediccion.py` y `docs/resultados_ml.md`: las tres métricas y la técnica quedan declaradas (indicador 5) |
-| RF‑29 | El sistema contrastará el precio construido con el estimado, expresará la desviación en porcentaje y marcará como atípicos los precios que se aparten del histórico | Esencial | UC‑07 | I6.1, I6.3 | `tests/unit/test_anomalias.py`: una desviación fuera del rango de la clase 3 de AACE genera hallazgo de severidad ADVERTENCIA |
-| RF‑30 | El sistema generará escenarios variando `ParametrosCosto` o precios de insumos y recalculará el presupuesto completo sin alterar el presupuesto base | Deseable | UC‑08 | F.1 | `tests/unit/test_escenarios.py`: el presupuesto base es idéntico antes y después de generar el escenario |
-| RF‑31 | El sistema comparará varios escenarios entre sí y con el presupuesto base en una tabla exportable | Opcional | UC‑08 | F.1 | `tests/unit/test_escenarios.py`: la tabla trae una fila por escenario con su total y su variación |
+| RF‑24 | El sistema importará un presupuesto de un tercero en formato tabular, conservando las unidades originales escritas por su autor, para poder auditarlo | Esencial | UC‑05 | I4 | `tests/integration/test_auditoria_7_de_7.py`: la unidad "mts" del cómputo llega intacta a la regla R3 |
+| RF‑25 | El sistema registrará rendimientos medidos con partida, valor, condiciones, fecha y referencia a la ejecución, y rechazará un rendimiento medido sin esa referencia | Esencial | UC‑06 | I6.2 | `tests/unit/test_contracts.py` cubre la invariante (`TipoRendimiento.MEDIDO` sin `referencia_ejecucion` lanza error); el registro y su consulta, pendiente (Sesión I6.2) |
+| RF‑26 | Al componer un APU, el sistema propondrá el rendimiento del histórico de la partida con su dispersión (número de observaciones, media, mínimo y máximo) | Esencial | UC‑06 | I6.2 | la propuesta trae número de observaciones, media, mínimo y máximo, y declara si el rendimiento es estimado o medido; prueba pendiente (Sesión I6.2) |
+| RF‑27 | El sistema advertirá cuando el rendimiento introducido se aparte del comportamiento observado, sin impedir el registro | Esencial | UC‑06 | I6.1, I6.2 | un rendimiento fuera del rango observado produce advertencia y el registro se completa igualmente; prueba pendiente (Sesión I6.1) |
+| RF‑28 | El sistema estimará el precio de mercado de una partida con la técnica que corresponda al conteo de registros del dominio y reportará MAPE, RMSE y R² de la técnica empleada | Esencial | UC‑07 | I6.3 | `docs/resultados_ml.md` declara MAPE, RMSE, R² y la técnica empleada según el conteo de registros del dominio; prueba pendiente (Sesión I6.3) (indicador 5) |
+| RF‑29 | El sistema contrastará el precio construido con el estimado, expresará la desviación en porcentaje y marcará como atípicos los precios que se aparten del histórico | Esencial | UC‑07 | I6.1, I6.3 | una desviación fuera del rango de la clase 3 de AACE genera hallazgo de severidad ADVERTENCIA; prueba pendiente (Sesión I6.1) |
+| RF‑30 | El sistema generará escenarios variando `ParametrosCosto` o precios de insumos y recalculará el presupuesto completo sin alterar el presupuesto base | Deseable | UC‑08 | F.1 | el presupuesto base es idéntico antes y después de generar el escenario; prueba pendiente (Sesión F.1) |
+| RF‑31 | El sistema comparará varios escenarios entre sí y con el presupuesto base en una tabla exportable | Opcional | UC‑08 | F.1 | la tabla trae una fila por escenario con su total y su variación respecto del base; prueba pendiente (Sesión F.1) |
 
-Al cerrar la Sesión 0.1 existen `tests/unit/test_costing.py`, `test_contracts.py`, `test_linea_base.py`
-y `test_arquitectura.py`; los demás archivos citados los crea el incremento indicado en su fila.
+Los archivos citados pertenecen al conjunto de pruebas acordado para el proyecto: en `tests/unit/`,
+`test_costing.py`, `test_contracts.py`, `test_linea_base.py`, `test_arquitectura.py`, `test_budget.py`,
+`test_reglas_civil.py`, `test_verification.py`, `test_adapter_telecom.py`, `test_adapter_industrial.py` y
+`test_adapter_sistemas.py`; en `tests/integration/`, `test_persistencia.py`, `test_presupuesto_linea_base.py`,
+`test_auditoria_7_de_7.py` y `test_actualizacion_precios.py`. Los cuatro primeros existen al cerrar la
+Sesión 0.1; los demás los crea el incremento indicado en su fila. Los RF posteriores al núcleo (I2, I6.1,
+I6.2, I6.3 y F.1) declaran su criterio medible y marcan la prueba como pendiente: el archivo se nombra al
+abrir esa sesión, no antes.
 
 Cobertura por caso de uso (mínimos exigidos por el criterio de cierre entre paréntesis):
 
@@ -386,7 +392,7 @@ Cobertura por caso de uso (mínimos exigidos por el criterio de cierre entre par
 | Mantenibilidad | RNF‑05 agregar un dominio no modifica `core/` | `git diff --stat core/`, `test_arquitectura.py` | vacío / verde |
 | Mantenibilidad | RNF‑06 cobertura de pruebas del núcleo | pytest‑cov | ≥ 80 % |
 | Portabilidad | RNF‑07 instalación con `uv sync` en Windows y Linux | pasos manuales | 0 |
-| Seguridad | RNF‑08 ejecución local: el sistema no requiere credenciales, no invoca servicios externos en tiempo de ejecución y los datos residen en un archivo SQLite del equipo del usuario | credenciales versionadas; llamadas de red durante la operación | 0 y 0; única excepción, la descarga inicial del modelo de `sentence‑transformers` (I2), que se declara y se cachea localmente |
+| Seguridad | RNF‑08 ejecución local: el sistema no requiere credenciales, no invoca servicios externos en tiempo de ejecución y los datos residen en un archivo SQLite del equipo del usuario | credenciales versionadas; llamadas de red durante la operación | 0 y 0; única excepción, la descarga inicial del modelo de `sentence-transformers` (I2), que se declara y se cachea localmente |
 | Compatibilidad | RNF‑09 entrada IFC 4 de cualquier modelador | archivos de ≥ 2 herramientas (p. ej. Revit y Bonsai) | cantidades extraídas iguales al cálculo manual en ambos; pendiente de la compuerta G1 (I3.1), cuya alternativa es la entrada tabular documentada |
 
 ### 3.4 Reglas de negocio
@@ -400,15 +406,15 @@ Criterios de degradación del módulo predictivo: [CLAUDE.md §8.1](../CLAUDE.md
 
 | UC | RF | Prueba(s) | Incremento | Indicador de la tesis |
 |---|---|---|---|---|
-| UC‑01 | RF‑01, RF‑03, RF‑04, RF‑05, RF‑06, RF‑07, RF‑08 | `tests/unit/test_costing.py`, `tests/unit/test_contracts.py`, `tests/unit/test_budget.py` (I0.5), `tests/integration/test_catalogo.py` (I0.4), `tests/integration/test_exportacion_excel.py` (I0.5), `tests/integration/test_adaptador_civil.py` (I3.1) | I0.1, I0.3, I0.4, I0.5, I3.1 | 2, 3 |
-| UC‑01 (transversal) | RF‑09 | `tests/unit/test_arquitectura.py` y `git diff --stat core/` | I0.1, I5 | 4 |
-| UC‑02 | RF‑10, RF‑11, RF‑12, RF‑13, RF‑14 | `tests/integration/test_actualizacion_precios.py` (I1), `tests/integration/test_reconstruccion_fecha.py` (I1) | I1 | 3 |
-| UC‑03 | RF‑15, RF‑16, RF‑17 | `tests/unit/test_normalizacion.py` (I2) | I2 | 3 |
-| UC‑04 | RF‑03, RF‑18, RF‑19, RF‑20 | `tests/unit/test_reglas_civil.py` (I3.2), `tests/integration/test_recalculo_alcance.py` (I3.2) | I3.2 | 2 |
-| UC‑05 | RF‑02, RF‑21, RF‑22, RF‑23, RF‑24 | `tests/unit/test_verification.py` (I4), `tests/integration/test_auditoria_externa.py` (I4) | I4 | 1 |
-| UC‑06 | RF‑25, RF‑26, RF‑27 | `tests/unit/test_rendimientos.py` (I6.2), `tests/unit/test_anomalias.py` (I6.1) | I6.1, I6.2 | 2, 5 |
-| UC‑07 | RF‑28, RF‑29 | `tests/unit/test_prediccion.py` (I6.3), `tests/unit/test_anomalias.py` (I6.1) | I6.1, I6.3 | 5 |
-| UC‑08 | RF‑30, RF‑31 | `tests/unit/test_escenarios.py` (F.1) | F.1 | 2 (apoyo) |
+| UC‑01 | RF‑01, RF‑03, RF‑04, RF‑05, RF‑06, RF‑07, RF‑08 | `tests/unit/test_costing.py`, `tests/unit/test_contracts.py`, `tests/unit/test_linea_base.py`, `tests/unit/test_arquitectura.py`, `tests/unit/test_budget.py` (I0.5), `tests/integration/test_persistencia.py` (I0.4), `tests/integration/test_presupuesto_linea_base.py` (I0.5); extracción IFC pendiente (I3.1) | I0.1, I0.3, I0.4, I0.5, I3.1 | 2, 3 |
+| UC‑01 (transversal) | RF‑09 | `tests/unit/test_arquitectura.py`, `tests/unit/test_adapter_telecom.py`, `tests/unit/test_adapter_industrial.py` y `tests/unit/test_adapter_sistemas.py` (I5), más `git diff --stat core/` | I0.1, I5 | 4 |
+| UC‑02 | RF‑10, RF‑11, RF‑12, RF‑13, RF‑14 | `tests/integration/test_actualizacion_precios.py` (I1), `tests/integration/test_persistencia.py` (I0.4) | I0.4, I1 | 3 |
+| UC‑03 | RF‑15, RF‑16, RF‑17 | pendiente (Sesión I2) | I2 | 3 |
+| UC‑04 | RF‑03, RF‑18, RF‑19, RF‑20 | `tests/unit/test_contracts.py` (RF‑03, I0.1), `tests/unit/test_reglas_civil.py` (I3.2), `tests/unit/test_budget.py` (I0.5) | I0.1, I3.2 | 2 |
+| UC‑05 | RF‑02, RF‑21, RF‑22, RF‑23, RF‑24 | `tests/unit/test_verification.py` (I4), `tests/integration/test_auditoria_7_de_7.py` (I4) | I4 | 1 |
+| UC‑06 | RF‑25, RF‑26, RF‑27 | `tests/unit/test_contracts.py` (invariante de `Rendimiento`, I0.1); registro, dispersión y advertencia pendientes (Sesiones I6.1, I6.2) | I0.1, I6.1, I6.2 | 2 |
+| UC‑07 | RF‑28, RF‑29 | pendiente (Sesiones I6.1, I6.3); métricas en `docs/resultados_ml.md` | I6.1, I6.3 | 5 |
+| UC‑08 | RF‑30, RF‑31 | pendiente (Sesión F.1) | F.1 | 2 (apoyo) |
 
 Correspondencia RNF → verificación: RNF‑01 y RNF‑02 se comprueban en UC‑01 y UC‑02 (RF‑06, RF‑14);
 RNF‑03 en UC‑02 (RF‑11); RNF‑04 con el juicio de expertos sobre el informe de UC‑05; RNF‑05 con RF‑09;
