@@ -1,0 +1,10 @@
+id,modulo,caso_de_uso,codigo_partida,entradas,salidas,consultas,archivos,interfaces,especificaciones
+SI-01,Presupuestos,Crear presupuesto a partir de partidas,SIS-PRES-01,2,1,1,1,0,actor=presupuestista
+SI-02,Presupuestos,Editar partida presupuestada,SIS-PRES-02,1,1,0,1,0,actor=presupuestista
+SI-03,Presupuestos,Cerrar la curva de inversion del presupuesto,SIS-PRES-03,1,2,1,0,0,actor=presupuestista
+SI-04,Catalogo,Registrar insumo en el catalogo,SIS-CAT-01,1,0,0,1,0,actor=administrador_catalogo
+SI-05,Catalogo,Actualizar precio de insumo,SIS-CAT-02,1,1,1,0,1,actor=administrador_catalogo
+SI-06,Catalogo,Consultar historial de precios de un insumo,SIS-CAT-03,0,0,1,0,0,actor=presupuestista
+SI-07,Verificacion,Generar el informe de auditoria del presupuesto,SIS-VER-01,1,1,2,1,0,actor=auditor
+SI-08,Verificacion,Exportar el presupuesto auditado a Excel,SIS-VER-02,0,1,0,0,1,actor=presupuestista
+SI-09,Verificacion,Consultar los indicadores de las siete reglas de verificacion,SIS-VER-03,0,0,1,0,0,actor=auditor
