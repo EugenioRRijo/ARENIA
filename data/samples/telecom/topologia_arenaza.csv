@@ -2,11 +2,10 @@ tipo,id,descripcion,codigo_partida,unidad,cantidad,origen,destino,longitud_m,res
 nodo,RACK-01,Rack fijo 12U con puertas,TC-RACK-01,pieza,1,,,,,ubicacion=oficina;tipo_equipo=rack
 nodo,SW-CORE,Switch escritorio gigabit 10 puertos con PoE,TC-SW-01,pieza,1,,,,,puertos=10;poe=si
 nodo,SW-DIST,Switch TP-Link 16 puertos,TC-SW-02,pieza,1,,,,,puertos=16
-nodo,AP-01,Punto de acceso WiFi mesh sala 1,TC-AP-01,pieza,1,,,,,tipo_equipo=decodificador mesh
-nodo,AP-02,Punto de acceso WiFi mesh sala 2,TC-AP-02,pieza,1,,,,,tipo_equipo=decodificador mesh
-nodo,AP-03,Punto de acceso WiFi mesh sala 3,TC-AP-03,pieza,1,,,,,tipo_equipo=decodificador mesh
-nodo,AP-04,Punto de acceso WiFi mesh sala 4,TC-AP-04,pieza,1,,,,,tipo_equipo=decodificador mesh
-nodo,AP-05,Punto de acceso WiFi mesh recepcion,TC-AP-05,pieza,1,,,,,tipo_equipo=decodificador mesh
+nodo,AP-01,Punto de acceso WiFi Ruijie sala 1,TC-AP-01,pieza,1,,,,,tipo_equipo=rap ruijie
+nodo,AP-02,Punto de acceso WiFi Ruijie sala 2,TC-AP-02,pieza,1,,,,,tipo_equipo=rap ruijie
+nodo,AP-03,Punto de acceso WiFi Ruijie sala 3,TC-AP-03,pieza,1,,,,,tipo_equipo=rap ruijie
+nodo,AP-04,Punto de acceso WiFi Ruijie recepcion,TC-AP-04,pieza,1,,,,,tipo_equipo=rap ruijie
 nodo,UPS-01,Mini UPS de respaldo para el rack,TC-UPS-01,pieza,1,,,,,capacidad=17600 mah
 enlace,ENL-01,Enlace UTP rack - switch core,TC-CAB-01,m,,RACK-01,SW-CORE,5,0.10,categoria=cat6;tipo_cable=utp
 enlace,ENL-02,Enlace UTP troncal switch core - switch distribucion,TC-CAB-02,m,,SW-CORE,SW-DIST,30,0.10,categoria=cat6;tipo_cable=utp

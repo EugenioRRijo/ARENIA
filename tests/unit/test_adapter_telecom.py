@@ -1,10 +1,10 @@
 """Adaptador del dominio telecom: topologia de red en CSV (Sesion I5).
 
-Reproduce, a partir de la muestra `data/samples/telecom/topologia_arenaza.csv` (derivada de
-`data/samples/telecom/Presupuesto_1_ARENAZA.pdf`), 9 nodos (puntos WiFi, switches, rack, UPS) y
-5 enlaces de cable UTP. Cada nodo es una cantidad tabular directa; cada enlace deriva su cantidad de
-la regla `longitud_m * (1 + reserva)`, evaluada por `adapters/telecom/evaluador.py` (independiente
-del de `adapters/civil`: cada adaptador es autonomo, CLAUDE.md paragrafo 2).
+Reproduce, a partir de la muestra `data/samples/telecom/topologia_arenaza.csv` (derivada de los dos
+presupuestos ARENAZA, ver `data/samples/telecom/README.md`), 8 nodos (puntos WiFi, switches, rack,
+UPS) y 5 enlaces de cable UTP. Cada nodo es una cantidad tabular directa; cada enlace deriva su
+cantidad de la regla `longitud_m * (1 + reserva)`, evaluada por `adapters/telecom/evaluador.py`
+(independiente del de `adapters/civil`: cada adaptador es autonomo, CLAUDE.md paragrafo 2).
 """
 
 from __future__ import annotations
@@ -14,6 +14,8 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from adapters.telecom.adaptador import AdaptadorTelecom
 from adapters.telecom.evaluador import evaluar_regla
 from core.contracts import Dominio, OrigenTipo
@@ -22,9 +24,29 @@ RAIZ = Path(__file__).resolve().parents[2]
 RUTA_MUESTRA = RAIZ / "data" / "samples" / "telecom" / "topologia_arenaza.csv"
 PAQUETE_TELECOM = RAIZ / "adapters" / "telecom"
 
+_ENCABEZADO_CSV = (
+    "tipo,id,descripcion,codigo_partida,unidad,cantidad,origen,destino,longitud_m,reserva,"
+    "especificaciones"
+)
+
 
 def _extraer():
     return AdaptadorTelecom().extraer(RUTA_MUESTRA)
+
+
+def _csv_minimo(tmp_path: Path, filas_enlace: list[str]) -> Path:
+    """Un CSV con dos nodos (`N-01`, `N-02`) y las filas de enlace que se le pasen, para pruebas de
+    casos borde que no necesitan la muestra completa.
+    """
+    lineas = [
+        _ENCABEZADO_CSV,
+        "nodo,N-01,Nodo de prueba 1,TC-N-01,pieza,1,,,,,",
+        "nodo,N-02,Nodo de prueba 2,TC-N-02,pieza,1,,,,,",
+        *filas_enlace,
+    ]
+    ruta = tmp_path / "topologia_prueba.csv"
+    ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    return ruta
 
 
 def test_extrae_nodos_y_enlaces_de_la_muestra():
@@ -32,11 +54,11 @@ def test_extrae_nodos_y_enlaces_de_la_muestra():
     assert adaptador.dominio is Dominio.TELECOM
 
     items = adaptador.extraer(RUTA_MUESTRA)
-    assert len(items) == 14
+    assert len(items) == 13
 
     nodos = [item for item in items if item.origen_tipo is OrigenTipo.CSV]
     enlaces = [item for item in items if item.origen_tipo is OrigenTipo.REGLA]
-    assert len(nodos) == 9
+    assert len(nodos) == 8
     assert len(enlaces) == 5
 
     for item in items:
@@ -85,7 +107,6 @@ def test_origen_id_es_la_clave_de_fila():
         "AP-02",
         "AP-03",
         "AP-04",
-        "AP-05",
         "UPS-01",
         "ENL-01",
         "ENL-02",
@@ -99,6 +120,28 @@ def test_origen_id_es_la_clave_de_fila():
     assert len(ids_obtenidos) == len(items)
 
 
+def test_reserva_vacia_es_cero(tmp_path):
+    ruta = _csv_minimo(
+        tmp_path,
+        ["enlace,E-01,Enlace sin reserva declarada,TC-E-01,m,,N-01,N-02,10,,"],
+    )
+    items = AdaptadorTelecom().extraer(ruta)
+
+    enlace = next(item for item in items if item.origen_id == "E-01")
+    assert enlace.parametros["reserva"] == Decimal("0")
+    assert enlace.cantidad == Decimal("10")
+
+
+def test_longitud_vacia_falla_con_fila_y_columna(tmp_path):
+    ruta = _csv_minimo(
+        tmp_path,
+        ["enlace,E-02,Enlace sin longitud,TC-E-02,m,,N-01,N-02,,0.10,"],
+    )
+
+    with pytest.raises(ValueError, match=r"E-02.*longitud_m"):
+        AdaptadorTelecom().extraer(ruta)
+
+
 def _imports_de(archivo: Path):
     arbol = ast.parse(archivo.read_text(encoding="utf-8"), filename=str(archivo))
     for nodo in ast.walk(arbol):
@@ -109,18 +152,43 @@ def _imports_de(archivo: Path):
             yield nodo.module
 
 
+def _import_permitido(modulo: str) -> bool:
+    """True si `modulo` es una dependencia permitida para un archivo de `adapters/telecom/`.
+
+    Solo puede depender de la biblioteca estandar, de `core.contracts` (y sus submodulos) y de su
+    propio paquete `adapters.telecom` (y sus submodulos). Comparar unicamente la raiz del modulo
+    (`modulo.split(".")[0]`) dejaria pasar `import adapters.civil.evaluador`, porque su raiz
+    tambien es `"adapters"`: por eso el caso `adapters` compara el nombre completo del paquete, no
+    solo la raiz (hallazgo Important 1 de la ronda 1 de revision).
+    """
+    permitidos_estandar = set(sys.stdlib_module_names) | {"__future__"}
+    raiz_modulo = modulo.split(".")[0]
+    if raiz_modulo == "core":
+        return modulo == "core.contracts" or modulo.startswith("core.contracts.")
+    if raiz_modulo == "adapters":
+        return modulo == "adapters.telecom" or modulo.startswith("adapters.telecom.")
+    return raiz_modulo in permitidos_estandar
+
+
 def test_no_importa_nada_de_core_salvo_contracts():
-    permitidos = set(sys.stdlib_module_names) | {"__future__"}
     for archivo in sorted(PAQUETE_TELECOM.rglob("*.py")):
         for modulo in _imports_de(archivo):
-            raiz_modulo = modulo.split(".")[0]
-            if raiz_modulo == "core":
-                assert modulo == "core.contracts" or modulo.startswith("core.contracts."), (
-                    f"{archivo.relative_to(RAIZ).as_posix()} importa {modulo!r}; "
-                    "adapters/telecom solo puede importar core.contracts"
-                )
-            elif raiz_modulo not in permitidos:
-                assert raiz_modulo in {"adapters"}, (
-                    f"{archivo.relative_to(RAIZ).as_posix()} importa {modulo!r} fuera de la "
-                    "biblioteca estandar y de core.contracts"
-                )
+            assert _import_permitido(modulo), (
+                f"{archivo.relative_to(RAIZ).as_posix()} importa {modulo!r}; adapters/telecom solo "
+                "puede importar la biblioteca estandar, core.contracts y su propio paquete"
+            )
+
+
+def test_la_validacion_de_imports_rechaza_otros_paquetes():
+    # el bug corregido en la ronda 1 (comparar solo la raiz "adapters") habria dejado pasar esto:
+    assert not _import_permitido("adapters.civil.evaluador")
+    assert not _import_permitido("adapters.civil")
+    assert not _import_permitido("core.costing")
+    assert not _import_permitido("core")
+    # lo que si esta permitido:
+    assert _import_permitido("core.contracts")
+    assert _import_permitido("core.contracts.item_computo")
+    assert _import_permitido("adapters.telecom")
+    assert _import_permitido("adapters.telecom.adaptador")
+    assert _import_permitido("decimal")
+    assert _import_permitido("__future__")

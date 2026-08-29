@@ -1,9 +1,12 @@
 # Muestra telecom: `topologia_arenaza.csv`
 
 Entrada del adaptador `AdaptadorTelecom` (`adapters/telecom/adaptador.py`, Sesión I5): una topología
-de red pequeña (rack, dos switches, cinco puntos de acceso WiFi, un UPS, cinco enlaces de cable UTP),
-derivada de `data/samples/telecom/Presupuesto_1_ARENAZA.pdf` (presupuesto real de instalación de
-puntos WiFi, 14 renglones, 1 109,29 USD; leído con `python -c "import fitz; ..."`, PyMuPDF global).
+de red pequeña (rack, dos switches, cuatro puntos de acceso WiFi, un UPS, cinco enlaces de cable
+UTP), derivada de los dos presupuestos reales de ARENAZA:
+`data/samples/telecom/Presupuesto_1_ARENAZA.pdf` (instalación de puntos WiFi, 14 renglones,
+1 109,29 USD) y `data/samples/telecom/Presupuesto_2_ARENAZA.pdf` (red y CCTV con rack, 26 renglones,
+5 410,73 USD); ambos leídos con `python -c "import fitz; ..."` (PyMuPDF global, no está en el venv de
+uv).
 
 ## Columnas
 
@@ -19,27 +22,48 @@ puntos WiFi, 14 renglones, 1 109,29 USD; leído con `python -c "import fitz; ...
 - `origen`, `destino` (solo `enlace`): extremos del tramo de cable, como `id` de dos filas `nodo`.
   No se validan como referencias existentes en esta sesión (fuera del alcance del adaptador); quedan
   en `ItemComputo.especificaciones["origen"/"destino"]` para que una regla de verificación futura los
-  use si hace falta.
+  use si hace falta. Nota: no todo nodo tiene un enlace que lo referencie en esta muestra (por
+  ejemplo `AP-04` no aparece como `destino` de ningún enlace); es un enlace "colgante" deliberado,
+  documentado como alcance de esta sesión, no un error de la muestra.
 - `longitud_m`, `reserva` (solo `enlace`): la cantidad del enlace es
   `longitud_m * (1 + reserva)` (`ItemComputo.regla`), evaluada por
   `adapters/telecom/evaluador.py`. `reserva` es la fracción adicional de cable por curvas, empalmes
-  y holgura de servicio; vacía equivale a 0.
+  y holgura de servicio; vacía equivale a 0 (ver `adapters/telecom/adaptador.py::_reserva`).
 - `especificaciones`: pares `clave=valor` separados por `;` (por ejemplo `categoria=cat6;tipo_cable=utp`),
   trazables hacia la regla R4.
 
-## Origen y supuestos declarados
+## Procedencia de cada nodo (tabla nodo → fuente)
 
-`Presupuesto_1_ARENAZA.pdf` es una lista de materiales (piezas y una bobina de 90 m de cable UTP
-CAT6), no una topología con nodos y tramos identificados: el PDF no dice cuántos metros van entre
-cada switch y cada punto de acceso, solo el total de cable comprado. Los nueve nodos de esta muestra
-(`RACK-01`, `SW-CORE`, `SW-DIST`, `AP-01`..`AP-05`, `UPS-01`) reproducen el tipo y la cantidad de
-equipos de los renglones del PDF (un switch de escritorio, cinco puntos WiFi/decodificadores mesh, un
-rack y un UPS, estos dos últimos coherentes con el alcance de `Presupuesto_2_ARENAZA.pdf`, que sí
-incluye rack). Las longitudes y la fracción de reserva por tramo (`ENL-01`..`ENL-05`, que suman 95 m,
-cerca de los 90 m de la bobina) son **supuestos de esta muestra**, igual que el sobreancho y el
-espesor de fondo lo son en `data/samples/civil/README.md`: el PDF no discrimina el cableado por
-tramo, así que se distribuye la longitud total entre una topología plausible (rack -> switch núcleo
--> switch de distribución -> puntos de acceso) para que la regla del enlace sea evaluable.
+Ningún PDF de ARENAZA es una topología de red (con nodos y tramos identificados): son listas de
+materiales. Cada nodo de la muestra toma su **tipo y cantidad de equipo** de un renglón real de uno
+de los dos PDF; ninguno inventa una cantidad que no esté en la fuente.
+
+| Nodo(s) | Descripción | Fuente | Renglón del PDF | Cantidad en el PDF |
+|---|---|---|---|---|
+| `RACK-01` | Rack fijo 12U | `Presupuesto_2_ARENAZA.pdf` | "Rack Fijo Onlink 12u" | 1 |
+| `SW-CORE` | Switch escritorio gigabit 10 puertos PoE | `Presupuesto_1_ARENAZA.pdf` | "Switch Escritorio Gigabit De 10 Puertos Con Poe" | 1 |
+| `SW-DIST` | Switch TP-Link 16 puertos | `Presupuesto_2_ARENAZA.pdf` | "Switch Tp-link 16 Puertos" | 1 |
+| `AP-01`..`AP-04` | Punto de acceso WiFi Ruijie | `Presupuesto_2_ARENAZA.pdf` | "Punto De Acceso Rap Ruijie" | 4 (una fila por unidad) |
+| `UPS-01` | Mini UPS de respaldo | `Presupuesto_2_ARENAZA.pdf` | "Mini Ups Spidertec 17600mah" | 1 (`capacidad=17600 mah` toma el dato textual del renglón) |
+| `ENL-01`..`ENL-05` | Enlaces de cable UTP CAT6 | **supuesto**, ver abajo | — | — |
+
+**Corrección respecto de una versión anterior de esta muestra:** `Presupuesto_1_ARENAZA.pdf` no trae
+ninguna cantidad de puntos de acceso WiFi: su nota al pie solo dice que se "reutilizan los
+DECODIFICADORES MESH" ya existentes para dar cobertura, sin declarar cuántos. Esa nota **no es la
+fuente** de `AP-01`..`AP-04`; la única cantidad de puntos de acceso que aparece en cualquiera de los
+dos PDF es el "4" de "Punto De Acceso Rap Ruijie" en `Presupuesto_2_ARENAZA.pdf`, y es la que usa
+esta muestra.
+
+## Supuestos declarados (no vienen de ningún PDF)
+
+Ningún PDF discrimina el cableado por tramo, solo el total de cable comprado
+(`Presupuesto_1_ARENAZA.pdf`: una bobina de 90 m; `Presupuesto_2_ARENAZA.pdf`: dos bobinas, 90 m y
+80 m). Por eso, para que la regla `longitud_m * (1 + reserva)` sea evaluable, esta muestra **supone**
+una topología plausible (rack -> switch núcleo -> switch de distribución -> puntos de acceso) y
+reparte una longitud entre sus cinco enlaces (`ENL-01`..`ENL-05`, que suman 95 m antes de reserva,
+del orden de una bobina de 90 m), cada uno con su propia fracción de reserva. Es el mismo tipo de
+supuesto declarado que el sobreancho y el espesor de fondo en `data/samples/civil/README.md`: ninguno
+sale de la fuente primaria, ambos quedan documentados aquí para no confundirse con un dato medido.
 
 ## Política de mano de obra "50 % del total"
 

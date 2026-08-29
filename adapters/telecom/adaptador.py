@@ -11,7 +11,7 @@ verificacion: trazabilidad geometrica).
 from __future__ import annotations
 
 import csv
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from adapters.telecom.evaluador import evaluar_regla
@@ -38,9 +38,35 @@ def _parsear_especificaciones(texto: str | None) -> dict[str, str]:
     return resultado
 
 
-def _decimal_o_cero(valor: str | None) -> Decimal:
-    valor = (valor or "").strip()
-    return Decimal(valor) if valor else Decimal("0")
+def _decimal(fila: dict[str, str], columna: str) -> Decimal:
+    """Convierte `fila[columna]` a `Decimal`, identificando la fila y la columna en el error.
+
+    `cantidad` (nodo) y `longitud_m` (enlace) deben venir siempre llenos: una celda vacia o no
+    numerica lanza `ValueError` con el `id` de la fila y el nombre de la columna, en vez del
+    `decimal.InvalidOperation` generico que lanzaria `Decimal("")` sin contexto.
+    """
+    valor = (fila.get(columna) or "").strip()
+    try:
+        return Decimal(valor)
+    except InvalidOperation as error:
+        raise ValueError(
+            f"fila {fila.get('id')!r}: columna {columna!r} vacia o no numerica: {valor!r}"
+        ) from error
+
+
+def _reserva(fila: dict[str, str]) -> Decimal:
+    """`reserva` vacia equivale a `Decimal("0")` (documentado en data/samples/telecom/README.md);
+    un valor presente pero no numerico sigue siendo un error, con la fila identificada.
+    """
+    valor = (fila.get("reserva") or "").strip()
+    if not valor:
+        return Decimal("0")
+    try:
+        return Decimal(valor)
+    except InvalidOperation as error:
+        raise ValueError(
+            f"fila {fila.get('id')!r}: columna 'reserva' no numerica: {valor!r}"
+        ) from error
 
 
 class AdaptadorTelecom(AdaptadorDominio):
@@ -70,7 +96,7 @@ class AdaptadorTelecom(AdaptadorDominio):
             codigo_partida=fila["codigo_partida"],
             descripcion=fila["descripcion"],
             unidad=fila["unidad"],
-            cantidad=Decimal(fila["cantidad"]),
+            cantidad=_decimal(fila, "cantidad"),
             origen_id=fila["id"],
             origen_tipo=OrigenTipo.CSV,
             dominio=Dominio.TELECOM,
@@ -79,8 +105,8 @@ class AdaptadorTelecom(AdaptadorDominio):
 
     def _item_enlace(self, fila: dict[str, str]) -> ItemComputo:
         parametros = {
-            "longitud_m": Decimal(fila["longitud_m"]),
-            "reserva": _decimal_o_cero(fila.get("reserva")),
+            "longitud_m": _decimal(fila, "longitud_m"),
+            "reserva": _reserva(fila),
         }
         cantidad = evaluar_regla(_REGLA_LONGITUD_ENLACE, parametros)
         especificaciones = {
