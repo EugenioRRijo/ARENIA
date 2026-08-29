@@ -1,0 +1,11 @@
+id_activo,descripcion,codigo_partida,unidad,frecuencia_anual,horizonte_anios,especificaciones
+IN-001,Bomba centrifuga de agua potable,MNT-BOM-CEN,intervencion,4,5,potencia=15 HP;marca=Grundfos
+IN-002,Tablero electrico principal de baja tension,MNT-TAB-PRI,intervencion,2,5,tension=480V;polos=42
+IN-003,Compresor de aire reciprocante,MNT-COM-REC,intervencion,6,5,presion=125 psi;capacidad=25 HP
+IN-004,Transformador de distribucion,MNT-TRA-DIS,intervencion,1,5,potencia=150 kVA;tension=13.8kV/480V
+IN-005,Valvula de control neumatica,MNT-VAL-CTL,intervencion,12,5,diametro=4 pulg;material=acero inoxidable
+IN-006,Motor electrico trifasico de induccion,MNT-MOT-TRI,intervencion,4,5,potencia=50 HP;rpm=1780
+IN-007,Bomba sumergible de aguas residuales,MNT-BOM-SUM,intervencion,6,5,potencia=10 HP;marca=Flygt
+IN-008,Tablero de control de compresores,MNT-TAB-COM,intervencion,2,5,tension=220V;polos=12
+IN-009,Compresor de tornillo rotativo,MNT-COM-TOR,intervencion,4,5,presion=150 psi;capacidad=40 HP
+IN-010,Transformador de emergencia,MNT-TRA-EME,intervencion,1,3,potencia=75 kVA;tension=13.8kV/208V
