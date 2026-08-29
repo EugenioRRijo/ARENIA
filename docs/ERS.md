@@ -2,15 +2,19 @@
 
 **Sistema de generación y auditoría de Análisis de Precios Unitarios multidominio**
 
-> Estado: **esqueleto**. Se completa en la Sesión 0.1 de [PLAN_DESARROLLO.md](../PLAN_DESARROLLO.md).
-> Las secciones marcadas `[0.1]` están por redactar; las demás ya tienen contenido definitivo o
-> enlazan a su fuente única ([CLAUDE.md](../CLAUDE.md)). Criterio de cierre: al menos 20 RF numerados
-> con prioridad y trazabilidad al caso de uso, y matriz de trazabilidad completa.
+> Estado: **completo, pendiente de revisión del tutor (compuerta G0, [docs/metodologia.md §2.2](metodologia.md#22-compuertas))**.
+> Redactado en la Sesión 0.1 de [PLAN_DESARROLLO.md](../PLAN_DESARROLLO.md). Criterio de cierre exigido:
+> al menos 20 RF numerados con prioridad y trazabilidad al caso de uso, y matriz de trazabilidad
+> completa. Resultado: **31 RF** (sección 3.2) y matriz de la sección 4.
+> Este documento no reproduce datos que tienen fuente única: enlaza [CLAUDE.md](../CLAUDE.md),
+> [docs/linea_base.md](linea_base.md) y [docs/metodologia.md](metodologia.md) (principio DRY,
+> [metodologia.md §5](metodologia.md#5-dry)). Tras cruzar G0 quedan congelados los ocho casos de uso y
+> sus requerimientos funcionales numerados.
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.1 (esqueleto) |
-| Fecha | 2026‑08‑26 |
+| Versión | 1.0 |
+| Fecha | 2026‑08‑29 |
 | Autor | [tesista] |
 | Revisor | [tutor académico] |
 
@@ -42,7 +46,15 @@ digitalización automática de planos, evaluación financiera del proyecto de in
 | ItemComputo | Cantidad de obra trazable (`core.contracts`) |
 | Adaptador de dominio | Componente que lee la fuente propia de un dominio y devuelve ItemComputo |
 | Línea base | Presupuesto auditado del caso de estudio, [docs/linea_base.md](linea_base.md) |
-| `[0.1]` | completar el glosario con LOD, AACE clase 3, MAPE, RMSE, R², CBR, Isolation Forest |
+| LOD | *Level of Development*: grado de definición geométrica y de información de un elemento del modelo BIM (LOD 100 conceptual … LOD 500 verificado en obra). Determina si una cantidad puede extraerse del modelo o debe declararse por regla; es la pregunta que resuelve la compuerta G1 |
+| AACE clase 3 | Clase de estimado de la *Association for the Advancement of Cost Engineering* (RP 18R‑97) para un proyecto definido entre el 10 % y el 40 %: exactitud esperada entre −20 % y +30 %. Marco de contraste del indicador 2 |
+| MAPE | *Mean Absolute Percentage Error*: media de \|(real − estimado)/real\|, en porcentaje. Métrica principal del módulo predictivo por ser independiente de la escala del precio |
+| RMSE | *Root Mean Squared Error*: raíz de la media de los errores al cuadrado, en la unidad monetaria; penaliza los errores grandes |
+| R² | Coeficiente de determinación: proporción de la varianza del precio explicada por el modelo (1 = ajuste perfecto, 0 = equivale a predecir la media) |
+| CBR | *Case‑Based Reasoning*, razonamiento basado en casos: se estima el precio de una partida nueva por analogía con las más parecidas del histórico, con validación dejando uno fuera. Alternativa prevista cuando hay entre 50 y 200 registros por dominio |
+| Isolation Forest | Algoritmo de detección de anomalías no supervisado: aísla observaciones raras con árboles de particiones aleatorias. No requiere datos etiquetados; se usa sobre precios unitarios y rendimientos |
+| sentence‑transformers | Biblioteca de modelos que convierten un texto en un vector semántico. Con el modelo multilingüe `paraphrase-multilingual-MiniLM-L12-v2` permite comparar descripciones de partidas por similitud del coseno sin entrenamiento previo |
+| Sombra digital | Réplica digital que se alimenta del estado real de la obra pero no actúa sobre ella. El sistema es BIM‑5D y, a lo sumo, sombra digital: **no** es un gemelo digital, que exige realimentación bidireccional en tiempo real ([metodologia.md §9](metodologia.md#9-riesgos-que-gobiernan-las-compuertas)) |
 
 ### 1.4 Referencias
 IEEE 830‑1998; ISO/IEC 25010; COVENIN 2000; AACE RP 18R‑97; Bases del anteproyecto
@@ -75,7 +87,198 @@ produce presupuesto, curva de inversión, informe de auditoría y exportación a
 | UC‑07 | Contrastar el precio construido con el precio de mercado | I6.3 |
 | UC‑08 | Generar escenarios de sensibilidad | F.1 |
 
-`[0.1]` Redactar cada UC con actor, precondiciones, flujo principal, flujos alternativos y postcondiciones.
+Los tipos citados en los flujos (`ItemComputo`, `ComposicionAPU`, `ResultadoAPU`, `Presupuesto`,
+`Hallazgo`, `Rendimiento`) son los de [CLAUDE.md §5](../CLAUDE.md#5-contratos-de-interfaz-corecontracts),
+implementados en `core/contracts/`.
+
+#### UC‑01 — Elaborar presupuesto nuevo desde una fuente de cantidades
+
+- **Actor principal:** proyectista / estimador. **Actor secundario:** administrador del catálogo.
+- **Precondiciones:** el catálogo tiene partidas, insumos y una lista de precios vigente; existe una
+  fuente de cantidades (IFC, CSV o tabla) de un dominio con adaptador registrado.
+- **Flujo principal**
+  1. El proyectista crea el proyecto y selecciona la fuente de cantidades y su dominio.
+  2. El sistema invoca `AdaptadorDominio.extraer(fuente)` y obtiene una lista de `ItemComputo`, cada uno
+     con `origen_id` y `origen_tipo`.
+  3. El sistema asocia cada ítem a su partida del catálogo y recupera su `ComposicionAPU` y el
+     rendimiento vigente.
+  4. El motor de costos calcula el `ResultadoAPU` de cada partida con los `ParametrosCosto` del proyecto.
+  5. El sistema arma el `Presupuesto`: una `PartidaPresupuestada` por ítem, con su total, y el total general.
+  6. El proyectista distribuye las partidas en períodos; el sistema genera la curva de inversión y
+     comprueba que el acumulado final iguale el total.
+  7. El sistema ejecuta la verificación (UC‑05) y emite el informe de auditoría sin que se le solicite.
+  8. El proyectista exporta presupuesto y curva a XLSX.
+- **Flujos alternativos**
+  - *2a. Fuente ilegible o de otro dominio:* el sistema rechaza la carga, no crea el presupuesto e indica
+    el archivo y el elemento o fila que falló.
+  - *3a. Ítem sin partida en el catálogo:* el sistema propone las tres partidas más similares (UC‑03); si
+    no se acepta ninguna, el ítem queda pendiente, no suma al total y el informe lo declara.
+  - *3b. Partida sin rendimiento vigente:* el sistema propone el del histórico con su dispersión (UC‑06) y
+    exige declarar si es estimado o medido.
+  - *6a. Sin plan de trabajo:* el presupuesto se emite sin curva y el informe registra que R2 no es aplicable.
+  - *7a. Hallazgos de severidad CRÍTICO:* el presupuesto se emite igualmente, con esos hallazgos al frente
+    del informe. La verificación audita, no bloquea.
+- **Postcondiciones:** presupuesto persistido con referencia a la lista de precios que lo valoró; curva
+  cerrada al 100 %; informe de auditoría persistido; toda cantidad conserva su origen.
+
+#### UC‑02 — Actualizar masivamente los precios de un presupuesto existente
+
+- **Actor principal:** administrador del catálogo. **Actor secundario:** proyectista.
+- **Precondiciones:** existe un presupuesto valorado con una lista de precios; se dispone del archivo
+  CSV/XLSX con la lista nueva.
+- **Flujo principal**
+  1. El administrador carga el archivo e indica su fecha de vigencia y su moneda.
+  2. El sistema valida columnas, tipos y unidades, y convierte todo importe a `Decimal`.
+  3. El sistema identifica los insumos cuyo precio difiere del vigente y las partidas donde participan.
+  4. El sistema recalcula los APU afectados y produce una versión nueva del presupuesto, sin editar
+     ninguna composición.
+  5. El sistema persiste un registro de cambio por insumo: precio anterior, precio nuevo, variación e
+     incidencia por partida.
+  6. El sistema muestra el informe comparativo por partida y total, en valor absoluto y porcentual.
+  7. El usuario acepta la versión nueva o la descarta.
+- **Flujos alternativos**
+  - *2a. Insumos desconocidos en el archivo:* el sistema los lista y ofrece darlos de alta o ignorarlos; los
+    ignorados no intervienen en el recálculo.
+  - *2b. Unidad no equivalente a la del catálogo* (`unidades_equivalentes`): la fila se rechaza y se
+    reporta; las demás se procesan.
+  - *3a. Ningún precio cambió:* no se crea versión nueva y se informa.
+  - *7a. El usuario descarta la versión:* se marca como descartada, pero el registro de cambios se conserva
+    porque alimenta el histórico del módulo predictivo.
+- **Postcondiciones:** versión nueva asociada a su lista de precios; histórico de cambios persistido; el
+  presupuesto anterior sigue siendo reconstruible a su fecha.
+
+#### UC‑03 — Reutilizar partidas y desgloses de proyectos anteriores
+
+- **Actor principal:** proyectista. **Actor secundario:** administrador del catálogo.
+- **Precondiciones:** el catálogo contiene partidas de proyectos anteriores; el modelo de similitud está
+  disponible localmente.
+- **Flujo principal**
+  1. El proyectista escribe la descripción de la partida en texto libre.
+  2. El sistema calcula su vector semántico y devuelve las tres partidas del catálogo con mayor similitud
+     del coseno, cada una con su puntaje.
+  3. El proyectista selecciona una.
+  4. El sistema precarga su `ComposicionAPU` y su rendimiento, conservando la referencia a la partida de
+     origen y el puntaje que la propuso.
+  5. El proyectista ajusta cantidades o insumos y el sistema recalcula el precio unitario.
+- **Flujos alternativos**
+  - *2a. Ningún candidato supera el umbral de similitud declarado:* el sistema no propone nada y ofrece
+    crear la partida desde cero.
+  - *2b. Catálogo vacío (primer proyecto):* la propuesta se omite sin error.
+  - *4a. El desglose recuperado usa insumos sin precio en la lista vigente:* se señalan y la partida queda
+    incompleta hasta que se coticen.
+- **Postcondiciones:** partida creada con trazabilidad a la partida de origen; el puntaje de similitud
+  queda registrado como justificación de la reutilización.
+
+#### UC‑04 — Recalcular ante cambio de alcance o dimensiones
+
+- **Actor principal:** proyectista.
+- **Precondiciones:** existe un presupuesto cuyas cantidades provienen de reglas paramétricas
+  (`origen_tipo = REGLA`) o de un modelo IFC.
+- **Flujo principal**
+  1. El proyectista modifica un parámetro dimensional (ancho, altura, espesor) o el conteo de elementos.
+  2. El sistema vuelve a evaluar las reglas afectadas y produce `ItemComputo` nuevos con la expresión y
+     los parámetros que los generaron.
+  3. El sistema recalcula las partidas afectadas y el total.
+  4. El sistema regenera la curva y vuelve a ejecutar la verificación.
+  5. El sistema muestra el diferencial contra la versión anterior: cantidad, precio unitario y total por
+     partida.
+- **Flujos alternativos**
+  - *1a. El parámetro no participa en ninguna regla:* no hay recálculo y se informa.
+  - *2a. La fuente es un modelo IFC y no reglas:* el sistema exige reimportar el modelo (UC‑01, paso 2) y
+    empareja por `origen_id` (GlobalId) para conservar la correspondencia de las partidas.
+  - *2b. Una regla produce una cantidad negativa o nula* (por ejemplo, relleno negativo): la cantidad se
+    rechaza, la partida conserva su valor anterior y se emite un hallazgo de R5.
+- **Postcondiciones:** versión nueva trazable, con la expresión que produjo cada cantidad; el diferencial
+  queda registrado.
+
+#### UC‑05 — Auditar un presupuesto elaborado por un tercero
+
+- **Actor principal:** auditor.
+- **Precondiciones:** hay un presupuesto propio del sistema, o un archivo tabular de un tercero con
+  cantidades, unidades, APU y plan de trabajo.
+- **Flujo principal**
+  1. El auditor selecciona el presupuesto o importa el archivo del tercero.
+  2. El sistema construye el `Presupuesto` en memoria conservando las unidades escritas por el autor.
+  3. El sistema ejecuta las siete reglas R1–R7
+     ([CLAUDE.md §7](../CLAUDE.md#7-siete-reglas-de-verificación-coreverification-sesión-i4)).
+  4. Cada regla devuelve `Hallazgo` con severidad, descripción, impacto cuantificado y los `origen_id`
+     involucrados.
+  5. El sistema ordena los hallazgos por severidad descendente y emite el informe de auditoría.
+  6. El auditor exporta el informe.
+- **Flujos alternativos**
+  - *2a. El archivo no trae plan de trabajo:* R2 y R7 se declaran no aplicables en el informe; las demás
+    reglas se ejecutan igual.
+  - *2b. Las cantidades no declaran regla ni origen:* R1 emite un hallazgo de trazabilidad ausente en vez
+    de comparar contra una expresión inexistente.
+  - *3a. Una regla no puede evaluarse por falta de datos:* se registra como hallazgo INFO "regla no
+    evaluable" y la ejecución continúa; ninguna regla aborta el informe.
+  - *5a. No hay hallazgos:* el informe se emite igualmente, declarando las siete reglas evaluadas y sin
+    hallazgos.
+- **Postcondiciones:** informe persistido y asociado al presupuesto; el presupuesto auditado no se
+  modifica en ningún caso.
+
+#### UC‑06 — Registrar y consultar rendimientos reales de obra ejecutada
+
+- **Actor principal:** residente de obra (registro). **Actor secundario:** proyectista (consulta).
+- **Precondiciones:** la partida existe en el catálogo y la ejecución es identificable (obra, tramo, fecha).
+- **Flujo principal**
+  1. El residente registra el rendimiento observado: partida, valor, condiciones, fecha y referencia a la
+     ejecución.
+  2. El sistema lo persiste como `TipoRendimiento.MEDIDO`, exigiendo esa referencia.
+  3. Al crear o revisar un APU, el sistema propone el rendimiento del histórico de la partida y muestra su
+     dispersión: número de observaciones, media, mínimo y máximo.
+  4. Si el proyectista introduce un valor que se aparta del comportamiento observado, el sistema lo
+     advierte sin impedir el registro.
+  5. El sistema nunca mezcla estimados con medidos: cada APU declara de cuál procede su rendimiento.
+- **Flujos alternativos**
+  - *1a. Falta la referencia a la ejecución:* el registro se rechaza; un rendimiento medido sin ejecución
+    no es auditable.
+  - *3a. No hay histórico para la partida:* el sistema propone el rendimiento estimado del catálogo y lo
+    rotula como tal.
+  - *4a. El proyectista acepta la advertencia:* se registra su justificación junto al APU.
+- **Postcondiciones:** histórico de rendimientos ampliado; todo APU es trazable al tipo y a la fuente de
+  su rendimiento.
+
+#### UC‑07 — Contrastar el precio construido con el precio de mercado
+
+- **Actor principal:** auditor. **Actor secundario:** proyectista.
+- **Precondiciones:** hay histórico de precios y de APU acumulado, y el conteo de registros por dominio
+  está hecho (compuerta G2, [CLAUDE.md §8.1](../CLAUDE.md#8-compuertas-y-criterios-de-degradación)).
+- **Flujo principal**
+  1. El usuario selecciona una partida o un presupuesto completo.
+  2. El sistema determina la técnica que corresponde al conteo de registros del dominio.
+  3. El sistema estima el precio de referencia y reporta MAPE, RMSE y R² de la técnica empleada.
+  4. El sistema contrasta el precio construido con el estimado y expresa la desviación en porcentaje.
+  5. El sistema marca como atípicos los precios que se apartan del histórico y los incorpora al informe
+     de auditoría.
+- **Flujos alternativos**
+  - *2a. Menos de 50 registros:* se emplea el sistema de reglas con análisis de sensibilidad y el
+    resultado se rotula como limitación declarada.
+  - *3a. Partida nueva sin análogas en el histórico:* no se estima y se informa que el contraste no es
+    posible.
+  - *4a. La desviación excede el rango de la clase 3 de AACE:* se emite un hallazgo de severidad
+    ADVERTENCIA.
+- **Postcondiciones:** estimación, métricas y desviación quedan registradas junto al presupuesto, con la
+  técnica empleada declarada.
+
+#### UC‑08 — Generar escenarios de sensibilidad
+
+- **Actor principal:** proyectista.
+- **Precondiciones:** existe un presupuesto base calculado.
+- **Flujo principal**
+  1. El proyectista define un escenario variando `ParametrosCosto` (FCAS, bono, administración, utilidad)
+     o un conjunto de precios de insumos.
+  2. El sistema recalcula el presupuesto completo con esos valores, sin alterar el base.
+  3. El sistema muestra el total del escenario y su variación respecto del base, por partida y en conjunto.
+  4. El proyectista compara varios escenarios en una tabla y la exporta.
+- **Flujos alternativos**
+  - *1a. Parámetro fuera de rango* (negativo, o depreciación fuera de (0, 1]): se rechaza por las
+    invariantes de los contratos y el escenario no se crea.
+  - *2a. El escenario altera precios de insumos:* se usa el mecanismo de UC‑02, pero sin persistir la
+    lista como vigente.
+  - *4a. El proyectista promueve un escenario a presupuesto:* se crea una versión nueva que registra el
+    escenario del que proviene.
+- **Postcondiciones:** escenarios guardados con sus parámetros; el presupuesto base permanece inalterado.
 
 ### 2.3 Características de los usuarios
 
@@ -113,34 +316,78 @@ reconocimiento de planos.
   (industrial), alcance funcional (sistemas), listas de precios CSV/XLSX.
 - **Archivos de salida:** presupuesto y curva en XLSX, informe de auditoría.
 
-### 3.2 Requisitos funcionales `[0.1]`
+### 3.2 Requisitos funcionales
 
-Numerar RF‑01 en adelante. Cada RF: enunciado verificable, prioridad (Esencial / Deseable / Opcional),
-UC de origen, incremento, criterio de aceptación.
+Cada RF es una afirmación comprobable, con prioridad (Esencial / Deseable / Opcional), el UC que lo
+origina, el incremento que lo implementa y un criterio de aceptación con la prueba que lo demuestra.
+Numeración: RF‑01 a RF‑03 se conservan como se escribieron en el esqueleto (son los tres requisitos
+transversales del núcleo); de RF‑04 en adelante los requisitos van agrupados por caso de uso en orden
+ascendente de UC. Los números no se reutilizan: si un RF se retira, su número queda vacante.
 
 | RF | Enunciado | Prioridad | UC | Incremento | Criterio de aceptación |
 |---|---|---|---|---|---|
 | RF‑01 | El sistema calculará el precio unitario de una partida a partir de su composición y los parámetros de costo según la fórmula de CLAUDE.md §4 | Esencial | UC‑01 | I0.3 | `test_costing.py` en verde (5 APU ± 0,01) |
 | RF‑02 | El sistema generará siempre el informe de auditoría al producir o cargar un presupuesto | Esencial | UC‑05 | I4 | 7 de 7 inconsistencias detectadas |
 | RF‑03 | Toda cantidad de obra conservará `origen_id`, `origen_tipo` y, si aplica, la regla que la produjo | Esencial | UC‑01, 04 | I0.1 | `test_contracts.py` |
-| RF‑… | `[0.1]` | | | | |
+| RF‑04 | El sistema obtendrá las cantidades de obra invocando `AdaptadorDominio.extraer(fuente)`, sin que el núcleo conozca el dominio ni el formato de la fuente | Esencial | UC‑01 | I0.1, I3.1 | `test_arquitectura.py` verde y `tests/integration/test_adaptador_civil.py` produce `ItemComputo` con `origen_id` = GlobalId |
+| RF‑05 | El sistema persistirá partidas, insumos, composiciones y rendimientos en SQLite, y `scripts/seed.py` reproducirá la línea base completa desde la base de datos | Esencial | UC‑01 | I0.4 | `tests/integration/test_catalogo.py`: los cinco APU recuperados de la base dan los mismos precios unitarios que el fixture |
+| RF‑06 | El sistema construirá el presupuesto asociando cada `ItemComputo` a su `ComposicionAPU`, calculando su `ResultadoAPU` y emitiendo una `PartidaPresupuestada` por ítem, con total por partida y total general | Esencial | UC‑01 | I0.5 | `tests/unit/test_budget.py`: el presupuesto de la línea base corregida se reproduce partida por partida |
+| RF‑07 | El sistema generará la curva de inversión de modo que su acumulado final sea exactamente igual al total del presupuesto | Esencial | UC‑01 | I0.5 | `tests/unit/test_budget.py`: `total_curva == total` sin tolerancia (el caso real cerraba en 99,30 %) |
+| RF‑08 | El sistema exportará presupuesto y curva a XLSX, redondeando a dos decimales solo en la celda presentada y nunca en el cálculo | Deseable | UC‑01 | I0.5 | `tests/integration/test_exportacion_excel.py`: los totales del archivo coinciden con los del presupuesto en memoria |
+| RF‑09 | El sistema admitirá un dominio nuevo agregando un adaptador bajo `adapters/` que solo importe `core.contracts`, sin modificar `core/` | Esencial | UC‑01 | I5 | `git diff --stat core/` vacío tras I5 y `test_arquitectura.py` verde (indicador 4) |
+| RF‑10 | El sistema cargará una lista de precios en CSV o XLSX, la validará (columnas, tipos y unidades) e identificará los insumos cuyo precio difiere del vigente y las partidas donde participan | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: la lista de prueba identifica exactamente los insumos modificados |
+| RF‑11 | El sistema recalculará todos los APU afectados por la lista nueva y producirá una versión nueva del presupuesto sin editar ninguna composición | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: las composiciones quedan idénticas y los precios unitarios cambian solo en las partidas afectadas |
+| RF‑12 | El sistema persistirá cada cambio de precio con insumo, precio anterior, precio nuevo, variación porcentual, incidencia por partida y fecha | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: un registro por insumo modificado, recuperable tras cerrar la sesión |
+| RF‑13 | El sistema emitirá un informe comparativo entre la versión anterior y la nueva, por partida y total, en variación absoluta y porcentual | Esencial | UC‑02 | I1 | `tests/integration/test_actualizacion_precios.py`: la suma de las variaciones por partida iguala la variación del total |
+| RF‑14 | El sistema reconstruirá cualquier presupuesto con los precios vigentes en la fecha en que fue elaborado | Esencial | UC‑02 | I1 | `tests/integration/test_reconstruccion_fecha.py`: reconstrucción idéntica al presupuesto original (RNF‑02) |
+| RF‑15 | El sistema devolverá, para una descripción en texto libre, las tres partidas del catálogo más similares con su puntaje de similitud del coseno | Esencial | UC‑03 | I2 | `tests/unit/test_normalizacion.py`: las tres propuestas salen ordenadas por puntaje descendente |
+| RF‑16 | Al aceptar una propuesta, el sistema precargará su composición y su rendimiento, conservando la referencia a la partida de origen y el puntaje que la propuso | Esencial | UC‑03 | I2 | `tests/unit/test_normalizacion.py`: la partida creada declara `codigo_partida` de origen y puntaje |
+| RF‑17 | El sistema reconocerá al menos el 80 % de las partidas de un presupuesto conocido al normalizar sus descripciones | Esencial | UC‑03 | I2 | `tests/unit/test_normalizacion.py`: tasa de reconocimiento ≥ 0,80 sobre el presupuesto de prueba |
+| RF‑18 | El sistema derivará las cantidades del dominio civil de reglas paramétricas declaradas, registrando en cada `ItemComputo` la expresión evaluada y los parámetros usados | Esencial | UC‑04 | I3.2 | `tests/unit/test_reglas_civil.py`: con a = 0,80, h = 0,80, e = 0,10 el concreto da 0,224 m3 y el encofrado 4,48 m2, y ambos ítems traen `regla` y `parametros` |
+| RF‑19 | Al modificar un parámetro dimensional o el conteo de elementos, el sistema reevaluará las reglas afectadas y recalculará cantidades, precios y curva sin intervención manual | Esencial | UC‑04 | I3.2 | `tests/integration/test_recalculo_alcance.py`: cambiar el ancho de la tanquilla altera solo las partidas dependientes |
+| RF‑20 | El sistema presentará el diferencial entre la versión anterior y la recalculada: cantidad, precio unitario y total por partida | Deseable | UC‑04 | I3.2 | `tests/integration/test_recalculo_alcance.py`: la suma de los diferenciales por partida iguala la diferencia de totales |
+| RF‑21 | El sistema ejecutará las siete reglas R1–R7 sobre cualquier `Presupuesto` y devolverá `Hallazgo` con severidad, descripción, impacto cuantificado y los `origen_id` involucrados | Esencial | UC‑05 | I4 | `tests/unit/test_verification.py`: cada regla devuelve hallazgos completos y lista vacía cuando el presupuesto cumple |
+| RF‑22 | El sistema detectará las siete inconsistencias de la línea base sobre el presupuesto de prueba que las reproduce | Esencial | UC‑05 | I4 | `tests/unit/test_verification.py`: 7 de 7, una por regla (indicador 1) |
+| RF‑23 | El sistema ordenará el informe por severidad descendente y no modificará el presupuesto auditado; una regla que no pueda evaluarse se reportará como hallazgo INFO sin interrumpir a las demás | Esencial | UC‑05 | I4 | `tests/unit/test_verification.py`: el presupuesto de entrada es idéntico antes y después, y una regla sin datos no aborta el informe |
+| RF‑24 | El sistema importará un presupuesto de un tercero en formato tabular, conservando las unidades originales escritas por su autor, para poder auditarlo | Esencial | UC‑05 | I4 | `tests/integration/test_auditoria_externa.py`: la unidad "mts" del cómputo llega intacta a la regla R3 |
+| RF‑25 | El sistema registrará rendimientos medidos con partida, valor, condiciones, fecha y referencia a la ejecución, y rechazará un rendimiento medido sin esa referencia | Esencial | UC‑06 | I6.2 | `tests/unit/test_rendimientos.py`: `TipoRendimiento.MEDIDO` sin `referencia_ejecucion` lanza error |
+| RF‑26 | Al componer un APU, el sistema propondrá el rendimiento del histórico de la partida con su dispersión (número de observaciones, media, mínimo y máximo) | Esencial | UC‑06 | I6.2 | `tests/unit/test_rendimientos.py`: la propuesta trae los cuatro estadísticos y distingue estimado de medido |
+| RF‑27 | El sistema advertirá cuando el rendimiento introducido se aparte del comportamiento observado, sin impedir el registro | Esencial | UC‑06 | I6.1, I6.2 | `tests/unit/test_anomalias.py`: un rendimiento fuera del histórico produce advertencia y el registro se completa |
+| RF‑28 | El sistema estimará el precio de mercado de una partida con la técnica que corresponda al conteo de registros del dominio y reportará MAPE, RMSE y R² de la técnica empleada | Esencial | UC‑07 | I6.3 | `tests/unit/test_prediccion.py` y `docs/resultados_ml.md`: las tres métricas y la técnica quedan declaradas (indicador 5) |
+| RF‑29 | El sistema contrastará el precio construido con el estimado, expresará la desviación en porcentaje y marcará como atípicos los precios que se aparten del histórico | Esencial | UC‑07 | I6.1, I6.3 | `tests/unit/test_anomalias.py`: una desviación fuera del rango de la clase 3 de AACE genera hallazgo de severidad ADVERTENCIA |
+| RF‑30 | El sistema generará escenarios variando `ParametrosCosto` o precios de insumos y recalculará el presupuesto completo sin alterar el presupuesto base | Deseable | UC‑08 | F.1 | `tests/unit/test_escenarios.py`: el presupuesto base es idéntico antes y después de generar el escenario |
+| RF‑31 | El sistema comparará varios escenarios entre sí y con el presupuesto base en una tabla exportable | Opcional | UC‑08 | F.1 | `tests/unit/test_escenarios.py`: la tabla trae una fila por escenario con su total y su variación |
 
-Guía de derivación por UC (mínimos esperados): UC‑01 → 4 RF; UC‑02 → 4; UC‑03 → 2; UC‑04 → 3;
-UC‑05 → 3 (reglas, informe, severidades); UC‑06 → 3; UC‑07 → 2; UC‑08 → 2. Total ≥ 23.
+Al cerrar la Sesión 0.1 existen `tests/unit/test_costing.py`, `test_contracts.py`, `test_linea_base.py`
+y `test_arquitectura.py`; los demás archivos citados los crea el incremento indicado en su fila.
 
-### 3.3 Requisitos no funcionales (ISO/IEC 25010) `[0.1]`
+Cobertura por caso de uso (mínimos exigidos por el criterio de cierre entre paréntesis):
+
+| UC | RF | Cantidad |
+|---|---|---|
+| UC‑01 | RF‑01, RF‑03, RF‑04, RF‑05, RF‑06, RF‑07, RF‑08, RF‑09 | 8 (≥ 4) |
+| UC‑02 | RF‑10, RF‑11, RF‑12, RF‑13, RF‑14 | 5 (≥ 4) |
+| UC‑03 | RF‑15, RF‑16, RF‑17 | 3 (≥ 2) |
+| UC‑04 | RF‑03, RF‑18, RF‑19, RF‑20 | 4 (≥ 3) |
+| UC‑05 | RF‑02, RF‑21, RF‑22, RF‑23, RF‑24 | 5 (≥ 3) |
+| UC‑06 | RF‑25, RF‑26, RF‑27 | 3 (≥ 3) |
+| UC‑07 | RF‑28, RF‑29 | 2 (≥ 2) |
+| UC‑08 | RF‑30, RF‑31 | 2 (≥ 2) |
+| **Total** | RF‑01 … RF‑31 (RF‑03 traza a dos UC) | **31** |
+
+### 3.3 Requisitos no funcionales (ISO/IEC 25010)
 
 | Característica | RNF | Métrica | Meta |
 |---|---|---|---|
 | Adecuación funcional | RNF‑01 exactitud del presupuesto frente a la línea base corregida | desviación % | dentro de clase 3 AACE |
 | Fiabilidad | RNF‑02 reproducibilidad: el mismo presupuesto se reconstruye a la fecha de su lista de precios | comparación exacta | 100 % |
-| Eficiencia de desempeño | RNF‑03 tiempo de recálculo masivo | segundos para N partidas | `[0.1]` |
+| Eficiencia de desempeño | RNF‑03 tiempo de recálculo masivo tras cambiar la lista de precios, medido en el equipo de desarrollo con SQLite local y sin exportación | segundos para N partidas | < 5 s con N ≤ 100 partidas |
 | Usabilidad | RNF‑04 el informe de auditoría se entiende sin formación previa | juicio de expertos (Likert) | ≥ 4/5 |
 | Mantenibilidad | RNF‑05 agregar un dominio no modifica `core/` | `git diff --stat core/`, `test_arquitectura.py` | vacío / verde |
 | Mantenibilidad | RNF‑06 cobertura de pruebas del núcleo | pytest‑cov | ≥ 80 % |
 | Portabilidad | RNF‑07 instalación con `uv sync` en Windows y Linux | pasos manuales | 0 |
-| Seguridad | RNF‑08 `[0.1]` | | |
-| Compatibilidad | RNF‑09 entrada IFC 4 de cualquier modelador | archivos de ≥ 2 herramientas | `[0.1]` |
+| Seguridad | RNF‑08 ejecución local: el sistema no requiere credenciales, no invoca servicios externos en tiempo de ejecución y los datos residen en un archivo SQLite del equipo del usuario | credenciales versionadas; llamadas de red durante la operación | 0 y 0; única excepción, la descarga inicial del modelo de `sentence‑transformers` (I2), que se declara y se cachea localmente |
+| Compatibilidad | RNF‑09 entrada IFC 4 de cualquier modelador | archivos de ≥ 2 herramientas (p. ej. Revit y Bonsai) | cantidades extraídas iguales al cálculo manual en ambos; pendiente de la compuerta G1 (I3.1), cuya alternativa es la entrada tabular documentada |
 
 ### 3.4 Reglas de negocio
 Fórmula de cálculo: [CLAUDE.md §4](../CLAUDE.md#4-especificación-del-cálculo-y-línea-base).
@@ -149,13 +396,24 @@ Criterios de degradación del módulo predictivo: [CLAUDE.md §8.1](../CLAUDE.md
 
 ---
 
-## 4. Matriz de trazabilidad `[0.1]`
+## 4. Matriz de trazabilidad
 
 | UC | RF | Prueba(s) | Incremento | Indicador de la tesis |
 |---|---|---|---|---|
-| UC‑01 | RF‑01, RF‑03, … | `tests/unit/test_costing.py`, … | I0 | 2 |
-| UC‑05 | RF‑02, … | `tests/unit/test_verification.py` (I4) | I4 | 1 |
-| … | | | | |
+| UC‑01 | RF‑01, RF‑03, RF‑04, RF‑05, RF‑06, RF‑07, RF‑08 | `tests/unit/test_costing.py`, `tests/unit/test_contracts.py`, `tests/unit/test_budget.py` (I0.5), `tests/integration/test_catalogo.py` (I0.4), `tests/integration/test_exportacion_excel.py` (I0.5), `tests/integration/test_adaptador_civil.py` (I3.1) | I0.1, I0.3, I0.4, I0.5, I3.1 | 2, 3 |
+| UC‑01 (transversal) | RF‑09 | `tests/unit/test_arquitectura.py` y `git diff --stat core/` | I0.1, I5 | 4 |
+| UC‑02 | RF‑10, RF‑11, RF‑12, RF‑13, RF‑14 | `tests/integration/test_actualizacion_precios.py` (I1), `tests/integration/test_reconstruccion_fecha.py` (I1) | I1 | 3 |
+| UC‑03 | RF‑15, RF‑16, RF‑17 | `tests/unit/test_normalizacion.py` (I2) | I2 | 3 |
+| UC‑04 | RF‑03, RF‑18, RF‑19, RF‑20 | `tests/unit/test_reglas_civil.py` (I3.2), `tests/integration/test_recalculo_alcance.py` (I3.2) | I3.2 | 2 |
+| UC‑05 | RF‑02, RF‑21, RF‑22, RF‑23, RF‑24 | `tests/unit/test_verification.py` (I4), `tests/integration/test_auditoria_externa.py` (I4) | I4 | 1 |
+| UC‑06 | RF‑25, RF‑26, RF‑27 | `tests/unit/test_rendimientos.py` (I6.2), `tests/unit/test_anomalias.py` (I6.1) | I6.1, I6.2 | 2, 5 |
+| UC‑07 | RF‑28, RF‑29 | `tests/unit/test_prediccion.py` (I6.3), `tests/unit/test_anomalias.py` (I6.1) | I6.1, I6.3 | 5 |
+| UC‑08 | RF‑30, RF‑31 | `tests/unit/test_escenarios.py` (F.1) | F.1 | 2 (apoyo) |
+
+Correspondencia RNF → verificación: RNF‑01 y RNF‑02 se comprueban en UC‑01 y UC‑02 (RF‑06, RF‑14);
+RNF‑03 en UC‑02 (RF‑11); RNF‑04 con el juicio de expertos sobre el informe de UC‑05; RNF‑05 con RF‑09;
+RNF‑06 y RNF‑07 en la Sesión F.2; RNF‑08 por inspección del repositorio y de las dependencias;
+RNF‑09 en la compuerta G1 (RF‑04).
 
 La columna "Indicador" enlaza con [docs/metodologia.md §8](metodologia.md#8-indicadores-de-la-tesis) y
 con la matriz de [docs/tesis/esqueleto_tesis.md](tesis/esqueleto_tesis.md).
