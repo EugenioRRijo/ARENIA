@@ -3,6 +3,9 @@
 `Catalogo` es la única puerta de entrada al catálogo persistido. Devuelve **contratos** cuando el
 resultado va a cruzar una frontera de paquete (`ComposicionAPU`, `Rendimiento`) y **modelos** cuando
 el llamador va a seguir trabajando con la sesión (`Partida`, `Insumo`, `ListaPrecios`).
+
+Aquí se orquestan la sesión y las consultas; **ninguna conversión entre modelo y contrato vive en
+este módulo**: las dos direcciones están en `core/catalog/mapeo.py`.
 """
 
 from __future__ import annotations
@@ -18,7 +21,17 @@ from sqlalchemy.orm import Session
 
 from core import models
 from core.catalog.errores import CatalogoIncompleto
-from core.catalog.mapeo import a_composicion, a_rendimiento
+from core.catalog.mapeo import (
+    LineaCatalogo,
+    a_composicion,
+    a_modelo_insumo,
+    a_modelo_lineas,
+    a_modelo_partida,
+    a_modelo_rendimiento,
+    a_modelo_rendimiento_estimado,
+    a_rendimiento,
+    lineas_de,
+)
 from core.contracts.apu import ComposicionAPU, Rendimiento, TipoRendimiento
 from core.contracts.dominio import Dominio
 
@@ -56,9 +69,7 @@ class Catalogo:
 
     def partida(self, codigo: str) -> models.Partida:
         """La partida de ese código. `KeyError` si no está en el catálogo."""
-        partida = self._sesion.scalars(
-            select(models.Partida).where(models.Partida.codigo == codigo)
-        ).one_or_none()
+        partida = self._buscar_partida(codigo)
         if partida is None:
             raise KeyError(f"no hay ninguna partida con código {codigo!r} en el catálogo")
         return partida
@@ -132,55 +143,28 @@ class Catalogo:
 
         Reutiliza los insumos que ya existen con el mismo (tipo, descripción, unidad) y el mismo
         precio en la lista; si el precio difiere, crea una variante (§6 del modelo de datos).
+
+        **No es reentrante.** Si la partida ya tiene composición cargada, lanza `ValueError` en vez
+        de añadir un segundo juego de líneas: duplicarlas dejaría un APU con insumos repetidos y un
+        segundo rendimiento estimado de la misma fecha, y hacerlo en silencio sería peor que fallar.
+        Reemplazar una composición existente es una operación distinta, todavía no implementada.
         """
-        partida = self._sesion.scalars(
-            select(models.Partida).where(models.Partida.codigo == composicion.codigo_partida)
-        ).one_or_none()
+        partida = self._buscar_partida(composicion.codigo_partida)
         if partida is None:
-            partida = models.Partida(
-                codigo=composicion.codigo_partida,
-                descripcion=composicion.descripcion,
-                unidad=composicion.unidad,
-                dominio=str(dominio),
-            )
+            partida = a_modelo_partida(composicion, dominio)
             self._sesion.add(partida)
             self._sesion.flush()
+        elif self._tiene_composicion(partida):
+            raise ValueError(
+                f"la partida {partida.codigo} ya tiene composición cargada; bórrela antes de "
+                "volver a cargarla (reemplazarla en silencio duplicaría sus líneas)"
+            )
 
         resumen = ResumenCarga(partida=partida)
-        orden = 0
-        for material in composicion.materiales:
-            insumo = self._resolver_insumo(
-                models.TipoInsumo.MATERIAL,
-                material.descripcion,
-                material.unidad,
-                material.precio,
-                lista,
-                resumen,
-            )
-            self._agregar_linea(partida, insumo, material.cantidad, None, orden)
-            orden += 1
-        for equipo in composicion.equipos:
-            insumo = self._resolver_insumo(
-                models.TipoInsumo.EQUIPO, equipo.descripcion, None, equipo.precio, lista, resumen
-            )
-            self._agregar_linea(partida, insumo, equipo.cantidad, equipo.depreciacion, orden)
-            orden += 1
-        for obrero in composicion.mano_obra:
-            insumo = self._resolver_insumo(
-                models.TipoInsumo.MANO_OBRA, obrero.descripcion, None, obrero.sueldo, lista, resumen
-            )
-            self._agregar_linea(partida, insumo, obrero.cantidad, None, orden)
-            orden += 1
-
-        self._sesion.add(
-            models.Rendimiento(
-                partida_id=partida.id,
-                valor=composicion.rendimiento,
-                tipo=TipoRendimiento.ESTIMADO.value,
-                fecha=fecha_rendimiento,
-                condiciones="",
-            )
-        )
+        lineas = lineas_de(composicion)
+        insumos = [self._resolver_insumo(linea, lista, resumen) for linea in lineas]
+        self._sesion.add_all(a_modelo_lineas(lineas, partida, insumos))
+        self._sesion.add(a_modelo_rendimiento_estimado(composicion, partida, fecha_rendimiento))
         self._sesion.flush()
         return resumen
 
@@ -198,14 +182,7 @@ class Catalogo:
                 raise CatalogoIncompleto(
                     f"no hay ninguna ejecución con referencia {rendimiento.referencia_ejecucion!r}"
                 )
-        modelo = models.Rendimiento(
-            partida_id=partida.id,
-            valor=rendimiento.valor,
-            tipo=rendimiento.tipo.value,
-            fecha=rendimiento.fecha,
-            condiciones=rendimiento.condiciones,
-            ejecucion_id=ejecucion.id if ejecucion is not None else None,
-        )
+        modelo = a_modelo_rendimiento(rendimiento, partida, ejecucion)
         self._sesion.add(modelo)
         self._sesion.flush()
         return modelo
@@ -229,40 +206,32 @@ class Catalogo:
             )
         return rendimiento
 
-    def _agregar_linea(
-        self,
-        partida: models.Partida,
-        insumo: models.Insumo,
-        cantidad: Decimal,
-        depreciacion: Decimal | None,
-        orden: int,
-    ) -> None:
-        self._sesion.add(
-            models.ComposicionAPU(
-                partida_id=partida.id,
-                insumo_id=insumo.id,
-                cantidad=cantidad,
-                depreciacion=depreciacion,
-                orden=orden,
+    def _buscar_partida(self, codigo: str) -> models.Partida | None:
+        return self._sesion.scalars(
+            select(models.Partida).where(models.Partida.codigo == codigo)
+        ).one_or_none()
+
+    def _tiene_composicion(self, partida: models.Partida) -> bool:
+        return (
+            self._sesion.scalar(
+                select(models.ComposicionAPU.id)
+                .where(models.ComposicionAPU.partida_id == partida.id)
+                .limit(1)
             )
+            is not None
         )
 
     def _resolver_insumo(
-        self,
-        tipo: models.TipoInsumo,
-        descripcion: str,
-        unidad: str | None,
-        precio: Decimal,
-        lista: models.ListaPrecios,
-        resumen: ResumenCarga,
+        self, linea: LineaCatalogo, lista: models.ListaPrecios, resumen: ResumenCarga
     ) -> models.Insumo:
+        """Reutiliza el insumo homónimo si su precio en la lista coincide; si no, crea variante."""
         candidatos = list(
             self._sesion.scalars(
                 select(models.Insumo)
                 .where(
-                    models.Insumo.tipo == tipo.value,
-                    models.Insumo.descripcion == descripcion,
-                    models.Insumo.unidad == unidad,
+                    models.Insumo.tipo == linea.tipo.value,
+                    models.Insumo.descripcion == linea.descripcion,
+                    models.Insumo.unidad == linea.unidad,
                 )
                 .order_by(models.Insumo.id)
             )
@@ -270,24 +239,20 @@ class Catalogo:
         for candidato in candidatos:
             vigente = self._precio_en_lista(lista, candidato)
             if vigente is None:
-                self._fijar_precio(lista, candidato, precio)
+                self._fijar_precio(lista, candidato, linea.precio)
                 return candidato
-            if vigente == precio:
+            if vigente == linea.precio:
                 return candidato
 
-        insumo = models.Insumo(
-            codigo=(
-                self._codigo_variante(candidatos[0].codigo)
-                if candidatos
-                else self._codigo_nuevo(tipo)
-            ),
-            tipo=tipo.value,
-            descripcion=descripcion,
-            unidad=unidad,
+        codigo = (
+            self._codigo_variante(candidatos[0].codigo)
+            if candidatos
+            else self._codigo_nuevo(linea.tipo)
         )
+        insumo = a_modelo_insumo(linea, codigo)
         self._sesion.add(insumo)
         self._sesion.flush()
-        self._fijar_precio(lista, insumo, precio)
+        self._fijar_precio(lista, insumo, linea.precio)
         destino = resumen.variantes if candidatos else resumen.insumos_nuevos
         destino.append(insumo)
         return insumo

@@ -207,6 +207,30 @@ def test_sembrar_es_idempotente(sesion):
     assert Catalogo(sesion).composicion("LB-03-ENC") == linea_base.APU_ENCOFRADO
 
 
+def test_cargar_composicion_dos_veces_lanza_valueerror(sesion):
+    """Recargar una partida ya compuesta duplicaría sus líneas: el catálogo lo rechaza.
+
+    `cargar_composicion` no es reentrante y no debe fingir que lo es: reemplazar en silencio
+    dejaría un APU con las líneas repetidas y un segundo rendimiento estimado de la misma fecha.
+    """
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    lineas_antes = _contar(sesion, models.ComposicionAPU)
+    rendimientos_antes = _contar(sesion, models.Rendimiento)
+
+    with pytest.raises(ValueError, match="LB-05-REL"):
+        catalogo.cargar_composicion(
+            linea_base.APU_RELLENO,
+            lista,
+            contracts.Dominio.CIVIL,
+            linea_base.FECHA_LINEA_BASE,
+        )
+
+    assert _contar(sesion, models.ComposicionAPU) == lineas_antes
+    assert _contar(sesion, models.Rendimiento) == rendimientos_antes
+    assert Catalogo(sesion).composicion("LB-05-REL") == linea_base.APU_RELLENO
+
+
 def test_script_seed_crea_la_base(tmp_path):
     ruta = tmp_path / "apu.db"
     assert main(["--db", str(ruta)]) == 0

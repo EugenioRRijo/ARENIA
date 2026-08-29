@@ -1,11 +1,20 @@
 """Conversión entre modelos persistidos y contratos de interfaz.
 
-**Único** lugar del sistema donde se cruza esa frontera (docs/modelo_datos.md §8). Los modelos se
-usan cualificados (`models.X`) y los contratos por su nombre, para que nunca se confundan los siete
-pares homónimos.
+**Único** lugar del sistema donde se cruza esa frontera, en las **dos** direcciones
+(docs/modelo_datos.md §8): modelo → contrato para reconstruir, contrato → modelo para cargar. El
+repositorio orquesta la sesión y las consultas, pero no construye modelos a partir de contratos ni
+al revés; si aparece una conversión nueva, su sitio es este módulo.
+
+Los modelos se usan cualificados (`models.X`) y los contratos por su nombre, para que nunca se
+confundan los siete pares homónimos.
 """
 
 from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
 
 from core import models
 from core.catalog.errores import CatalogoIncompleto
@@ -17,6 +26,11 @@ from core.contracts.apu import (
     Rendimiento,
     TipoRendimiento,
 )
+from core.contracts.dominio import Dominio
+
+# ---------------------------------------------------------------------------------------------
+# Modelo -> contrato
+# ---------------------------------------------------------------------------------------------
 
 
 def a_composicion(
@@ -80,4 +94,148 @@ def a_rendimiento(rendimiento: models.Rendimiento) -> Rendimiento:
         referencia_ejecucion=(
             rendimiento.ejecucion.referencia if rendimiento.ejecucion is not None else None
         ),
+    )
+
+
+# ---------------------------------------------------------------------------------------------
+# Contrato -> modelo
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class LineaCatalogo:
+    """Una línea de una `ComposicionAPU` traducida al vocabulario del catálogo.
+
+    Aplana las tres tuplas del contrato (materiales, equipos, mano de obra) en la secuencia única y
+    ordenada que persiste `models.ComposicionAPU`, y unifica los tres nombres del importe unitario
+    (`precio` de material y equipo, `sueldo` de mano de obra) en uno solo.
+    """
+
+    tipo: models.TipoInsumo
+    descripcion: str
+    unidad: str | None
+    precio: Decimal
+    cantidad: Decimal
+    depreciacion: Decimal | None
+
+
+def lineas_de(composicion: ComposicionAPU) -> list[LineaCatalogo]:
+    """Aplana un APU del contrato en el orden canónico: materiales, equipos y mano de obra.
+
+    Ese orden es el que se guarda en `ComposicionAPU.orden` y el que `a_composicion` deshace al
+    reconstruir; los dos sentidos dependen de esta única definición.
+    """
+    lineas = [
+        LineaCatalogo(
+            tipo=models.TipoInsumo.MATERIAL,
+            descripcion=material.descripcion,
+            unidad=material.unidad,
+            precio=material.precio,
+            cantidad=material.cantidad,
+            depreciacion=None,
+        )
+        for material in composicion.materiales
+    ]
+    lineas += [
+        LineaCatalogo(
+            tipo=models.TipoInsumo.EQUIPO,
+            descripcion=equipo.descripcion,
+            unidad=None,
+            precio=equipo.precio,
+            cantidad=equipo.cantidad,
+            depreciacion=equipo.depreciacion,
+        )
+        for equipo in composicion.equipos
+    ]
+    lineas += [
+        LineaCatalogo(
+            tipo=models.TipoInsumo.MANO_OBRA,
+            descripcion=obrero.descripcion,
+            unidad=None,
+            precio=obrero.sueldo,
+            cantidad=obrero.cantidad,
+            depreciacion=None,
+        )
+        for obrero in composicion.mano_obra
+    ]
+    return lineas
+
+
+def a_modelo_partida(composicion: ComposicionAPU, dominio: Dominio) -> models.Partida:
+    """Construye la cabecera persistente de un APU. El dominio es un dato, no una rama de código."""
+    return models.Partida(
+        codigo=composicion.codigo_partida,
+        descripcion=composicion.descripcion,
+        unidad=composicion.unidad,
+        dominio=str(dominio),
+    )
+
+
+def a_modelo_insumo(linea: LineaCatalogo, codigo: str) -> models.Insumo:
+    """Construye el insumo de catálogo que describe una línea. `codigo` lo genera el repositorio.
+
+    El código depende de lo que ya hay en la base (siguiente número del tipo, o sufijo de variante),
+    que es una consulta, no una conversión: por eso entra como argumento ya resuelto.
+    """
+    return models.Insumo(
+        codigo=codigo,
+        tipo=linea.tipo.value,
+        descripcion=linea.descripcion,
+        unidad=linea.unidad,
+    )
+
+
+def a_modelo_lineas(
+    lineas: Sequence[LineaCatalogo],
+    partida: models.Partida,
+    insumos: Sequence[models.Insumo],
+) -> list[models.ComposicionAPU]:
+    """Construye las líneas persistentes, numeradas por su posición en el orden canónico.
+
+    `insumos` son los insumos ya resueltos por el repositorio, uno por línea y en el mismo orden.
+    """
+    return [
+        models.ComposicionAPU(
+            partida_id=partida.id,
+            insumo_id=insumo.id,
+            cantidad=linea.cantidad,
+            depreciacion=linea.depreciacion,
+            orden=orden,
+        )
+        for orden, (linea, insumo) in enumerate(zip(lineas, insumos, strict=True))
+    ]
+
+
+def a_modelo_rendimiento(
+    rendimiento: Rendimiento,
+    partida: models.Partida,
+    ejecucion: models.Ejecucion | None = None,
+) -> models.Rendimiento:
+    """Construye el rendimiento persistente. `ejecucion` ya viene resuelta por el repositorio."""
+    return models.Rendimiento(
+        partida_id=partida.id,
+        valor=rendimiento.valor,
+        tipo=rendimiento.tipo.value,
+        fecha=rendimiento.fecha,
+        condiciones=rendimiento.condiciones,
+        ejecucion_id=ejecucion.id if ejecucion is not None else None,
+    )
+
+
+def a_modelo_rendimiento_estimado(
+    composicion: ComposicionAPU, partida: models.Partida, fecha: date
+) -> models.Rendimiento:
+    """El rendimiento ESTIMADO que declara un APU del contrato, listo para persistir.
+
+    Pasa por `contracts.Rendimiento` a propósito: así el valor queda validado por las invariantes
+    del contrato (mayor que cero) antes de tocar la base de datos.
+    """
+    return a_modelo_rendimiento(
+        Rendimiento(
+            codigo_partida=composicion.codigo_partida,
+            valor=composicion.rendimiento,
+            tipo=TipoRendimiento.ESTIMADO,
+            fecha=fecha,
+        ),
+        partida,
     )
