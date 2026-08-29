@@ -2,3 +2,7 @@
 
 Sesión I5. Muestras en data/samples/telecom/.
 """
+
+from adapters.telecom.adaptador import AdaptadorTelecom
+
+__all__ = ["AdaptadorTelecom"]
