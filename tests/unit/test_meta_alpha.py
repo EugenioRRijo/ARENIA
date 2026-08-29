@@ -83,6 +83,64 @@ def test_estado_pruebas_ok_si_ningun_archivo_tiene_fallidas_ni_errores(tmp_path)
     assert estado is meta_alpha.Estado.OK
 
 
+def test_estado_pruebas_pendiente_si_un_archivo_existe_y_otro_no(tmp_path):
+    """Caso multi-archivo (afecta a M3/M5/M6): un archivo con resultados en verde no basta
+    para tapar que otro archivo de evidencia todavia no existe."""
+    archivo_existente = tmp_path / "test_existe.py"
+    archivo_existente.write_text("# archivo de prueba, contenido irrelevante\n", encoding="utf-8")
+    archivo_inexistente = str(tmp_path / "test_no_existe.py")
+    resumenes = {
+        str(archivo_existente): meta_alpha.ResumenArchivo(
+            pasadas=3, fallidas=0, errores=0, omitidas=0
+        )
+    }
+
+    estado, detalle = meta_alpha.estado_pruebas(
+        resumenes, [str(archivo_existente), archivo_inexistente]
+    )
+
+    assert estado is meta_alpha.Estado.PENDIENTE
+    assert archivo_inexistente in detalle
+
+
+def test_estado_pruebas_falla_si_un_archivo_existente_no_tiene_resultados_registrados(tmp_path):
+    """Un archivo que existe en disco pero sin ningun testcase en el reporte JUnit (0 pasadas /
+    0 fallidas / 0 errores / 0 omitidas) no es un OK real: es ausencia de evidencia, y debe
+    reportarse como FALLA explicita en vez de leerse como 'corrio sin fallos'."""
+    archivo = tmp_path / "test_sin_resultados.py"
+    archivo.write_text("# archivo de prueba, contenido irrelevante\n", encoding="utf-8")
+
+    estado, detalle = meta_alpha.estado_pruebas({}, [str(archivo)])
+
+    assert estado is meta_alpha.Estado.FALLA
+    assert "sin resultados" in detalle
+
+
+def test_estado_ejecucion_pytest_none_si_corre_normal_con_exito():
+    assert meta_alpha.estado_ejecucion_pytest(0, "<testsuites></testsuites>") is None
+
+
+def test_estado_ejecucion_pytest_none_si_hay_pruebas_fallidas_normales():
+    """El codigo 1 es la salida normal de pytest cuando hay pruebas en rojo: no es catastrofico."""
+    assert meta_alpha.estado_ejecucion_pytest(1, "<testsuites></testsuites>") is None
+
+
+def test_estado_ejecucion_pytest_falla_explicita_si_el_codigo_no_es_0_ni_1():
+    """INTERNALERROR, conftest.py roto, señal del SO: codigos fuera de {0, 1}."""
+    estado, detalle = meta_alpha.estado_ejecucion_pytest(3, "")
+
+    assert estado is meta_alpha.Estado.FALLA
+    assert "3" in detalle
+
+
+def test_estado_ejecucion_pytest_falla_explicita_si_no_hay_junit():
+    """Corrida catastrofica sin junit.xml, aunque el codigo de salida sea 0."""
+    estado, detalle = meta_alpha.estado_ejecucion_pytest(0, "")
+
+    assert estado is meta_alpha.Estado.FALLA
+    assert "pytest no produjo resultados" in detalle
+
+
 def test_estado_nucleo_intacto_falla_con_un_commit_que_toca_adapters_y_core():
     commits = [("abc123def", ["adapters/civil/extractor.py", "core/costing/motor.py"])]
 

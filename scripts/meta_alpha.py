@@ -216,20 +216,42 @@ def _totales_suite(xml_texto: str) -> tuple[int, int, int]:
 def estado_pruebas(
     resumenes: dict[str, ResumenArchivo], archivos: Collection[str]
 ) -> tuple[Estado, str]:
-    """PENDIENTE si falta algun archivo en disco; FALLA si alguno tiene fallidas + errores > 0."""
+    """PENDIENTE si falta algun archivo en disco. FALLA si alguno tiene fallidas + errores > 0,
+    o si un archivo existente no tiene ningun resultado registrado en JUnit (0 pasadas / 0
+    fallidas / 0 errores / 0 omitidas): eso nunca es un OK real, es ausencia de evidencia.
+    """
     faltantes = sorted(archivo for archivo in archivos if not (RAIZ / archivo).exists())
     if faltantes:
         return Estado.PENDIENTE, f"falta {', '.join(faltantes)}"
 
+    sin_resultados = ResumenArchivo(0, 0, 0, 0)
     detalles = []
     hay_fallo = False
     for archivo in archivos:
-        resumen = resumenes.get(archivo, ResumenArchivo(0, 0, 0, 0))
+        resumen = resumenes.get(archivo, sin_resultados)
+        if resumen == sin_resultados:
+            hay_fallo = True
+            detalles.append(f"{archivo}: sin resultados")
+            continue
         if resumen.fallidas + resumen.errores > 0:
             hay_fallo = True
         detalles.append(f"{archivo}: {resumen.pasadas} pasadas / {resumen.fallidas} fallidas")
     estado = Estado.FALLA if hay_fallo else Estado.OK
     return estado, "; ".join(detalles)
+
+
+def estado_ejecucion_pytest(codigo_retorno: int, xml_texto: str) -> tuple[Estado, str] | None:
+    """Diagnostico de una corrida catastrofica de pytest: codigo de salida fuera de {0, 1}
+    (INTERNALERROR, `conftest.py` roto, señal del SO) o sin JUnit para leer.
+
+    Devuelve `None` cuando pytest corrio con normalidad: exito (0) o con pruebas en rojo, que
+    sale con codigo 1 y sí escribe JUnit. En caso contrario devuelve el FALLA explicito que
+    deben adoptar las metas de tipo "pruebas" y M12, en vez de interpretar la ausencia de datos
+    como si todo hubiese pasado.
+    """
+    if codigo_retorno in (0, 1) and xml_texto:
+        return None
+    return Estado.FALLA, f"pytest no produjo resultados (codigo {codigo_retorno})"
 
 
 def estado_nucleo_intacto(commits: Sequence[tuple[str, Sequence[str]]]) -> tuple[Estado, str]:
@@ -320,8 +342,13 @@ def _filas_a_json(filas: Sequence[Fila]) -> str:
 # --------------------------------------------------------------------------------------
 
 
-def _ejecutar_pytest(directorio_salida: Path, con_cobertura: bool) -> tuple[str, Decimal | None]:
-    """Corre pytest una sola vez; devuelve el XML de JUnit y el % de cobertura de `core/`."""
+def _ejecutar_pytest(
+    directorio_salida: Path, con_cobertura: bool
+) -> tuple[str, Decimal | None, int]:
+    """Corre pytest una sola vez; devuelve el XML de JUnit, el % de cobertura de `core/` y el
+    codigo de salida del proceso (para detectar una corrida catastrofica: ver
+    `estado_ejecucion_pytest`).
+    """
     junit_path = directorio_salida / "junit.xml"
     cov_path = directorio_salida / "cobertura.json"
     comando = [
@@ -336,14 +363,14 @@ def _ejecutar_pytest(directorio_salida: Path, con_cobertura: bool) -> tuple[str,
     if con_cobertura:
         comando += ["--cov=core", f"--cov-report=json:{cov_path}"]
 
-    subprocess.run(comando, cwd=RAIZ, capture_output=True, text=True)
+    resultado = subprocess.run(comando, cwd=RAIZ, capture_output=True, text=True)
 
     xml_texto = junit_path.read_text(encoding="utf-8") if junit_path.exists() else ""
     cobertura = None
     if con_cobertura and cov_path.exists():
         datos = json.loads(cov_path.read_text(encoding="utf-8"))
         cobertura = Decimal(str(datos["totals"]["percent_covered"]))
-    return xml_texto, cobertura
+    return xml_texto, cobertura, resultado.returncode
 
 
 def _ejecutar_ruff() -> tuple[int, int]:
@@ -385,7 +412,8 @@ def _commits_nucleo_intacto(base: str) -> list[tuple[str, list[str]]]:
 
 def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila]:
     with tempfile.TemporaryDirectory(prefix="meta_alpha_") as directorio_temp:
-        xml_texto, cobertura = _ejecutar_pytest(Path(directorio_temp), con_cobertura)
+        xml_texto, cobertura, codigo_pytest = _ejecutar_pytest(Path(directorio_temp), con_cobertura)
+    corrida_rota = estado_ejecucion_pytest(codigo_pytest, xml_texto)
 
     codigo_check, codigo_format = _ejecutar_ruff()
     commits = _commits_nucleo_intacto(base)
@@ -401,6 +429,12 @@ def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila
     for meta in METAS:
         if meta.tipo == "pruebas":
             estado, evidencia = estado_pruebas(resumenes, meta.archivos)
+            # Un archivo faltante sigue siendo PENDIENTE aunque pytest se haya roto: la ausencia
+            # del archivo es un hecho independiente de esta corrida. Solo se sobreescribe el
+            # resultado de un archivo que sí existe (donde "sin resultados" ya dio FALLA) para
+            # dejar un mensaje mas especifico sobre por que no hay evidencia.
+            if corrida_rota is not None and estado is not Estado.PENDIENTE:
+                estado, evidencia = corrida_rota
         elif meta.tipo == "git":
             estado, evidencia = estado_nucleo_intacto(commits)
         elif meta.tipo == "cobertura":
@@ -412,6 +446,8 @@ def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila
                 estado, evidencia = estado_cobertura(cobertura, Decimal(umbral_cobertura))
         elif meta.tipo == "ruff":
             estado, evidencia = estado_ruff(codigo_check, codigo_format)
+        elif corrida_rota is not None:  # "suite", corrida catastrofica de pytest
+            estado, evidencia = corrida_rota
         else:  # "suite"
             estado, evidencia = estado_suite(total, fallidas, errores)
         filas.append(Fila(meta.codigo, meta.titulo, estado, evidencia))
