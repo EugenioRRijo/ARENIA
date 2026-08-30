@@ -1,0 +1,283 @@
+"""Persistencia del presupuesto: guardar el documento emitido y volver a leerlo.
+
+Implementa el versionado híbrido de `docs/modelo_datos.md` §5. Al guardar, cada renglón congela su
+`ResultadoAPU` completo (la parte «documento»: lo que se firmó) y el presupuesto copia los cuatro
+`ParametrosCosto` con que se calculó. Al cargar, la composición se **reconstruye** desde el catálogo
+con la lista de precios que el presupuesto referencia y se vuelve a pasar por el motor: si el precio
+unitario reconstruido no coincide con la instantánea, el presupuesto y el catálogo se han desligado
+y `cargar_presupuesto` lo denuncia con `ValueError` en vez de devolver un documento adulterado.
+El `Presupuesto` devuelto lleva la instantánea, no el recálculo: es lo que se emitió.
+
+`core/catalog/mapeo.py` es el único lugar donde se cruza la frontera modelo↔contrato **del
+catálogo**; este módulo es el único donde se cruza la del **presupuesto**. Los modelos se usan
+siempre cualificados (`models.X`) y los contratos por su nombre: siete nombres coinciden.
+
+Los tres campos JSON‑texto (`ItemComputo.parametros`, `ItemComputo.especificaciones` y
+`Hallazgo.origen_ids`) se serializan con los `Decimal` **como cadena**, según
+`docs/modelo_datos.md` §4.3, para que la ida y vuelta sea exacta.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Mapping
+from decimal import Decimal
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from core import models
+from core.catalog import Catalogo
+from core.contracts.apu import ParametrosCosto, ResultadoAPU
+from core.contracts.dominio import Dominio
+from core.contracts.item_computo import ItemComputo, OrigenTipo
+from core.contracts.presupuesto import PartidaPresupuestada, Presupuesto, PuntoCurva
+from core.costing import calcular_apu
+from core.verification.directivas import CLAVE_UNIDAD_ORIGINAL
+from core.verification.informe import InformeAuditoria
+
+__all__ = ["TOLERANCIA_RECONSTRUCCION", "cargar_presupuesto", "guardar_presupuesto"]
+
+#: Diferencia máxima admitida entre el precio unitario reconstruido y el de la instantánea.
+TOLERANCIA_RECONSTRUCCION = Decimal("0.000001")
+
+
+def guardar_presupuesto(
+    session: Session,
+    presupuesto: Presupuesto,
+    informe: InformeAuditoria,
+    proyecto: models.Proyecto,
+    lista: models.ListaPrecios,
+    parametros: ParametrosCosto,
+) -> models.Presupuesto:
+    """Persiste el presupuesto con su cómputo, su curva y los hallazgos de su informe.
+
+    Deja la transacción abierta: confirmar o deshacer es decisión de quien llama. Cada partida del
+    presupuesto debe existir en el catálogo (`KeyError` si no), porque el renglón persistido la
+    referencia por clave foránea, y el informe tiene que ser el de este presupuesto (`ValueError`):
+    los hallazgos se guardan colgando de él y atribuirlos a otro documento sería falsear la
+    auditoría.
+    """
+    if informe.codigo_presupuesto != presupuesto.codigo:
+        raise ValueError(
+            f"el informe audita el presupuesto {informe.codigo_presupuesto!r}, "
+            f"no el {presupuesto.codigo!r} que se está guardando"
+        )
+
+    catalogo = Catalogo(session)
+    # Las partidas del catálogo se resuelven antes de construir nada: así un código desconocido
+    # falla sin dejar a medias el presupuesto, y ninguna consulta posterior dispara el autoflush
+    # de una jerarquía todavía incompleta.
+    catalogadas = [catalogo.partida(p.item.codigo_partida) for p in presupuesto.partidas]
+
+    modelo = models.Presupuesto(
+        codigo=presupuesto.codigo,
+        proyecto=proyecto,
+        fecha=presupuesto.fecha,
+        moneda=presupuesto.moneda,
+        lista_precios=lista,
+        fcas=parametros.fcas,
+        bono_alimentacion=parametros.bono_alimentacion,
+        administracion=parametros.administracion,
+        utilidad=parametros.utilidad,
+    )
+
+    for orden, (partida, catalogada) in enumerate(
+        zip(presupuesto.partidas, catalogadas, strict=True)
+    ):
+        item = _a_modelo_item(partida.item, modelo)
+        modelo.partidas.append(_a_modelo_renglon(partida, catalogada, item, orden))
+
+    for orden, punto in enumerate(presupuesto.curva):
+        modelo.curva.append(
+            models.PuntoCurva(
+                orden=orden,
+                periodo=punto.periodo,
+                monto=punto.monto,
+                acumulado=punto.acumulado,
+            )
+        )
+
+    for hallazgo in informe.hallazgos:
+        modelo.hallazgos.append(
+            models.Hallazgo(
+                regla=hallazgo.regla,
+                severidad=int(hallazgo.severidad),
+                descripcion=hallazgo.descripcion,
+                impacto=hallazgo.impacto,
+                origen_ids=json.dumps(list(hallazgo.origen_ids)),
+                valor_observado=hallazgo.valor_observado,
+                valor_esperado=hallazgo.valor_esperado,
+            )
+        )
+
+    session.add(modelo)
+    session.flush()
+    return modelo
+
+
+def cargar_presupuesto(
+    session: Session, proyecto_nombre: str, codigo: str, catalogo: Catalogo
+) -> Presupuesto:
+    """Reconstruye el `Presupuesto` del contrato a partir de lo persistido.
+
+    Cada renglón se revalora con `Catalogo.composicion` sobre la lista de precios que el propio
+    presupuesto referencia y se compara con la instantánea guardada: una diferencia mayor que
+    `TOLERANCIA_RECONSTRUCCION` en el precio unitario es `ValueError`.
+    """
+    modelo = _buscar(session, proyecto_nombre, codigo)
+    parametros = _parametros_de(modelo)
+
+    partidas = tuple(
+        _a_contrato_renglon(renglon, modelo, catalogo, parametros) for renglon in modelo.partidas
+    )
+    curva = tuple(
+        PuntoCurva(periodo=punto.periodo, monto=punto.monto, acumulado=punto.acumulado)
+        for punto in modelo.curva
+    )
+    return Presupuesto(
+        codigo=modelo.codigo,
+        fecha=modelo.fecha,
+        moneda=modelo.moneda,
+        partidas=partidas,
+        curva=curva,
+    )
+
+
+# ---------------------------------------------------------------------------------------------
+# Contrato -> modelo
+# ---------------------------------------------------------------------------------------------
+
+
+def _a_modelo_item(item: ItemComputo, presupuesto: models.Presupuesto) -> models.ItemComputo:
+    """La cantidad de obra, con su unidad original y sus dos diccionarios en JSON‑texto."""
+    return models.ItemComputo(
+        codigo_partida=item.codigo_partida,
+        descripcion=item.descripcion,
+        unidad_original=item.especificaciones.get(CLAVE_UNIDAD_ORIGINAL, item.unidad),
+        unidad=item.unidad,
+        cantidad=item.cantidad,
+        origen_id=item.origen_id,
+        origen_tipo=str(item.origen_tipo),
+        dominio=str(item.dominio),
+        presupuesto=presupuesto,
+        regla=item.regla,
+        parametros=_json_decimales(item.parametros),
+        especificaciones=json.dumps(dict(item.especificaciones)),
+    )
+
+
+def _a_modelo_renglon(
+    partida: PartidaPresupuestada,
+    catalogada: models.Partida,
+    item: models.ItemComputo,
+    orden: int,
+) -> models.PartidaPresupuestada:
+    """El renglón con la instantánea completa del `ResultadoAPU` (desnormalización de §4.2)."""
+    resultado = partida.resultado
+    return models.PartidaPresupuestada(
+        partida=catalogada,
+        item_computo=item,
+        orden=orden,
+        cantidad=partida.item.cantidad,
+        materiales=resultado.materiales,
+        equipos=resultado.equipos,
+        mano_obra=resultado.mano_obra,
+        costo_directo=resultado.costo_directo,
+        con_administracion=resultado.con_administracion,
+        precio_unitario=resultado.precio_unitario,
+        total=partida.total,
+    )
+
+
+def _json_decimales(valores: Mapping[str, Decimal]) -> str:
+    """JSON de un diccionario de `Decimal`, con cada valor como cadena (§4.3)."""
+    return json.dumps({clave: str(valor) for clave, valor in valores.items()})
+
+
+# ---------------------------------------------------------------------------------------------
+# Modelo -> contrato
+# ---------------------------------------------------------------------------------------------
+
+
+def _buscar(session: Session, proyecto_nombre: str, codigo: str) -> models.Presupuesto:
+    modelo = session.scalars(
+        select(models.Presupuesto)
+        .join(models.Proyecto)
+        .where(models.Proyecto.nombre == proyecto_nombre, models.Presupuesto.codigo == codigo)
+    ).one_or_none()
+    if modelo is None:
+        raise KeyError(f"no hay ningún presupuesto {codigo!r} en el proyecto {proyecto_nombre!r}")
+    return modelo
+
+
+def _parametros_de(modelo: models.Presupuesto) -> ParametrosCosto:
+    """Los `ParametrosCosto` congelados en la fila del presupuesto.
+
+    El contrato `Presupuesto` no los lleva (insuficiencia registrada en la bitácora de I0.5): la
+    fila sí, y de ahí salen.
+    """
+    return ParametrosCosto(
+        fcas=modelo.fcas,
+        bono_alimentacion=modelo.bono_alimentacion,
+        administracion=modelo.administracion,
+        utilidad=modelo.utilidad,
+    )
+
+
+def _a_contrato_renglon(
+    renglon: models.PartidaPresupuestada,
+    presupuesto: models.Presupuesto,
+    catalogo: Catalogo,
+    parametros: ParametrosCosto,
+) -> PartidaPresupuestada:
+    codigo = renglon.partida.codigo
+    composicion = catalogo.composicion(
+        codigo, fecha=presupuesto.fecha, lista=presupuesto.lista_precios
+    )
+    reconstruido = calcular_apu(composicion, parametros)
+    _verificar(codigo, reconstruido, renglon)
+    return PartidaPresupuestada(
+        item=_a_contrato_item(renglon.item_computo),
+        apu=composicion,
+        resultado=_a_contrato_resultado(renglon),
+    )
+
+
+def _verificar(
+    codigo: str, reconstruido: ResultadoAPU, renglon: models.PartidaPresupuestada
+) -> None:
+    diferencia = abs(reconstruido.precio_unitario - renglon.precio_unitario)
+    if diferencia > TOLERANCIA_RECONSTRUCCION:
+        raise ValueError(
+            f"la partida {codigo} no se reconstruye: el catálogo da un precio unitario de "
+            f"{reconstruido.precio_unitario} y el presupuesto guardó "
+            f"{renglon.precio_unitario} (difieren en {diferencia})"
+        )
+
+
+def _a_contrato_item(item: models.ItemComputo) -> ItemComputo:
+    return ItemComputo(
+        codigo_partida=item.codigo_partida,
+        descripcion=item.descripcion,
+        unidad=item.unidad,
+        cantidad=item.cantidad,
+        origen_id=item.origen_id,
+        origen_tipo=OrigenTipo(item.origen_tipo),
+        dominio=Dominio(item.dominio),
+        regla=item.regla,
+        parametros={clave: Decimal(valor) for clave, valor in json.loads(item.parametros).items()},
+        especificaciones=json.loads(item.especificaciones),
+    )
+
+
+def _a_contrato_resultado(renglon: models.PartidaPresupuestada) -> ResultadoAPU:
+    """La instantánea tal como se emitió, no el recálculo: es la parte «documento» del modelo."""
+    return ResultadoAPU(
+        materiales=renglon.materiales,
+        equipos=renglon.equipos,
+        mano_obra=renglon.mano_obra,
+        costo_directo=renglon.costo_directo,
+        con_administracion=renglon.con_administracion,
+        precio_unitario=renglon.precio_unitario,
+    )
