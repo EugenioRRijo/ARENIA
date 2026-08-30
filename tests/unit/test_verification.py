@@ -103,6 +103,22 @@ def test_el_evaluador_indica_el_parametro_faltante():
         evaluar("largo * ancho", {"largo": Decimal("2")})
 
 
+@pytest.mark.parametrize(
+    "expresion",
+    [
+        "1e999999 * 1e999999",
+        "9e999999 + 9e999999",
+        "9e999999 - -9e999999",
+    ],
+)
+def test_el_evaluador_convierte_el_desbordamiento_en_expresion_invalida(expresion):
+    """`decimal.Overflow` es un `ArithmeticError` como `DivisionByZero`: los tres operadores
+    (Add, Sub, Mult) deben quedar tan protegidos como Div y Pow, no solo estos dos.
+    """
+    with pytest.raises(ExpresionInvalida):
+        evaluar(expresion, {})
+
+
 def test_nombres_de_devuelve_los_parametros_de_la_expresion():
     assert nombres_de("longitud * (1 + desperdicio)") == frozenset({"longitud", "desperdicio"})
 
@@ -468,6 +484,60 @@ def test_r5_cae_a_la_tolerancia_del_sistema_si_la_declarada_no_es_numerica(presu
     severidades = [h.severidad for h in hallazgos]
     assert Severidad.ADVERTENCIA in severidades
     assert Severidad.ERROR in severidades
+
+
+@pytest.mark.parametrize("tolerancia_invalida", ["nan", "Infinity", "-0.05"])
+def test_r5_cae_a_la_tolerancia_del_sistema_si_la_declarada_es_nan_infinita_o_negativa(
+    presupuesto, tolerancia_invalida
+):
+    """`Decimal("nan")`, `Decimal("Infinity")` y `Decimal("-0.05")` construyen sin lanzar
+    `InvalidOperation`: fallan (o mienten) recien al comparar en `_dentro_de_tolerancia`. La
+    regla debe tratarlas igual que una tolerancia no numerica: advertir y usar la del sistema,
+    sin lanzar y sin ocultar el error de balance detras de una tolerancia negativa siempre
+    incumplida.
+    """
+    con_tolerancia_rota = _con_item(
+        presupuesto,
+        linea_base.APU_RELLENO.codigo_partida,
+        especificaciones={
+            directivas.CLAVE_BALANCE: BALANCE_RELLENO,
+            directivas.CLAVE_TOLERANCIA: tolerancia_invalida,
+        },
+    )
+    hallazgos = BalanceVolumetrico().evaluar(con_tolerancia_rota)
+    severidades = [h.severidad for h in hallazgos]
+    assert Severidad.ADVERTENCIA in severidades
+    assert Severidad.ERROR in severidades
+    advertencia = next(h for h in hallazgos if h.severidad is Severidad.ADVERTENCIA)
+    assert "tolerancia de balance no numerica" in advertencia.descripcion
+
+
+def test_r1_reporta_una_regla_que_desborda_en_vez_de_reventar_auditar(presupuesto):
+    roto = _con_item(
+        presupuesto,
+        linea_base.APU_EXCAVACION.codigo_partida,
+        regla="1e999999 * 1e999999",
+    )
+    informe = auditar(roto)
+    hallazgos = [
+        h for h in informe.hallazgos if h.regla == "R1" and h.origen_ids == ("computo:LB-01-EXC",)
+    ]
+    assert len(hallazgos) == 1
+    assert hallazgos[0].severidad is Severidad.ERROR
+    assert "no se puede evaluar" in hallazgos[0].descripcion
+
+
+def test_r5_reporta_un_balance_que_desborda_en_vez_de_reventar_auditar(presupuesto):
+    roto = _con_item(
+        presupuesto,
+        linea_base.APU_RELLENO.codigo_partida,
+        especificaciones={directivas.CLAVE_BALANCE: "1e999999 * 1e999999"},
+    )
+    informe = auditar(roto)
+    hallazgos = [h for h in informe.hallazgos if h.regla == "R5"]
+    assert len(hallazgos) == 1
+    assert hallazgos[0].severidad is Severidad.ERROR
+    assert "no se puede evaluar" in hallazgos[0].descripcion
 
 
 # ---------------------------------------------------------------------------------------------
