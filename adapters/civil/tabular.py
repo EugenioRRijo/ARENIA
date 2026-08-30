@@ -117,8 +117,8 @@ class AdaptadorCivilTabular(AdaptadorDominio):
                     "(se necesita el diametro de tuberia)"
                 )
             balance = (
-                f"{self._codigos['excavacion']} - {self._codigos['concreto']} - "
-                f"{self._codigos['tuberia']} * {factor_volumen_tuberia}"
+                f"{{{self._codigos['excavacion']}}} - {{{self._codigos['concreto']}}} - "
+                f"{{{self._codigos['tuberia']}}} * {factor_volumen_tuberia}"
             )
             items.append(
                 computar_relleno(
