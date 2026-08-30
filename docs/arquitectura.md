@@ -739,8 +739,9 @@ una versión nueva del presupuesto; el presupuesto anterior sigue reconstruyénd
 ## 4. Vista de desarrollo (definitivo)
 
 El diagrama de componentes es el más importante del trabajo: debe hacer evidente que **agregar un
-adaptador no toca el núcleo**. Las flechas son dependencias de importación; `tests/unit/test_arquitectura.py`
-las verifica en cada ejecución de la suite.
+adaptador no toca el núcleo**. Las flechas son dependencias de importación: las que cruzan la
+frontera de `core/` las verifica `tests/unit/test_arquitectura.py` en cada ejecución de la suite; las
+internas del núcleo se mantienen por revisión (ver el final de esta sección).
 
 ```mermaid
 flowchart TB
