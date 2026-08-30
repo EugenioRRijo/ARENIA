@@ -1,4 +1,40 @@
 """Presupuesto, curva de inversión (cierra al 100 % por construcción) y exportación a Excel.
 
 Sesiones I0.5 e I1.
+
+Flujo completo de la Sesión I0.5::
+
+    from core.budget import elaborar, exportar_excel, plan_secuencial
+
+    resultado = elaborar(items, composiciones, parametros, codigo="001", fecha=hoy)
+    exportar_excel(resultado.presupuesto, resultado.informe, Path("presupuesto.xlsx"))
+
+`elaborar` audita siempre: no existe forma de obtener el presupuesto sin su informe (principio 7 de
+CLAUDE.md §2).
+
+La persistencia del presupuesto (`guardar_presupuesto` y `cargar_presupuesto`) queda pendiente:
+depende de `core.models` y `core.catalog`, que no están en la base de esta rama. Ver la bitácora
+`docs/bitacora/2026-08-29-I0.5-presupuesto.md`.
 """
+
+from core.budget.curva import (
+    PeriodoPlan,
+    PlanInvalido,
+    con_curva,
+    generar_curva,
+    plan_secuencial,
+)
+from core.budget.excel import exportar_excel
+from core.budget.presupuesto import ResultadoElaboracion, elaborar, generar_presupuesto
+
+__all__ = [
+    "PeriodoPlan",
+    "PlanInvalido",
+    "ResultadoElaboracion",
+    "con_curva",
+    "elaborar",
+    "exportar_excel",
+    "generar_curva",
+    "generar_presupuesto",
+    "plan_secuencial",
+]

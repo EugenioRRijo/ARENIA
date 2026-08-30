@@ -216,4 +216,4 @@ def presupuesto_corregido() -> Presupuesto:
 
     composiciones = _composiciones_corregidas()
     sin_curva = _presupuesto(_items_corregidos(composiciones), composiciones)
-    return replace(sin_curva, curva=tuple(generar_curva(plan_secuencial(sin_curva))))
+    return replace(sin_curva, curva=tuple(generar_curva(sin_curva, plan_secuencial(sin_curva))))
