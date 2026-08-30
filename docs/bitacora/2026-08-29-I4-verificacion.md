@@ -64,3 +64,40 @@ Ninguno bloqueante. `core/` no se tocó fuera de `core/verification/`; ningún c
 `tests/unit/test_arquitectura.py` sigue verde (40 pruebas), la suite completa queda en 202 pruebas
 verdes y 1 omitida (la del presupuesto corregido, a la espera de `core.budget`), con `ruff check .`
 y `ruff format --check .` limpios y sin advertencias en la salida de pytest.
+
+## Ronda 1 (revisión de calidad)
+
+La revisión encontró dos rutas de datos donde una regla podía lanzar una excepción en vez de
+producir un hallazgo, incumpliendo el requisito del brief ("ninguna regla lanza excepciones por
+datos"). Ambas se corrigieron con un cambio mínimo, sin tocar la forma pública de nada.
+
+1. **`expresiones.py:120‑136` (`_evaluar_binario`): el `try/except ArithmeticError` solo envolvía
+   `Div` y `Pow`.** `Add`, `Sub` y `Mult` retornaban antes de llegar al `try`, así que un
+   `decimal.Overflow` (subclase de `ArithmeticError`) producido por una constante extrema —por
+   ejemplo `evaluar("1e999999 * 1e999999", {})`— se propagaba sin convertirse en
+   `ExpresionInvalida`. Como `TrazabilidadGeometrica._verificar_regla` y
+   `BalanceVolumetrico._verificar` solo capturan `(ExpresionInvalida, ParametroFaltante)`, un
+   `ItemComputo.regla` o un `_balance` con esa forma hacía reventar `auditar()` en vez de producir
+   un hallazgo ERROR. **Corrección:** se movió el despacho completo de los cinco operadores dentro
+   del mismo `try`, de modo que cualquier `ArithmeticError` —no solo división entre cero o potencia
+   no representable— sale como `ExpresionInvalida`.
+
+2. **`reglas.py` (`BalanceVolumetrico._tolerancia`): `Decimal(declarada)` acepta `"nan"`,
+   `"Infinity"` y `"-0.05"`, valores que `except InvalidOperation` no atrapa** porque la
+   construcción del `Decimal` no falla; fallan (o mienten) después, al comparar en
+   `_dentro_de_tolerancia`. Con `"nan"` la comparación lanzaba `decimal.InvalidOperation`
+   directamente; con `"-0.05"` la regla marcaba ERROR en todo balance sin emitir la ADVERTENCIA que
+   el propio código pretendía (una tolerancia negativa vuelve la comparación siempre falsa).
+   **Corrección:** tras construir el `Decimal`, se exige `tolerancia.is_finite() and tolerancia >=
+   0`; si no se cumple, cae al mismo aviso ADVERTENCIA ya escrito para la tolerancia no numérica,
+   sin duplicar el mensaje.
+
+**Pruebas añadidas** (TDD, RED confirmado contra el código sin corregir y GREEN contra el corregido,
+ambas evidencias en el reporte de esta ronda): `test_el_evaluador_convierte_el_desbordamiento_en_expresion_invalida`
+(parametrizada con Add/Sub/Mult desbordados), `test_r1_reporta_una_regla_que_desborda_en_vez_de_reventar_auditar`,
+`test_r5_reporta_un_balance_que_desborda_en_vez_de_reventar_auditar` y
+`test_r5_cae_a_la_tolerancia_del_sistema_si_la_declarada_es_nan_infinita_o_negativa` (parametrizada
+con `"nan"`, `"Infinity"`, `"-0.05"`).
+
+No se tocó nada más: ni la forma de `reglas.py`, ni los Minor diferidos a la revisión final, ni
+ningún archivo fuera de las rutas exclusivas de esta tarea.

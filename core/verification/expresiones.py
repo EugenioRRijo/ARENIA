@@ -122,17 +122,19 @@ def _evaluar_binario(nodo: ast.BinOp, fuente: str, valores: Mapping[str, Decimal
         raise ExpresionInvalida(f"operador binario no permitido: {type(nodo.op).__name__}")
     izquierda = _evaluar_nodo(nodo.left, fuente, valores)
     derecha = _evaluar_nodo(nodo.right, fuente, valores)
-    if isinstance(nodo.op, ast.Add):
-        return izquierda + derecha
-    if isinstance(nodo.op, ast.Sub):
-        return izquierda - derecha
-    if isinstance(nodo.op, ast.Mult):
-        return izquierda * derecha
     try:
+        if isinstance(nodo.op, ast.Add):
+            return izquierda + derecha
+        if isinstance(nodo.op, ast.Sub):
+            return izquierda - derecha
+        if isinstance(nodo.op, ast.Mult):
+            return izquierda * derecha
         if isinstance(nodo.op, ast.Div):
             return izquierda / derecha
         return izquierda**derecha  # ast.Pow: no queda otro operador posible
-    except ArithmeticError as error:  # division entre cero, potencia no representable
+    except ArithmeticError as error:
+        # desbordamiento, division entre cero, potencia no representable: cualquier operador
+        # aritmetico puede fallar con un Decimal suficientemente extremo, no solo Div y Pow.
         raise ExpresionInvalida(f"operacion aritmetica imposible: {error}") from error
 
 

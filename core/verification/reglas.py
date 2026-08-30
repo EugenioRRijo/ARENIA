@@ -460,8 +460,14 @@ class BalanceVolumetrico(ReglaVerificacion):
         if declarada is None:
             return self.tolerancia_relativa, []
         try:
-            return Decimal(declarada), []
+            tolerancia = Decimal(declarada)
         except InvalidOperation:
+            tolerancia = None
+        # `Decimal("nan")` y `Decimal("Infinity")` no lanzan `InvalidOperation` al construirse:
+        # fallan despues, al comparar. Una tolerancia negativa tampoco lanza, pero vuelve la
+        # comparacion de `_dentro_de_tolerancia` siempre falsa. Las tres son datos invalidos y
+        # caen al mismo aviso que la tolerancia no numerica.
+        if tolerancia is None or not tolerancia.is_finite() or tolerancia < _CERO:
             aviso = Hallazgo(
                 regla=self.codigo,
                 severidad=Severidad.ADVERTENCIA,
@@ -472,6 +478,7 @@ class BalanceVolumetrico(ReglaVerificacion):
                 origen_ids=(item.origen_id,),
             )
             return self.tolerancia_relativa, [aviso]
+        return tolerancia, []
 
 
 # ---------------------------------------------------------------------------------------------
