@@ -107,7 +107,7 @@ def test_los_items_son_trazables():
             excavacion=Decimal("11.28"),
             concreto=Decimal("0.896"),
             volumen_tuberia=Decimal("0.2"),
-            balance="LB-01-EXC - LB-04-CON - LB-02-TUB * 0.008107338624",
+            balance="{LB-01-EXC} - {LB-04-CON} - {LB-02-TUB} * 0.008107338624",
         ),
     ]
 
@@ -141,7 +141,7 @@ def test_adaptador_tabular_extrae_la_muestra():
     assert tuberia.cantidad == Decimal("25.2")
 
     assert CLAVE_BALANCE in relleno.especificaciones
-    assert relleno.especificaciones[CLAVE_BALANCE].startswith(CODIGOS["excavacion"])
+    assert relleno.especificaciones[CLAVE_BALANCE].startswith(f"{{{CODIGOS['excavacion']}}}")
 
 
 def test_evaluador_rechaza_llamadas_y_atributos():
