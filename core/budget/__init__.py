@@ -12,9 +12,9 @@ Flujo completo de la Sesión I0.5::
 `elaborar` audita siempre: no existe forma de obtener el presupuesto sin su informe (principio 7 de
 CLAUDE.md §2).
 
-La persistencia del presupuesto (`guardar_presupuesto` y `cargar_presupuesto`) queda pendiente:
-depende de `core.models` y `core.catalog`, que no están en la base de esta rama. Ver la bitácora
-`docs/bitacora/2026-08-29-I0.5-presupuesto.md`.
+`guardar_presupuesto` y `cargar_presupuesto` implementan el versionado híbrido de
+`docs/modelo_datos.md` §5: el renglón guardado congela su `ResultadoAPU` y al cargar se comprueba
+que el catálogo sigue reproduciéndolo.
 """
 
 from core.budget.curva import (
@@ -25,16 +25,19 @@ from core.budget.curva import (
     plan_secuencial,
 )
 from core.budget.excel import exportar_excel
+from core.budget.persistencia import cargar_presupuesto, guardar_presupuesto
 from core.budget.presupuesto import ResultadoElaboracion, elaborar, generar_presupuesto
 
 __all__ = [
     "PeriodoPlan",
     "PlanInvalido",
     "ResultadoElaboracion",
+    "cargar_presupuesto",
     "con_curva",
     "elaborar",
     "exportar_excel",
     "generar_curva",
     "generar_presupuesto",
+    "guardar_presupuesto",
     "plan_secuencial",
 ]
