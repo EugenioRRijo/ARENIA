@@ -56,14 +56,28 @@ esta muestra.
 
 ## Supuestos declarados (no vienen de ningún PDF)
 
-Ningún PDF discrimina el cableado por tramo, solo el total de cable comprado
-(`Presupuesto_1_ARENAZA.pdf`: una bobina de 90 m; `Presupuesto_2_ARENAZA.pdf`: dos bobinas, 90 m y
-80 m). Por eso, para que la regla `longitud_m * (1 + reserva)` sea evaluable, esta muestra **supone**
-una topología plausible (rack -> switch núcleo -> switch de distribución -> puntos de acceso) y
-reparte una longitud entre sus cinco enlaces (`ENL-01`..`ENL-05`, que suman 95 m antes de reserva,
-del orden de una bobina de 90 m), cada uno con su propia fracción de reserva. Es el mismo tipo de
-supuesto declarado que el sobreancho y el espesor de fondo en `data/samples/civil/README.md`: ninguno
-sale de la fuente primaria, ambos quedan documentados aquí para no confundirse con un dato medido.
+Ningún PDF discrimina el cableado por tramo. Lo que compran es **cable por bobina, medido en
+piezas**, nunca en metros: `Presupuesto_1_ARENAZA.pdf` lleva "BOBINA CABLE UTP CAT 6 (300 M)"
+(renglón 1, 1 pieza, 82,68 USD) y "Bobina Cable Utp Cat6 305 m Int" (renglón 7, 1 pieza,
+211,21 USD); `Presupuesto_2_ARENAZA.pdf` lleva esas dos mismas bobinas (renglones 1 y 2,
+96,99 y 211,21 USD). Son del orden de 605 m disponibles en cada presupuesto, sin reparto por tramo.
+
+**Corrección de la revisión final del sprint alpha (ítem 10).** Una versión anterior de este README
+atribuía a esas bobinas "90 m" (`Presupuesto_1`) y "90 m y 80 m" (`Presupuesto_2`). Los PDF no dicen
+eso: los 90 y los 80 son **metros de "Tubo Corrugado Flexible 1 Pulgada"** —la canalización, no el
+cable—, renglón 3 de `Presupuesto_1_ARENAZA.pdf` y renglón 5 de `Presupuesto_2_ARENAZA.pdf`, la
+única partida medida en metros de los dos documentos. Ese renglón, además, **no coincide consigo
+mismo** en el segundo presupuesto: sus cómputos métricos dicen 80 m y su presupuesto 90 m (99,75 ×
+3 tubos de 30 m = 299,25 USD). Es una inconsistencia de la fuente primaria, del mismo tipo que las
+siete de la línea base civil; queda anotada aquí, no corregida.
+
+Por eso, para que la regla `longitud_m * (1 + reserva)` sea evaluable, esta muestra **supone** una
+topología plausible (rack -> switch núcleo -> switch de distribución -> puntos de acceso) y reparte
+una longitud entre sus cinco enlaces (`ENL-01`..`ENL-05`, que suman 95 m antes de reserva, del orden
+de los 90 m de canalización del primer presupuesto y muy por debajo de los ~605 m de bobina
+comprados), cada uno con su propia fracción de reserva. Es el mismo tipo de supuesto declarado que
+el sobreancho y el espesor de fondo en `data/samples/civil/README.md`: ninguno sale de la fuente
+primaria, ambos quedan documentados aquí para no confundirse con un dato medido.
 
 ## Política de mano de obra "50 % del total"
 

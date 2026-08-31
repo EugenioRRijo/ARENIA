@@ -123,7 +123,7 @@ METAS: tuple[Meta, ...] = (
         "pruebas",
         ("tests/unit/test_arquitectura.py",),
     ),
-    Meta("M9", "Núcleo intacto: ningún commit de adapters/ml toca core/", "git"),
+    Meta("M9", "Núcleo intacto: ni un commit ni una rama de adaptador tocan core/", "git"),
     Meta("M10", "Cobertura de core/ >= umbral", "cobertura"),
     Meta("M11", "ruff check y ruff format --check limpios", "ruff"),
     Meta("M12", "Suite completa sin fallos ni errores", "suite"),
@@ -254,11 +254,25 @@ def estado_ejecucion_pytest(codigo_retorno: int, xml_texto: str) -> tuple[Estado
     return Estado.FALLA, f"pytest no produjo resultados (codigo {codigo_retorno})"
 
 
-def estado_nucleo_intacto(commits: Sequence[tuple[str, Sequence[str]]]) -> tuple[Estado, str]:
-    """FALLA si algun commit toca a la vez `adapters/`|`ml/` y `core/`; PENDIENTE sin commits."""
-    if not commits:
+def estado_nucleo_intacto(
+    commits: Sequence[tuple[str, Sequence[str]]],
+    ramas: Sequence[tuple[str, Sequence[str]]] = (),
+) -> tuple[Estado, str]:
+    """Las dos evidencias de la hipotesis central (CLAUDE.md seccion 1), en una sola meta.
+
+    1. **Por commit** (`commits`): FALLA si algun commit toca a la vez `adapters/`|`ml/` y `core/`.
+    2. **Por rama** (`ramas`): FALLA si el `git diff core/` del rango completo de una rama que
+       incorpora un dominio no esta vacio. Cierra el agujero de la regla por commit, que solo ve
+       los commits listados por `git log -- adapters ml`: un commit de esa misma rama que tocara
+       **solo** `core/` le seria invisible.
+
+    Cada elemento de `ramas` es `(nombre legible de la rama, archivos de core/ que cambia)`.
+    PENDIENTE si no hay ni commits ni ramas que evaluar.
+    """
+    if not commits and not ramas:
         return Estado.PENDIENTE, "sin commits que toquen adapters/ o ml/ desde la base"
 
+    problemas = []
     conflictivos = [
         sha
         for sha, archivos in commits
@@ -267,8 +281,20 @@ def estado_nucleo_intacto(commits: Sequence[tuple[str, Sequence[str]]]) -> tuple
     ]
     if conflictivos:
         cortos = ", ".join(sha[:8] for sha in conflictivos)
-        return Estado.FALLA, f"commits que tocan core/ junto a adapters/ o ml/: {cortos}"
-    return Estado.OK, f"{len(commits)} commits evaluados"
+        problemas.append(f"commits que tocan core/ junto a adapters/ o ml/: {cortos}")
+
+    sucias = [(nombre, archivos) for nombre, archivos in ramas if archivos]
+    if sucias:
+        detalle = "; ".join(f"{nombre} cambia {', '.join(archivos)}" for nombre, archivos in sucias)
+        problemas.append(f"ramas de adaptador con git diff core/ no vacio: {detalle}")
+
+    if problemas:
+        return Estado.FALLA, "; ".join(problemas)
+    return (
+        Estado.OK,
+        f"{len(commits)} commits evaluados; {len(ramas)} ramas de adaptador "
+        f"con git diff core/ vacio",
+    )
 
 
 def estado_cobertura(porcentaje: Decimal | float, umbral: Decimal | float) -> tuple[Estado, str]:
@@ -410,6 +436,51 @@ def _commits_nucleo_intacto(base: str) -> list[tuple[str, list[str]]]:
     return commits
 
 
+def _git(*argumentos: str) -> list[str]:
+    """Lineas no vacias de la salida de un comando git; lista vacia si el comando falla."""
+    resultado = subprocess.run(
+        ["git", *argumentos], cwd=RAIZ, capture_output=True, text=True, encoding="utf-8"
+    )
+    if resultado.returncode != 0:
+        return []
+    return [linea.strip() for linea in resultado.stdout.splitlines() if linea.strip()]
+
+
+def _ramas_adaptador(base: str) -> list[tuple[str, list[str]]]:
+    """Ramas fusionadas que **incorporan** un dominio, con los archivos de `core/` que cambian.
+
+    Una rama cuenta como incorporacion de un dominio si su rango (`primer_padre...tope`, es decir
+    lo que la rama introdujo respecto de su punto de partida) **agrega** algun archivo bajo
+    `adapters/` o `ml/`. Es la formulacion literal de la hipotesis de CLAUDE.md seccion 1 ("el
+    nucleo no cambia cuando se agrega un dominio") y la unidad de la que habla su evidencia:
+    `git diff --stat core/` vacio tras implementar los adaptadores.
+
+    Una rama que solo *modifica* un adaptador ya existente (una correccion, o una pasada
+    transversal que ademas toca `core/` por razones ajenas al dominio) no es la incorporacion de
+    un dominio: sus commits los cubre la regla por commit de `estado_nucleo_intacto`.
+
+    Solo se miran las fusiones de la **linea principal** (las de `--first-parent`): una fusion de
+    `main` *hacia dentro* de una rama en curso tiene los papeles invertidos (su segundo padre es la
+    linea principal) y su rango no es lo que la rama introdujo. De una fusion se toman el primer y
+    el segundo padre; una fusion de pulpo (tres o mas padres) no la produce este proyecto y se
+    evalua solo por su segunda rama.
+    """
+    principales = set(_git("rev-list", "--first-parent", f"{base}..HEAD"))
+    ramas: list[tuple[str, list[str]]] = []
+    for linea in _git("log", "--merges", "--format=%H|%s", f"{base}..HEAD"):
+        sha, _, asunto = linea.partition("|")
+        if sha not in principales:
+            continue
+        padres = _git("rev-parse", f"{sha}^1", f"{sha}^2")
+        if len(padres) != 2:
+            continue
+        rango = f"{padres[0]}...{padres[1]}"
+        if not _git("diff", "--name-only", "--diff-filter=A", rango, "--", "adapters", "ml"):
+            continue
+        ramas.append((f"{sha[:8]} {asunto}", _git("diff", "--name-only", rango, "--", "core")))
+    return ramas
+
+
 def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila]:
     with tempfile.TemporaryDirectory(prefix="meta_alpha_") as directorio_temp:
         xml_texto, cobertura, codigo_pytest = _ejecutar_pytest(Path(directorio_temp), con_cobertura)
@@ -417,6 +488,7 @@ def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila
 
     codigo_check, codigo_format = _ejecutar_ruff()
     commits = _commits_nucleo_intacto(base)
+    ramas = _ramas_adaptador(base)
 
     archivos_pruebas = _archivos_de_pruebas()
     if xml_texto:
@@ -436,7 +508,7 @@ def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila
             if corrida_rota is not None and estado is not Estado.PENDIENTE:
                 estado, evidencia = corrida_rota
         elif meta.tipo == "git":
-            estado, evidencia = estado_nucleo_intacto(commits)
+            estado, evidencia = estado_nucleo_intacto(commits, ramas)
         elif meta.tipo == "cobertura":
             if not con_cobertura:
                 estado, evidencia = Estado.PENDIENTE, "cobertura omitida (--sin-cobertura)"

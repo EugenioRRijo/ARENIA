@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from core import contracts, models
-from core.catalog import Catalogo, abrir_sesion, crear_motor
+from core.catalog import Catalogo, CatalogoIncompleto, abrir_sesion, crear_motor
 from scripts.seed import main, sembrar
 from tests.fixtures import apu_linea_base as linea_base
 
@@ -92,6 +92,34 @@ def test_precios_se_reconstruyen_a_fecha(sesion):
     assert catalogo.lista_vigente(date(2026, 6, 15)).id == nueva.id
     assert cemento(date(2026, 5, 1)) == Decimal("15")
     assert cemento(date(2026, 6, 15)) == Decimal("18")
+
+
+def test_un_material_sin_unidad_es_un_catalogo_incompleto(sesion):
+    """La frontera modelo → contrato debe nombrar el insumo que falta, como sus ramas vecinas.
+
+    `insumo.unidad or ""` mandaba la cadena vacía a `normalizar_unidad`, que lanza el `ValueError`
+    del contrato: un error sin código ni descripción, que no dice cuál de los insumos del catálogo
+    hay que completar (revisión final, ítem 7).
+    """
+    codigo_partida = linea_base.APU_CONCRETO.codigo_partida
+    linea = sesion.scalars(
+        select(models.ComposicionAPU)
+        .join(models.Partida, models.Partida.id == models.ComposicionAPU.partida_id)
+        .join(models.Insumo, models.Insumo.id == models.ComposicionAPU.insumo_id)
+        .where(
+            models.Partida.codigo == codigo_partida,
+            models.Insumo.tipo == models.TipoInsumo.MATERIAL.value,
+        )
+        .order_by(models.ComposicionAPU.orden)
+    ).first()
+    linea.insumo.unidad = None
+    sesion.flush()
+
+    with pytest.raises(CatalogoIncompleto) as error:
+        Catalogo(sesion).composicion(codigo_partida)
+
+    assert linea.insumo.codigo in str(error.value)
+    assert linea.insumo.descripcion in str(error.value)
 
 
 def test_rendimiento_medido_exige_ejecucion(sesion):

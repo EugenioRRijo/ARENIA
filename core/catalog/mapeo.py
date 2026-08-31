@@ -1,9 +1,12 @@
 """Conversión entre modelos persistidos y contratos de interfaz.
 
-**Único** lugar del sistema donde se cruza esa frontera, en las **dos** direcciones
-(docs/modelo_datos.md §8): modelo → contrato para reconstruir, contrato → modelo para cargar. El
-repositorio orquesta la sesión y las consultas, pero no construye modelos a partir de contratos ni
-al revés; si aparece una conversión nueva, su sitio es este módulo.
+Frontera del **catálogo**, en las **dos** direcciones (docs/modelo_datos.md §8): modelo → contrato
+para reconstruir, contrato → modelo para cargar. En todo el sistema la frontera modelo ↔ contrato
+existe en exactamente dos módulos —este y `core/budget/persistencia.py`, que hace lo propio con el
+presupuesto (ADR 12 de docs/arquitectura.md)—; unirlos habría hecho que `core.catalog` dependiera
+de `core.verification` por el `InformeAuditoria`. El repositorio orquesta la sesión y las consultas,
+pero no construye modelos a partir de contratos ni al revés; si al catálogo le aparece una
+conversión nueva, su sitio es este módulo.
 
 Los modelos se usan cualificados (`models.X`) y los contratos por su nombre, para que nunca se
 confundan los siete pares homónimos.
@@ -57,8 +60,13 @@ def a_composicion(
                 f"'{lista.nombre}'; no se puede valorar la partida {partida.codigo}"
             )
         if insumo.tipo == models.TipoInsumo.MATERIAL:
+            if not insumo.unidad:
+                raise CatalogoIncompleto(
+                    f"el material {insumo.codigo} ({insumo.descripcion}) no declara unidad; "
+                    f"no se puede valorar la partida {partida.codigo}"
+                )
             materiales.append(
-                LineaMaterial(insumo.descripcion, insumo.unidad or "", linea.cantidad, precio)
+                LineaMaterial(insumo.descripcion, insumo.unidad, linea.cantidad, precio)
             )
         elif insumo.tipo == models.TipoInsumo.EQUIPO:
             if linea.depreciacion is None:

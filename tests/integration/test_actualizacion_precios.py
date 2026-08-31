@@ -171,6 +171,24 @@ def test_leer_lista_precios_xlsx_lee_decimales_exactos(tmp_path):
     assert leidos["Retroexcavadora"].unidad is None
 
 
+@pytest.mark.parametrize("precio", ["nan", "Infinity", "-Infinity", "-1"])
+def test_leer_lista_precios_rechaza_lo_que_no_es_un_numero_no_negativo(tmp_path, precio):
+    """`ValueError` citando archivo y fila, como promete el docstring de `leer_lista_precios`.
+
+    Antes de la corrección solo se cubría el negativo: `Decimal("nan") < 0` lanza
+    `decimal.InvalidOperation` (un `ArithmeticError`, no un `ValueError`) fuera del `except` de la
+    construcción, y `Decimal("Infinity") < 0` es `False`, así que un precio infinito entraba a la
+    lista en silencio (revisión final, ítem 4).
+    """
+    archivo = tmp_path / "lista.csv"
+    archivo.write_text(
+        f"tipo,insumo,unidad,precio\nmaterial,{CEMENTO},saco,{precio}\n", encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match=r"lista\.csv, fila 2"):
+        leer_lista_precios(archivo)
+
+
 def test_crear_lista_copia_los_precios_anteriores_y_sobrescribe_los_del_archivo(
     sesion, presupuesto_001, lista_nueva
 ):
@@ -304,6 +322,77 @@ def test_registra_la_incidencia_de_cada_cambio_en_el_concreto(
         assert incidencia.precio_unitario_nuevo == anterior + INCREMENTO_PU_CONCRETO
         assert incidencia.variacion == INCREMENTO_PU_CONCRETO / anterior
         assert incidencia.cambio.insumo.descripcion in PRECIOS_NUEVOS
+
+
+def test_repetir_uc02_con_el_mismo_par_de_listas_no_duplica_el_historial(
+    sesion, presupuesto_001, lista_nueva, actualizacion
+):
+    """`registrar_cambios` ya era idempotente; `_registrar_incidencias` no lo era.
+
+    Un segundo `actualizar_precios` con el mismo par de listas duplicaba las `IncidenciaCambio`,
+    la tabla que alimentará el módulo predictivo de I6 (revisión final, ítem 8).
+    """
+    cambios = len(sesion.scalars(select(models.CambioPrecio)).all())
+    incidencias = len(sesion.scalars(select(models.IncidenciaCambio)).all())
+
+    actualizar_precios(
+        sesion,
+        NOMBRE_PROYECTO,
+        linea_base.CODIGO_PRESUPUESTO,
+        lista_nueva.lista,
+        "003",
+        plan=plan_secuencial(presupuesto_001.presupuesto),
+    )
+
+    assert len(sesion.scalars(select(models.CambioPrecio)).all()) == cambios
+    assert len(sesion.scalars(select(models.IncidenciaCambio)).all()) == incidencias
+
+
+@pytest.fixture
+def cemento_en_dos_lineas(sesion):
+    """El vaciado de concreto con el cemento repetido en dos líneas de su composición.
+
+    Nada lo prohíbe en el modelo (`composicion_apu` no tiene clave única por partida e insumo) y
+    hace que el `join` de `_partidas_por_insumo` devuelva la misma partida dos veces.
+    """
+    partida = sesion.scalars(select(models.Partida).where(models.Partida.codigo == CONCRETO)).one()
+    linea = sesion.scalars(
+        select(models.ComposicionAPU)
+        .join(models.Insumo)
+        .where(
+            models.ComposicionAPU.partida_id == partida.id,
+            models.Insumo.descripcion == CEMENTO,
+        )
+    ).one()
+    sesion.add(
+        models.ComposicionAPU(
+            partida_id=partida.id,
+            insumo_id=linea.insumo_id,
+            cantidad=Decimal("0.5"),
+            orden=linea.orden + 100,
+        )
+    )
+    sesion.flush()
+    return partida
+
+
+def test_un_insumo_repetido_en_una_partida_registra_una_sola_incidencia(
+    sesion, cemento_en_dos_lineas, presupuesto_001, lista_nueva
+):
+    """Una incidencia por par (cambio de precio, partida), aunque el insumo se repita."""
+    actualizar_precios(
+        sesion,
+        NOMBRE_PROYECTO,
+        linea_base.CODIGO_PRESUPUESTO,
+        lista_nueva.lista,
+        CODIGO_NUEVO,
+        plan=plan_secuencial(presupuesto_001.presupuesto),
+    )
+
+    incidencias = sesion.scalars(select(models.IncidenciaCambio)).all()
+
+    assert len(incidencias) == 2
+    assert len({(i.cambio_id, i.partida_id) for i in incidencias}) == 2
 
 
 def test_el_presupuesto_anterior_sigue_reconstruyendose_a_su_fecha(

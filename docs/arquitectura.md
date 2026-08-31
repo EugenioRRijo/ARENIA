@@ -820,10 +820,16 @@ terminan con el usuario, y un archivo SQLite como toda la base de datos. No hay 
 tiempo de ejecución; la única excepción declarada es la descarga inicial del modelo de
 `sentence-transformers` (Sesión I2), que se cachea localmente.
 
+Lo punteado y marcado *PREVISTO* no existe todavía: la **compuerta G1 sigue abierta**
+([CLAUDE.md §8.2](../CLAUDE.md#8-compuertas-y-criterios-de-degradación)), no hay estación de
+modelado en el despliegue ni `data/samples/tanquilla.ifc` en el repositorio, y la entrada civil
+vigente es tabular (`adapters/civil/tabular.py` sobre
+`data/samples/civil/tanquillas_y_zanja.csv`). El resto del diagrama es lo que hoy se ejecuta.
+
 ```mermaid
 flowchart TB
-    subgraph modelador["Nodo externo: estacion de modelado BIM"]
-        revit["Revit / Bonsai<br/>exporta IFC 4"]
+    subgraph modelador["Nodo externo: estacion de modelado BIM (PREVISTO, Sesion I3.1)"]
+        revit["Revit / Bonsai<br/>exporta IFC 4<br/>compuerta G1 abierta"]
     end
 
     subgraph equipo["Nodo: equipo del usuario (Windows 11 o Linux, Python 3.13, uv)"]
@@ -839,13 +845,13 @@ flowchart TB
         end
         subgraph datos["Almacenamiento local"]
             db[("data/apu.db<br/>SQLite, PRAGMA foreign_keys=ON<br/>ignorado por git, regenerable")]
-            samples["data/samples/**<br/>CSV de los cuatro dominios, IFC"]
+            samples["data/samples/**<br/>CSV de los cuatro dominios<br/>(tanquilla.ifc: PREVISTO)"]
             base["data/linea_base/APUS_CLINICA.pdf<br/>evidencia primaria"]
             salidas["presupuesto.xlsx<br/>informe de auditoria en Markdown"]
         end
     end
 
-    revit -->|"archivo IFC 4"| samples
+    revit -.->|"archivo IFC 4 (PREVISTO, I3.1)"| samples
     streamlit --> paquetes
     fastapi --> paquetes
     seed --> paquetes
@@ -861,7 +867,7 @@ Decisiones de despliegue y sus consecuencias:
 
 | Aspecto | Decisión | Consecuencia |
 |---|---|---|
-| Base de datos | SQLite en `data/apu.db`, URL por defecto de `core.catalog.sesion.crear_motor` | sin instalación de servidor; `data/*.db` está en `.gitignore` y se regenera con `uv run python scripts/seed.py` |
+| Base de datos | SQLite en `data/apu.db`, URL por defecto de `core.catalog.sesion.crear_motor` | sin instalación de servidor; `.gitignore` ignora `*.db` (en cualquier carpeta) y la base se regenera con `uv run python scripts/seed.py` |
 | Integridad referencial | `PRAGMA foreign_keys=ON` en cada conexión SQLite | sin él, el motor ignora las claves foráneas y el esquema deja de ser el documentado |
 | Portabilidad del motor | PostgreSQL se activa cambiando la URL y sustituyendo `DecimalExacto` por `Numeric(18, 6)` | ningún modelo cambia (ADR 7) |
 | Entorno | `uv sync` (RNF‑07), extras por capa: `ui`, `api`, `civil`, `ml` | el equipo del proyectista no necesita `ifcopenshell` ni `torch` para presupuestar |

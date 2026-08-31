@@ -3,11 +3,13 @@
 El presupuesto auditado reproduce las siete inconsistencias documentadas en `docs/linea_base.md`.
 El informe se genera siempre y debe señalar las siete, cada una con la regla que le corresponde y
 la partida involucrada, sin que el núcleo conozca el dominio civil.
+
+Ninguna prueba de este archivo se omite por su cuenta: el `importorskip` de `core.budget` que
+protegía a la última mientras I0.5 no existía convertiría hoy una regresión del núcleo en un
+*skip* silencioso justo en la prueba del indicador 1 de la tesis (revisión final, ítem 6).
 """
 
 from __future__ import annotations
-
-import pytest
 
 from core.contracts import Severidad
 from core.verification import auditar
@@ -65,9 +67,5 @@ def test_todo_hallazgo_de_partida_referencia_un_origen_trazable():
 
 
 def test_el_presupuesto_corregido_no_tiene_errores():
-    budget = pytest.importorskip("core.budget")
-    if not hasattr(budget, "generar_curva"):
-        pytest.skip("core.budget aún no expone generar_curva ni plan_secuencial (Sesión I0.5)")
-
     informe = auditar(presupuesto_corregido())
     assert informe.cumple, informe.a_markdown()

@@ -7,7 +7,8 @@ drenaje de una clínica.
 La hipótesis central del trabajo es que **un núcleo de costeo y verificación puede permanecer intacto
 mientras se agregan dominios (civil, telecom, industrial, sistemas) mediante adaptadores**. La prueba
 empírica es `git diff --stat core/` vacío al terminar los adaptadores (Sesión I5); la mide la meta M9
-de `scripts/meta_alpha.py` commit a commit y la vigila `tests/unit/test_arquitectura.py`.
+de `scripts/meta_alpha.py` —commit a commit y, además, con el `git diff core/` del **rango completo**
+de cada rama que incorpora un dominio— y la vigila `tests/unit/test_arquitectura.py`.
 
 ## Documentos rectores
 

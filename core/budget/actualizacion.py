@@ -177,9 +177,24 @@ def _registrar_incidencias(
     define docs/modelo_datos.md §2.2. Cuando varios insumos suben en la misma partida, cada cambio
     registra ese mismo par: repartir el efecto entre ellos exigiría una columna que la entidad no
     tiene, y el reparto ya está en el comparativo.
+
+    Idempotente, como `registrar_cambios`: si esos cambios ya tienen su incidencia registrada,
+    devuelve la existente en vez de duplicarla. Repetir UC‑02 con el mismo par de listas es
+    normal (el usuario descarta la versión nueva y vuelve a intentarlo) y la tabla que alimentará
+    el módulo predictivo de I6 no puede llenarse de filas repetidas.
     """
     if not cambios:
         return []
+
+    registradas = list(
+        session.scalars(
+            select(models.IncidenciaCambio)
+            .where(models.IncidenciaCambio.cambio_id.in_([cambio.id for cambio in cambios]))
+            .order_by(models.IncidenciaCambio.id)
+        )
+    )
+    if registradas:
+        return registradas
 
     precios_anteriores = _precio_unitario_por_partida(anterior)
     precios_nuevos = _precio_unitario_por_partida(nuevo)
@@ -208,7 +223,13 @@ def _registrar_incidencias(
 def _partidas_por_insumo(
     session: Session, insumos: Sequence[int], codigos: Sequence[str]
 ) -> dict[int, list[models.Partida]]:
-    """Qué partidas del presupuesto llevan cada insumo, según la composición del catálogo."""
+    """Qué partidas del presupuesto llevan cada insumo, según la composición del catálogo.
+
+    Cada partida aparece **una sola vez** por insumo: nada impide que una partida repita el mismo
+    insumo en dos líneas de su composición (`composicion_apu` no tiene clave única por partida e
+    insumo), y sin eliminar el repetido el `join` registraría dos incidencias idénticas para el
+    mismo cambio de precio.
+    """
     filas = session.execute(
         select(models.ComposicionAPU.insumo_id, models.Partida)
         .join(models.Partida, models.Partida.id == models.ComposicionAPU.partida_id)
@@ -220,7 +241,9 @@ def _partidas_por_insumo(
     ).all()
     por_insumo: dict[int, list[models.Partida]] = {}
     for insumo_id, partida in filas:
-        por_insumo.setdefault(insumo_id, []).append(partida)
+        partidas = por_insumo.setdefault(insumo_id, [])
+        if all(registrada.id != partida.id for registrada in partidas):
+            partidas.append(partida)
     return por_insumo
 
 
