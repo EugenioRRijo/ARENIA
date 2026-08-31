@@ -1,8 +1,9 @@
 """Interfaz Streamlit multipagina del sistema APU (Sesion F.1, Tarea 4).
 
-Enrutador `st.navigation` sobre las seis pantallas de `ui/paginas/`: actualizacion masiva de
-precios (UC-02), catalogo, elaborar presupuesto (UC-01), historico de cambios de precio, el
-simulador de listas de prueba y el visor 3D del modelo IFC (Tarea 7).
+Enrutador `st.navigation` sobre las siete pantallas de `ui/paginas/`: actualizacion masiva de
+precios (UC-02), catalogo, elaborar presupuesto (UC-01), historico de cambios de precio, las
+partidas similares (UC-03, Sesion I2), el simulador de listas de prueba y el visor 3D del modelo
+IFC (Tarea 7).
 
 Cada pagina expone `def render() -> None` sin efectos al importarse (los suyos, y los de este
 modulo, los comprueba `tests/unit/test_ui_importable.py` con `importlib.import_module`): este
@@ -30,7 +31,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.paginas import actualizacion, catalogo, elaborar, historico, simulador, visor
+from ui.paginas import actualizacion, catalogo, elaborar, historico, similares, simulador, visor
 
 TITULO_APP = "Sistema APU"
 
@@ -43,6 +44,7 @@ def main() -> None:
         st.Page(catalogo.render, title="Catalogo"),
         st.Page(elaborar.render, title="Elaborar presupuesto (UC-01)"),
         st.Page(historico.render, title="Historico de precios"),
+        st.Page(similares.render, title="Partidas similares (UC-03)"),
         st.Page(simulador.render, title="Simulador de listas"),
         st.Page(visor.render, title="Visor 3D"),
     ]
