@@ -1,6 +1,6 @@
 # Bitácora — Sprint alpha (versión alpha 0.1)
 
-**Fechas:** 2026‑08‑29 → 2026‑08‑30 · **Rama:** `main` (un incremento por rama `inc/…`, fusionado con
+**Fechas:** 2026‑08‑29 → 2026‑08‑31 · **Rama:** `main` (un incremento por rama `inc/…`, fusionado con
 `--no-ff`) · **Compuertas cruzadas:** G‑núcleo (motor en verde sin tocar la línea base, etiqueta
 `g-nucleo`) · **Pendientes:** G0 (tutor), G1 (IFC), G2 (datos para ML).
 
@@ -44,8 +44,8 @@ Los briefs, reportes, paquetes de revisión y el ledger del sprint viven fuera d
 | T13 Integración final | — | `main` | (este cierre) | — | esta bitácora |
 
 Momentos del trabajo (CLAUDE.md §1) alcanzados: las cinco pruebas del motor en verde (`g-nucleo`);
-`git diff --stat core/` vacío para los cuatro adaptadores (meta M9, verificada commit a commit por
-`meta_alpha.py`). La compuerta G1 (IFC) sigue abierta: el adaptador civil del alpha es tabular
+`git diff --stat core/` vacío para los cuatro adaptadores (meta M9, verificada por `meta_alpha.py` commit a
+commit y por el rango completo de cada rama de adaptador). La compuerta G1 (IFC) sigue abierta: el adaptador civil del alpha es tabular
 (CLAUDE.md §8.2).
 
 ## Decisiones del sprint (rulings del integrador)
@@ -116,9 +116,30 @@ cobertura de `core/` 97,82 % (umbral 80 %); M9 «núcleo intacto» verificado so
 adaptadores; ruff check y ruff format limpios. La tabla completa la imprime
 `uv run python scripts/meta_alpha.py`.
 
+Tras la oleada de corrección de la revisión final (fusión `b31e899`): **12/12** con 308 pruebas,
+cobertura de `core/` 97,96 % y M9 reforzado (8 commits evaluados y las 4 ramas de adaptador con
+`git diff core/` vacío por rango).
+
 ## Revisión final de la rama
 
-(pendiente)
+Revisor independiente sobre todo el sprint (`e783f0c..16f61e6`): **0 Critical, 3 Important y 9
+minors promovidos** — un defecto reproducible del adaptador civil (el balance de R5 con dos zanjas
+de diámetro distinto usaba solo el último factor), dos docstrings del núcleo que contradecían el
+«exactamente dos» de los documentos normativos, y M9 midiendo menos de lo que el README afirmaba.
+Fortalezas verificadas por el propio revisor: contratos congelados de verdad (`git diff` vacío en
+`core/contracts/` y en las pruebas del motor a lo largo de los 41 commits), la hipótesis central
+comprobada rama por rama, la curva que cierra por construcción y la disciplina `Decimal` sin fisuras.
+
+La oleada única de corrección (`inc/alpha-fixes`, commits `6ba145b` y `f440e47`, fusión `b31e899`)
+corrigió los diez ítems con trece pruebas nuevas; la re‑revisión los dio todos por atendidos sin
+roturas. Fueron dos commits a propósito — uno civil y uno del resto — porque un commit único que
+mezcle `core/` y `adapters/` hace caer M9. Hallazgo adicional al verificar procedencias contra los
+PDF: la propia fuente primaria ARENAZA es inconsistente (el tubo corrugado mide 80 m en los cómputos
+y 90 m en el presupuesto del mismo documento) — candidata a caso de estudio de R7 en telecom. El
+alcance de M9 («rama de adaptador» = la que agrega archivos bajo `adapters/` o `ml/`) se valida con
+el tutor en G0.
+
+La etiqueta `alpha-0.1` queda en el commit de este cierre.
 
 ## Próximos pasos
 
