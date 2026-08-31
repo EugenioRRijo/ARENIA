@@ -1,0 +1,212 @@
+"""Pagina del visor 3D: modelo IFC teselado junto a la tabla elemento <-> partida (Sesion F.1, T7).
+
+Carga un archivo `.ifc` (por defecto ofrece `data/samples/tanquilla.ifc`, la muestra de T5), lo
+tesela con `ui.visor3d.mallas` y renderiza el resultado con three.js dentro de un
+`st.components.v1.html` (three.js se carga desde cdnjs, version fija: cdnjs dejo de publicar el
+build UMD `three.min.js` despues de r147 aproximadamente, por eso se fija `r128`, la ultima
+etiqueta `rNNN` que si trae ese archivo). `OrbitControls` no viene en `three.min.js` y no esta
+publicado por separado en cdnjs para esta version: en vez de reimplementar un control de orbita
+completo, el visor gira el modelo automaticamente sobre su propio centro (alcance que el brief
+permite explicitamente).
+
+Al lado se muestra la misma tabla GlobalId <-> codigo_partida <-> cantidad que produce
+`AdaptadorCivilIFC` sobre el mismo archivo (adapters/civil/ifc.py, T6): el visor no reemplaza la
+trazabilidad de la regla R1, la ilustra.
+
+Sin pruebas de UI (decision del proyecto, spec F.1 seccion 7): la teselacion se prueba en
+`tests/unit/test_visor3d.py`; esta pagina solo se comprueba con `tests/unit/test_ui_importable.py`
+(se importa sin efectos) y con la verificacion manual documentada en el reporte de la tarea.
+"""
+
+from __future__ import annotations
+
+import json
+import tempfile
+from pathlib import Path
+
+import ifcopenshell
+import streamlit as st
+from pandas import DataFrame
+
+from adapters.civil.ifc import AdaptadorCivilIFC
+from core.contracts import ItemComputo
+from core.verification.informe import DECIMALES_PRESENTACION
+from core.verification.texto import formatear_decimal
+from ui.visor3d import mallas
+
+TITULO = "Visor 3D"
+RUTA_POR_DEFECTO = "data/samples/tanquilla.ifc"
+ALTURA_VISOR = 480
+VERSION_THREE_JS = "r128"
+URL_THREE_JS = f"https://cdnjs.cloudflare.com/ajax/libs/three.js/{VERSION_THREE_JS}/three.min.js"
+
+#: Errores esperados al abrir o leer un `.ifc`: archivo inexistente o sin permisos (`OSError`),
+#: contenido que no es un IFC valido (`ifcopenshell.Error`, por ejemplo una cabecera SPF corrupta)
+#: y los que ya usan las demas paginas para un archivo mal formado o incompleto (`LookupError`,
+#: `ValueError`, `ArithmeticError`; ver `ui/paginas/elaborar.py`).
+_ERRORES_LECTURA_IFC = (OSError, ifcopenshell.Error, LookupError, ValueError, ArithmeticError)
+
+
+def render() -> None:
+    """Selector de archivo IFC; visor three.js y tabla de cómputo lado a lado."""
+    st.title(TITULO)
+    st.caption(
+        "Carga un modelo IFC y compara su geometria con el cómputo que extrae el adaptador civil: "
+        "cada malla del visor corresponde a una fila de la tabla, unidas por el GlobalId (regla R1 "
+        "de verificacion, CLAUDE.md §7)."
+    )
+
+    archivo = st.file_uploader("Modelo IFC (.ifc)", type=["ifc"])
+    if archivo is None:
+        st.caption(f"Sin archivo cargado: se muestra la muestra por defecto ({RUTA_POR_DEFECTO}).")
+        _render_desde_ruta(Path(RUTA_POR_DEFECTO))
+        return
+
+    with tempfile.TemporaryDirectory() as carpeta:
+        ruta_temporal = Path(carpeta) / archivo.name
+        ruta_temporal.write_bytes(archivo.getvalue())
+        _render_desde_ruta(ruta_temporal)
+
+
+def _render_desde_ruta(ruta: Path) -> None:
+    if not ruta.exists():
+        st.error(f"No se encontro el archivo {ruta}.")
+        return
+
+    try:
+        mallas_encontradas = mallas(ruta)
+        items = AdaptadorCivilIFC().extraer(ruta)
+    except _ERRORES_LECTURA_IFC as error:
+        st.error(str(error))
+        return
+
+    columna_visor, columna_tabla = st.columns([2, 1])
+    with columna_visor:
+        if mallas_encontradas:
+            st.components.v1.html(_html_visor(mallas_encontradas), height=ALTURA_VISOR)
+        else:
+            st.info("El modelo no tiene elementos con geometria propia para renderizar.")
+    with columna_tabla:
+        _mostrar_tabla(items)
+
+
+def _mostrar_tabla(items: list[ItemComputo]) -> None:
+    st.subheader("Elemento <-> partida <-> cantidad")
+    if not items:
+        st.info("El modelo no tiene elementos con Pset_APU: no hay cómputo civil que extraer.")
+        return
+
+    tabla = DataFrame(
+        [
+            {
+                "global_id": item.origen_id,
+                "codigo_partida": item.codigo_partida,
+                "descripcion": item.descripcion,
+                "unidad": item.unidad,
+                "cantidad": formatear_decimal(item.cantidad, DECIMALES_PRESENTACION),
+            }
+            for item in items
+        ]
+    )
+    st.dataframe(tabla, hide_index=True)
+
+
+def _html_visor(mallas_encontradas: list[dict]) -> str:
+    """Incrusta el visor three.js con las mallas ya teseladas, listas para `BufferGeometry`."""
+    return (
+        _PLANTILLA_HTML.replace("__DATOS__", json.dumps(mallas_encontradas))
+        .replace("__URL_THREE__", URL_THREE_JS)
+        .replace("__ALTURA__", str(ALTURA_VISOR))
+    )
+
+
+_PLANTILLA_HTML = """
+<div id="contenedor-visor" style="width:100%;height:__ALTURA__px;"></div>
+<script src="__URL_THREE__"></script>
+<script>
+(function () {
+  var datos = __DATOS__;
+  var contenedor = document.getElementById("contenedor-visor");
+  var ancho = contenedor.clientWidth || 800;
+  var alto = __ALTURA__;
+
+  var escena = new THREE.Scene();
+  escena.background = new THREE.Color(0xf2f2f2);
+
+  var camara = new THREE.PerspectiveCamera(45, ancho / alto, 0.001, 1000);
+  var renderizador = new THREE.WebGLRenderer({ antialias: true });
+  renderizador.setSize(ancho, alto);
+  contenedor.appendChild(renderizador.domElement);
+
+  escena.add(new THREE.AmbientLight(0xffffff, 0.6));
+  var luz = new THREE.DirectionalLight(0xffffff, 0.8);
+  luz.position.set(2, 3, 2);
+  escena.add(luz);
+
+  var minimo = [Infinity, Infinity, Infinity];
+  var maximo = [-Infinity, -Infinity, -Infinity];
+  var colores = [0x3d7ea6, 0xa63d5c, 0x5ca63d, 0xa6863d, 0x7a3da6];
+  var grupo = new THREE.Group();
+
+  datos.forEach(function (malla, indice) {
+    var geometria = new THREE.BufferGeometry();
+    geometria.setAttribute("position", new THREE.Float32BufferAttribute(malla.vertices, 3));
+    geometria.setIndex(malla.caras);
+    geometria.computeVertexNormals();
+    var material = new THREE.MeshStandardMaterial({
+      color: colores[indice % colores.length],
+      side: THREE.DoubleSide,
+    });
+    var malla3d = new THREE.Mesh(geometria, material);
+    malla3d.name = malla.global_id;
+    grupo.add(malla3d);
+
+    for (var i = 0; i < malla.vertices.length; i += 3) {
+      for (var k = 0; k < 3; k++) {
+        var v = malla.vertices[i + k];
+        if (v < minimo[k]) minimo[k] = v;
+        if (v > maximo[k]) maximo[k] = v;
+      }
+    }
+  });
+
+  var centro = new THREE.Vector3(
+    (minimo[0] + maximo[0]) / 2,
+    (minimo[1] + maximo[1]) / 2,
+    (minimo[2] + maximo[2]) / 2
+  );
+  var radio = Math.max(
+    maximo[0] - minimo[0],
+    maximo[1] - minimo[1],
+    maximo[2] - minimo[2],
+    0.1
+  );
+
+  var pivote = new THREE.Group();
+  grupo.position.set(-centro.x, -centro.y, -centro.z);
+  pivote.position.set(centro.x, centro.y, centro.z);
+  pivote.add(grupo);
+  escena.add(pivote);
+
+  camara.position.set(
+    centro.x + radio * 1.6,
+    centro.y + radio * 1.3,
+    centro.z + radio * 1.6
+  );
+  camara.lookAt(centro);
+
+  window.addEventListener("resize", function () {
+    var nuevoAncho = contenedor.clientWidth || ancho;
+    camara.aspect = nuevoAncho / alto;
+    camara.updateProjectionMatrix();
+    renderizador.setSize(nuevoAncho, alto);
+  });
+
+  (function animar() {
+    requestAnimationFrame(animar);
+    pivote.rotation.y += 0.006;
+    renderizador.render(escena, camara);
+  })();
+})();
+</script>
+"""
