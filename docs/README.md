@@ -10,9 +10,9 @@
 | [arquitectura.md](arquitectura.md) — vistas 4+1 de Kruchten | completo, pendiente de revisión del tutor (G0) | 0.3 ✔ |
 | [tesis/esqueleto_tesis.md](tesis/esqueleto_tesis.md) — capítulos y matriz de trazabilidad | completo | se actualiza por fase |
 | [bitacora/](bitacora/) — una entrada por sprint | en curso | cada sesión |
-| resultados_ml.md | pendiente | I6.3 |
-| api.json | pendiente | F.1 |
-| plan_pruebas.md (IEEE 829), calidad_iso25010.md | pendientes | F.2 |
+| [resultados_ml.md](resultados_ml.md) — métricas del módulo predictivo y compuerta G2 | completo | I6.3 ✔ |
+| [api.json](api.json) — esquema OpenAPI exportado | completo | F.1 ✔ |
+| [plan_pruebas.md](plan_pruebas.md) (IEEE 829), [calidad_iso25010.md](calidad_iso25010.md) | completos | F.2 ✔ |
 | manual_usuario.md, manual_tecnico.md | pendientes | F.3 |
 
 ## Fuentes (`fuentes/`)

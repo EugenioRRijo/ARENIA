@@ -1,0 +1,130 @@
+# Evaluación de calidad del producto (ISO/IEC 25010) — Sesión F.2
+
+Evaluación del sistema contra el modelo de calidad de producto de ISO/IEC 25010, con las métricas
+y metas declaradas en [ERS.md §3.3](ERS.md#33-requisitos-no-funcionales-isoiec-25010). La evidencia
+numérica (corrida de la suite, cobertura, medición de desempeño) está registrada **una sola vez**
+en [plan_pruebas.md](plan_pruebas.md) §9–§10; aquí se interpreta.
+
+Fecha de la evaluación: 2026‑08‑31, sobre `main` en `02f961a` (cierre del sprint I6).
+
+## 1. Adecuación funcional
+
+**Completitud funcional.** 28 de los 31 RF tienen prueba automatizada en verde; los **26 RF
+esenciales están todos cubiertos**. Los tres restantes: RF‑16 parcial (su persistencia espera un
+flujo de creación de partidas que no existe en ningún UC implementado — hallazgo recurrente de I2
+e I6, elevado a G0), RF‑30 (deseable) y RF‑31 (opcional) pendientes porque UC‑08 quedó fuera del
+alcance de F.1 por decisión documentada. Siete de los ocho casos de uso operan de extremo a
+extremo.
+
+**Corrección funcional (RNF‑01).** El presupuesto de la línea base corregida se reproduce con
+desviación 0,00 % — los cinco precios unitarios dentro de ± 0,01 y los totales exactos en
+`Decimal` — muy dentro del rango de la clase 3 de AACE (−20 % / +30 %) que la meta exige. La
+prueba de aceptación crítica del trabajo se cumple: **7 de 7 inconsistencias detectadas**
+(indicador 1 de la tesis).
+
+**Pertinencia funcional.** El informe de auditoría se genera siempre, sin pedirlo (principio 7 de
+CLAUDE.md §2): `elaborar()` no tiene un modo sin auditoría.
+
+**Veredicto: cumple**, con los tres RF no esenciales declarados arriba.
+
+## 2. Fiabilidad
+
+**Madurez.** 385 pruebas, 0 fallos, 0 omitidas, con `-W error` (ninguna advertencia tolerada) en
+la corrida registrada. La suite creció de 88 (Sprint 0) a 385 sin retirar ninguna prueba de valor:
+la línea base que validó el motor en I0.3 sigue vigilándolo intacta.
+
+**Reproducibilidad (RNF‑02).** Cualquier presupuesto se reconstruye con los precios vigentes a su
+fecha y el resultado es idéntico al emitido (100 %, comparación exacta). Todo lo estocástico fija
+semilla: la misma entrada produce el mismo resultado en ML y en el simulador.
+
+**Tolerancia a fallos.** Una regla de verificación que no puede evaluarse se reporta como hallazgo
+INFO sin interrumpir a las demás (RF‑23); una lista de precios malformada se rechaza citando
+archivo y fila antes de valorar nada; un rendimiento atípico advierte pero no impide el registro
+(RF‑27).
+
+**Veredicto: cumple.**
+
+## 3. Eficiencia de desempeño (RNF‑03)
+
+Medición reproducible con `uv run python scripts/medir_rnf03.py` (2026‑08‑31, equipo de
+desarrollo, SQLite local, sin exportación): el ciclo completo de UC‑02 — revalorar 100 partidas
+con 41 insumos cambiados, reelaborar con auditoría R1–R7, guardar la versión nueva y su histórico
+de incidencias — tarda **1,17 s**, contra la meta de < 5 s: margen de 4×. La suite completa (385
+pruebas, incluido el modelo de lenguaje de I2) corre en 104,5 s.
+
+**Veredicto: cumple.**
+
+## 4. Usabilidad (RNF‑04)
+
+La meta (juicio de expertos ≥ 4/5 en Likert sobre el informe de auditoría) **no es automatizable y
+está pendiente**: el instrumento se aplica con el tutor en la Fase 6. Lo que el producto ya
+aporta a esa evaluación: hallazgos en español con severidad, impacto cuantificado y los
+`origen_id` involucrados; UI multipágina con los flujos implementados y visor 3D del modelo; API
+autodocumentada (OpenAPI en `docs/api.json`).
+
+**Veredicto: pendiente de medición** (riesgo bajo: el informe se diseñó desde el caso real).
+
+## 5. Mantenibilidad
+
+**Modularidad (RNF‑05).** La hipótesis central de la tesis es una propiedad de mantenibilidad y
+está probada empíricamente: `git diff --stat core/` vacío tras implementar los adaptadores
+telecom, industrial y sistemas (indicador 4), y `test_arquitectura.py` (64 casos) la vuelve a
+comprobar en cada corrida — un adaptador que importe de `core` algo distinto de `core.contracts`
+rompe la suite.
+
+**Capacidad de prueba (RNF‑06).** Cobertura de `core/` **97,99 %** (meta ≥ 80 %); `ml/` 99,29 %,
+`api/` 94,04 %, `adapters/` 88,78 %; total medido 95,99 %.
+
+**Analizabilidad.** Cada hecho vive en un solo lugar (DRY: constantes en `ParametrosCosto`, alias
+de unidades en `contracts.unidades`, línea base en el fixture); toda cantidad lleva su origen
+(RF‑03); `ruff` (reglas E, F, W, I, B, UP, N) corre limpio.
+
+**Modificabilidad.** Agregar un dominio = un paquete nuevo bajo `adapters/` que subclasifica
+`AdaptadorDominio`; la guía para terceros queda en el manual técnico (Sesión F.3).
+
+**Veredicto: cumple.**
+
+## 6. Portabilidad (RNF‑07)
+
+Instalación con `uv sync` (+ extras) sin pasos manuales, verificada en Windows 11. Sin rutas
+codificadas ni dependencias del sistema operativo en el código propio. La verificación en Linux
+está **pendiente**; nada en las dependencias (SQLAlchemy, SQLite, scikit‑learn, ifcopenshell) la
+hace improbable.
+
+**Veredicto: parcial** (verificado en una de las dos plataformas declaradas).
+
+## 7. Seguridad (RNF‑08)
+
+Por inspección del repositorio y de las dependencias: 0 credenciales versionadas; ejecución
+enteramente local (SQLite en el equipo del usuario, API y UI en localhost); 0 llamadas de red en
+operación — la única excepción, declarada y cacheada, es la descarga inicial del modelo de
+`sentence-transformers` (I2). La corrida de la suite pasa sin red disponible una vez poblada la
+caché.
+
+**Veredicto: cumple** para el perfil declarado (herramienta local de tesis, sin autenticación).
+
+## 8. Compatibilidad (RNF‑09)
+
+La compuerta G1 se cruzó **con salvedad**: el adaptador civil extrae de `tanquilla.ifc` cantidades
+exactas al cálculo manual (0,224 m³ de concreto), pero el modelo fue generado programáticamente
+con ifcopenshell, no exportado por un modelador BIM real. La meta (archivos de ≥ 2 herramientas,
+p. ej. Revit y Bonsai) sigue abierta; la alternativa tabular documentada existe desde el diseño.
+
+**Veredicto: parcial**, brecha declarada en la bitácora de F.1.
+
+## 9. Resumen
+
+| Característica | Meta de la ERS | Resultado | Veredicto |
+|---|---|---|---|
+| Adecuación funcional | clase 3 AACE; RF cubiertos | desviación 0,00 %; 26/26 esenciales en verde; 7 de 7 | cumple |
+| Fiabilidad | reproducibilidad 100 % | comparación exacta en verde; 385/385 | cumple |
+| Eficiencia de desempeño | < 5 s con ≤ 100 partidas | **1,17 s** con 100 partidas | cumple |
+| Usabilidad | Likert ≥ 4/5 | instrumento por aplicar (Fase 6) | pendiente |
+| Mantenibilidad | `core/` intacto; cobertura ≥ 80 % | diff vacío + 64 pruebas; **97,99 %** | cumple |
+| Portabilidad | 0 pasos manuales, Windows y Linux | Windows ✔; Linux pendiente | parcial |
+| Seguridad | 0 credenciales, 0 red | 0 y 0 (excepción declarada) | cumple |
+| Compatibilidad | IFC de ≥ 2 modeladores | exacto contra modelo programático | parcial |
+
+Cinco características cumplen su meta con evidencia automatizada o medida; una espera una medición
+humana (usabilidad) y dos quedan parciales por brechas declaradas desde las compuertas (Linux,
+IFC real). Ninguna brecha es silenciosa: todas tienen dueño, causa y bitácora.
