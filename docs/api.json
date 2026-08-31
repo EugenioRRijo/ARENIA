@@ -184,7 +184,7 @@
           "listas"
         ],
         "summary": "Listar Cambios Precio",
-        "description": "Historial de `CambioPrecio`, filtrable por descripcion de insumo y rango de fecha.",
+        "description": "Historial de `CambioPrecio`, filtrable por descripcion de insumo y rango de fecha.\n\nLa consulta vive una sola vez en `core.catalog.cambios_precio` (la misma que usa\n`ui/paginas/historico.py`); esta ruta solo serializa.",
         "operationId": "listar_cambios_precio_cambios_precio_get",
         "parameters": [
           {
@@ -630,6 +630,166 @@
           }
         }
       }
+    },
+    "/ejecuciones": {
+      "get": {
+        "tags": [
+          "rendimientos"
+        ],
+        "summary": "Listar Ejecuciones",
+        "description": "Obras ejecutadas registradas, de la mas antigua a la mas reciente.",
+        "operationId": "listar_ejecuciones_ejecuciones_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EjecucionRespuesta"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Ejecuciones Ejecuciones Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "rendimientos"
+        ],
+        "summary": "Crear Ejecucion",
+        "description": "Registra una obra ejecutada (referencia unica) y confirma la transaccion.",
+        "operationId": "crear_ejecucion_ejecuciones_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EjecucionPeticion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjecucionRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/partidas/{codigo}/rendimientos": {
+      "get": {
+        "tags": [
+          "rendimientos"
+        ],
+        "summary": "Obtener Rendimientos",
+        "description": "El historico de la partida con su dispersion y su propuesta (RF-26).",
+        "operationId": "obtener_rendimientos_partidas__codigo__rendimientos_get",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codigo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RendimientosRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "rendimientos"
+        ],
+        "summary": "Crear Rendimiento",
+        "description": "RF-25 + RF-27: registra el rendimiento y advierte si se aparta de lo observado.\n\nLa advertencia se evalua contra el comportamiento observado ANTES de este registro (el valor\nnuevo no participa de su propio rango) y nunca impide: la respuesta siempre es 201 con el\nregistro hecho y la transaccion confirmada.",
+        "operationId": "crear_rendimiento_partidas__codigo__rendimientos_post",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codigo"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RendimientoPeticion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistroRendimientoRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -796,6 +956,45 @@
         "title": "ComparativoRespuesta",
         "description": "El comparativo completo de UC-02: totales antes y después, y una fila por renglón."
       },
+      "DispersionRespuesta": {
+        "properties": {
+          "observaciones": {
+            "type": "integer",
+            "title": "Observaciones"
+          },
+          "media": {
+            "type": "string",
+            "title": "Media"
+          },
+          "minimo": {
+            "type": "string",
+            "title": "Minimo"
+          },
+          "maximo": {
+            "type": "string",
+            "title": "Maximo"
+          },
+          "medidos": {
+            "type": "integer",
+            "title": "Medidos"
+          },
+          "estimados": {
+            "type": "integer",
+            "title": "Estimados"
+          }
+        },
+        "type": "object",
+        "required": [
+          "observaciones",
+          "media",
+          "minimo",
+          "maximo",
+          "medidos",
+          "estimados"
+        ],
+        "title": "DispersionRespuesta",
+        "description": "RF-26: el comportamiento observado de la partida, con montos como texto exacto."
+      },
       "Dominio": {
         "type": "string",
         "enum": [
@@ -805,6 +1004,81 @@
           "sistemas"
         ],
         "title": "Dominio"
+      },
+      "EjecucionPeticion": {
+        "properties": {
+          "referencia": {
+            "type": "string",
+            "title": "Referencia"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Fin"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "referencia",
+          "fecha_inicio"
+        ],
+        "title": "EjecucionPeticion",
+        "description": "La obra ejecutada de la que se mediran rendimientos (registro, RF-25)."
+      },
+      "EjecucionRespuesta": {
+        "properties": {
+          "referencia": {
+            "type": "string",
+            "title": "Referencia"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Inicio"
+          },
+          "fecha_fin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Fin"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "referencia",
+          "fecha_inicio",
+          "fecha_fin",
+          "descripcion"
+        ],
+        "title": "EjecucionRespuesta",
+        "description": "Una obra ejecutada registrada."
       },
       "FilaComparativoRespuesta": {
         "properties": {
@@ -1324,6 +1598,170 @@
         ],
         "title": "PresupuestoResumenRespuesta",
         "description": "Cabecera de un presupuesto guardado: código y total, para el listado."
+      },
+      "PropuestaRendimientoRespuesta": {
+        "properties": {
+          "rendimiento": {
+            "$ref": "#/components/schemas/RendimientoRespuesta"
+          },
+          "dispersion": {
+            "$ref": "#/components/schemas/DispersionRespuesta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rendimiento",
+          "dispersion"
+        ],
+        "title": "PropuestaRendimientoRespuesta",
+        "description": "La propuesta al componer un APU: rendimiento elegido mas su dispersion."
+      },
+      "RegistroRendimientoRespuesta": {
+        "properties": {
+          "rendimiento": {
+            "$ref": "#/components/schemas/RendimientoRespuesta"
+          },
+          "advertencia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advertencia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rendimiento",
+          "advertencia"
+        ],
+        "title": "RegistroRendimientoRespuesta",
+        "description": "Lo registrado y la advertencia de RF-27 (o null): advertir nunca es impedir."
+      },
+      "RendimientoPeticion": {
+        "properties": {
+          "valor": {
+            "type": "string",
+            "title": "Valor"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          },
+          "condiciones": {
+            "type": "string",
+            "title": "Condiciones",
+            "default": ""
+          },
+          "referencia_ejecucion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referencia Ejecucion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor",
+          "tipo",
+          "fecha"
+        ],
+        "title": "RendimientoPeticion",
+        "description": "Registro de un rendimiento sobre una partida. `valor` viaja como texto decimal."
+      },
+      "RendimientoRespuesta": {
+        "properties": {
+          "valor": {
+            "type": "string",
+            "title": "Valor"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          },
+          "condiciones": {
+            "type": "string",
+            "title": "Condiciones"
+          },
+          "referencia_ejecucion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referencia Ejecucion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor",
+          "tipo",
+          "fecha",
+          "condiciones",
+          "referencia_ejecucion"
+        ],
+        "title": "RendimientoRespuesta",
+        "description": "Un rendimiento del historico: estimado o medido, siempre declarado."
+      },
+      "RendimientosRespuesta": {
+        "properties": {
+          "historico": {
+            "items": {
+              "$ref": "#/components/schemas/RendimientoRespuesta"
+            },
+            "type": "array",
+            "title": "Historico"
+          },
+          "dispersion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DispersionRespuesta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "propuesta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropuestaRendimientoRespuesta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "historico",
+          "dispersion",
+          "propuesta"
+        ],
+        "title": "RendimientosRespuesta",
+        "description": "El historico completo de una partida, con dispersion y propuesta (RF-26)."
       },
       "ValidationError": {
         "properties": {

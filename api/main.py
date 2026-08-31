@@ -3,7 +3,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from api.rutas import catalogo, computos, listas, presupuestos
+from api.rutas import catalogo, computos, listas, presupuestos, rendimientos
 from core.catalog import CatalogoIncompleto
 
 DESCRIPCION = """API HTTP sobre el nucleo del sistema de Analisis de Precios Unitarios (APU).
@@ -20,6 +20,7 @@ app.include_router(catalogo.router)
 app.include_router(listas.router)
 app.include_router(computos.router)
 app.include_router(presupuestos.router)
+app.include_router(rendimientos.router)
 
 
 @app.exception_handler(CatalogoIncompleto)
