@@ -185,3 +185,22 @@ def test_codigo_de_presupuesto_repetido_en_dos_proyectos_no_revienta_en_500(clie
         ).status_code
         == 200
     )
+
+
+def test_computo_civil_desde_un_modelo_ifc(cliente):
+    """Compuerta G1 por HTTP: `.ifc` como entrada de `/computos/civil`, decidido por la extension
+    del archivo (docs/superpowers/specs/2026-08-31-f1-api-simulador-design.md, seccion 7). No hace
+    falta el mapeo `codigos` que exige la entrada tabular: `Pset_APU` ya trae el codigo de partida.
+    """
+    ruta = RAIZ / "data" / "samples" / "tanquilla.ifc"
+    with ruta.open("rb") as f:
+        r = cliente.post(
+            "/computos/civil",
+            files={"archivo": (ruta.name, f, "application/octet-stream")},
+        )
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert items[0]["cantidad"] == "0.224"
+    assert items[0]["codigo_partida"] == "LB-04-CON"
+    assert items[0]["origen_tipo"] == "ifc"

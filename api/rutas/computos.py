@@ -9,20 +9,40 @@ import tempfile
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from api.esquemas import ItemComputoRespuesta
 from core.contracts import AdaptadorDominio, Dominio, ItemComputo
 
 router = APIRouter(tags=["computos"])
 
+_EXTENSION_IFC = ".ifc"
 
-def _adaptador(dominio: str, codigos: dict[str, str] | None) -> AdaptadorDominio:
-    """El adaptador del dominio pedido. El civil exige el mapeo de códigos por tipo de elemento."""
+
+def _adaptador(
+    dominio: str, codigos: dict[str, str] | None, nombre_archivo: str | None = None
+) -> AdaptadorDominio:
+    """El adaptador del dominio pedido.
+
+    El civil acepta dos entradas, decididas por la extension del archivo subido (seccion 7 de la
+    spec de F.1): `.ifc` (compuerta G1, `Pset_APU` ya trae el codigo de partida, no hace falta
+    `codigos`) o tabular (CSV, exige el mapeo `codigos` de tipo de elemento a codigo_partida).
+    """
     if dominio == Dominio.CIVIL:
+        if (nombre_archivo or "").lower().endswith(_EXTENSION_IFC):
+            try:
+                from adapters.civil.ifc import AdaptadorCivilIFC
+            except ImportError as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail="no se pudo leer el archivo .ifc: instala el extra civil (ifcopenshell)",
+                ) from exc
+
+            return AdaptadorCivilIFC()
         if codigos is None:
             raise ValueError(
-                "el dominio civil exige 'codigos' (mapeo de tipo de elemento a codigo_partida)"
+                "el dominio civil exige 'codigos' (mapeo de tipo de elemento a codigo_partida) "
+                "cuando el archivo no es .ifc"
             )
         from adapters.civil.tabular import AdaptadorCivilTabular
 
@@ -55,7 +75,7 @@ def computar(
     original, porque los adaptadores leen por extensión.
     """
     mapeo_codigos = json.loads(codigos) if codigos is not None else None
-    adaptador = _adaptador(dominio, mapeo_codigos)
+    adaptador = _adaptador(dominio, mapeo_codigos, archivo.filename)
     with tempfile.TemporaryDirectory() as carpeta:
         ruta = Path(carpeta) / archivo.filename
         ruta.write_bytes(archivo.file.read())
