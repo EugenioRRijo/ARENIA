@@ -13,9 +13,18 @@ Al lado se muestra la misma tabla GlobalId <-> codigo_partida <-> cantidad que p
 `AdaptadorCivilIFC` sobre el mismo archivo (adapters/civil/ifc.py, T6): el visor no reemplaza la
 trazabilidad de la regla R1, la ilustra.
 
+`ifcopenshell` (y, por lo tanto, `adapters.civil.ifc`, que lo importa a nivel de modulo) se cargan
+de forma perezosa en `_cargar_dependencias_civiles()`, no al importar este modulo: antes de esta
+pagina ninguna de las cinco pantallas registradas en `ui/app.py` requeria el extra `civil`, y un
+import incondicional aqui rompería `ui.app` (y las cinco pantallas sin relacion con IFC) en
+cualquier entorno instalado solo con `uv sync --extra ui --extra api`. Si el extra no esta
+instalado, `render()` lo detecta y muestra un mensaje con `st.error`, mismo criterio que usa
+`api/rutas/computos.py` para `ImportError` (400 con mensaje claro) en vez de una traza cruda.
+
 Sin pruebas de UI (decision del proyecto, spec F.1 seccion 7): la teselacion se prueba en
-`tests/unit/test_visor3d.py`; esta pagina solo se comprueba con `tests/unit/test_ui_importable.py`
-(se importa sin efectos) y con la verificacion manual documentada en el reporte de la tarea.
+`tests/unit/test_visor3d.py`, junto con el aislamiento del import perezoso; esta pagina solo se
+comprueba con `tests/unit/test_ui_importable.py` (se importa sin efectos) y con la verificacion
+manual documentada en el reporte de la tarea.
 """
 
 from __future__ import annotations
@@ -23,28 +32,43 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from types import ModuleType
+from typing import TYPE_CHECKING
 
-import ifcopenshell
 import streamlit as st
 from pandas import DataFrame
 
-from adapters.civil.ifc import AdaptadorCivilIFC
 from core.contracts import ItemComputo
 from core.verification.informe import DECIMALES_PRESENTACION
 from core.verification.texto import formatear_decimal
 from ui.visor3d import mallas
+
+if TYPE_CHECKING:
+    from adapters.civil.ifc import AdaptadorCivilIFC
 
 TITULO = "Visor 3D"
 RUTA_POR_DEFECTO = "data/samples/tanquilla.ifc"
 ALTURA_VISOR = 480
 VERSION_THREE_JS = "r128"
 URL_THREE_JS = f"https://cdnjs.cloudflare.com/ajax/libs/three.js/{VERSION_THREE_JS}/three.min.js"
+_MENSAJE_SIN_EXTRA_CIVIL = (
+    "El visor 3D necesita el extra 'civil' (ifcopenshell): instala con "
+    "'uv sync --extra civil' y vuelve a intentar."
+)
 
-#: Errores esperados al abrir o leer un `.ifc`: archivo inexistente o sin permisos (`OSError`),
-#: contenido que no es un IFC valido (`ifcopenshell.Error`, por ejemplo una cabecera SPF corrupta)
-#: y los que ya usan las demas paginas para un archivo mal formado o incompleto (`LookupError`,
-#: `ValueError`, `ArithmeticError`; ver `ui/paginas/elaborar.py`).
-_ERRORES_LECTURA_IFC = (OSError, ifcopenshell.Error, LookupError, ValueError, ArithmeticError)
+
+def _cargar_dependencias_civiles() -> tuple[ModuleType, type[AdaptadorCivilIFC]]:
+    """Importa `ifcopenshell` y `AdaptadorCivilIFC` solo cuando el visor se usa de verdad.
+
+    Perezoso a proposito (CLAUDE.md §9, seccion "import perezoso" de este modulo): asi `ui.app` y
+    esta pagina siguen siendo importables sin el extra `civil`. Relanza `ImportError` tal cual si
+    ifcopenshell no esta instalado; `render()` decide como mostrarlo (`st.error`).
+    """
+    import ifcopenshell
+
+    from adapters.civil.ifc import AdaptadorCivilIFC
+
+    return ifcopenshell, AdaptadorCivilIFC
 
 
 def render() -> None:
@@ -69,14 +93,25 @@ def render() -> None:
 
 
 def _render_desde_ruta(ruta: Path) -> None:
+    try:
+        ifcopenshell, adaptador_civil_ifc = _cargar_dependencias_civiles()
+    except ImportError:
+        st.error(_MENSAJE_SIN_EXTRA_CIVIL)
+        return
+
     if not ruta.exists():
         st.error(f"No se encontro el archivo {ruta}.")
         return
 
+    # Errores esperados al abrir o leer el `.ifc`: sin permisos (`OSError`), contenido que no es
+    # un IFC valido (`ifcopenshell.Error`, por ejemplo una cabecera SPF corrupta) y los que ya usan
+    # las demas paginas para un archivo mal formado o incompleto (`LookupError`, `ValueError`,
+    # `ArithmeticError`; ver `ui/paginas/elaborar.py`).
+    errores_lectura_ifc = (OSError, ifcopenshell.Error, LookupError, ValueError, ArithmeticError)
     try:
         mallas_encontradas = mallas(ruta)
-        items = AdaptadorCivilIFC().extraer(ruta)
-    except _ERRORES_LECTURA_IFC as error:
+        items = adaptador_civil_ifc().extraer(ruta)
+    except errores_lectura_ifc as error:
         st.error(str(error))
         return
 
