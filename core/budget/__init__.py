@@ -17,6 +17,7 @@ CLAUDE.md §2).
 que el catálogo sigue reproduciéndolo.
 """
 
+from core.budget.actualizacion import COLUMNAS_COMPARATIVO, Comparativo, actualizar_precios
 from core.budget.curva import (
     PeriodoPlan,
     PlanInvalido,
@@ -29,9 +30,12 @@ from core.budget.persistencia import cargar_presupuesto, guardar_presupuesto
 from core.budget.presupuesto import ResultadoElaboracion, elaborar, generar_presupuesto
 
 __all__ = [
+    "COLUMNAS_COMPARATIVO",
+    "Comparativo",
     "PeriodoPlan",
     "PlanInvalido",
     "ResultadoElaboracion",
+    "actualizar_precios",
     "cargar_presupuesto",
     "con_curva",
     "elaborar",

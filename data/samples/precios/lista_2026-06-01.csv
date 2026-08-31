@@ -1,0 +1,10 @@
+tipo,insumo,unidad,precio
+material,Cemento Portland,saco,18
+material,Arena lavada,m3,33
+material,Piedra picada,m3,35
+material,Tubería PVC 4 pulg,m,6
+material,Material granular,m3,12
+equipo,Retroexcavadora,,200
+equipo,Mezcladora de concreto,,60
+mano_obra,Ayudante,,3
+mano_obra,Albañil de 1ra,,5
