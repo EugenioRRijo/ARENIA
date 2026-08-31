@@ -1,4 +1,27 @@
-"""Predicción de precio unitario: XGBoost / CBR / reglas según la compuerta G2 (CLAUDE.md §8.1).
+"""Prediccion de precio unitario (Sesion I6.3, compuerta G2)."""
 
-Sesión I6.3.
-"""
+from ml.prediction.reglas import (
+    RANGO_AACE_CLASE_3,
+    UMBRAL_CASOS,
+    UMBRAL_XGBOOST,
+    Metricas,
+    PrediccionPrecio,
+    Tecnica,
+    contrastar_aace,
+    metricas,
+    predecir_por_reglas,
+    tecnica_para,
+)
+
+__all__ = [
+    "RANGO_AACE_CLASE_3",
+    "UMBRAL_CASOS",
+    "UMBRAL_XGBOOST",
+    "Metricas",
+    "PrediccionPrecio",
+    "Tecnica",
+    "contrastar_aace",
+    "metricas",
+    "predecir_por_reglas",
+    "tecnica_para",
+]
