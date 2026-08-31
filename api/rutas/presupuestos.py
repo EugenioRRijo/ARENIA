@@ -122,9 +122,15 @@ def listar_presupuestos(sesion: SesionDep) -> list[PresupuestoResumenRespuesta]:
 
 
 @router.get("/presupuestos/{codigo}", response_model=PresupuestoDetalleRespuesta)
-def obtener_presupuesto(sesion: SesionDep, codigo: str) -> PresupuestoDetalleRespuesta:
-    """El presupuesto reconstruido desde el catálogo (`cargar_presupuesto`), con sus renglones."""
-    presupuesto, _ = _cargar(sesion, codigo)
+def obtener_presupuesto(
+    sesion: SesionDep, codigo: str, proyecto: str | None = None
+) -> PresupuestoDetalleRespuesta:
+    """El presupuesto reconstruido desde el catálogo (`cargar_presupuesto`), con sus renglones.
+
+    `codigo` es único solo por proyecto: si dos proyectos comparten código, indique `proyecto`
+    para desambiguar (`_buscar_modelo` responde 409 en vez de una ambigüedad silenciosa).
+    """
+    presupuesto, _ = _cargar(sesion, codigo, proyecto)
     return PresupuestoDetalleRespuesta(
         codigo=presupuesto.codigo,
         fecha=presupuesto.fecha,
@@ -147,18 +153,22 @@ def obtener_presupuesto(sesion: SesionDep, codigo: str) -> PresupuestoDetalleRes
 
 
 @router.get("/presupuestos/{codigo}/informe")
-def informe_de_auditoria(sesion: SesionDep, codigo: str) -> PlainTextResponse:
+def informe_de_auditoria(
+    sesion: SesionDep, codigo: str, proyecto: str | None = None
+) -> PlainTextResponse:
     """El informe de auditoría en markdown (UC-05): se genera siempre, con la misma llamada que
     usa `ui/app.py` (`InformeAuditoria.a_markdown()`), nunca reinventada aquí.
     """
-    _, informe = _cargar(sesion, codigo)
+    _, informe = _cargar(sesion, codigo, proyecto)
     return PlainTextResponse(informe.a_markdown(), media_type="text/markdown")
 
 
 @router.get("/presupuestos/{codigo}/excel")
-def exportar_presupuesto_excel(sesion: SesionDep, codigo: str) -> FileResponse:
+def exportar_presupuesto_excel(
+    sesion: SesionDep, codigo: str, proyecto: str | None = None
+) -> FileResponse:
     """El presupuesto, su APU, su curva y su auditoría como libro de Excel descargable."""
-    presupuesto, informe = _cargar(sesion, codigo)
+    presupuesto, informe = _cargar(sesion, codigo, proyecto)
     descriptor, ruta_texto = tempfile.mkstemp(suffix=".xlsx")
     os.close(descriptor)  # exportar_excel abre la ruta por su cuenta (openpyxl.Workbook.save)
     ruta = exportar_excel(presupuesto, informe, Path(ruta_texto))
@@ -172,14 +182,17 @@ def exportar_presupuesto_excel(sesion: SesionDep, codigo: str) -> FileResponse:
 
 @router.post("/presupuestos/{codigo}/actualizacion", response_model=ComparativoRespuesta)
 def actualizar_presupuesto(
-    sesion: SesionDep, codigo: str, peticion: ActualizacionPeticion
+    sesion: SesionDep,
+    codigo: str,
+    peticion: ActualizacionPeticion,
+    proyecto: str | None = None,
 ) -> ComparativoRespuesta:
     """UC-02: revalora el presupuesto con `peticion.lista` y guarda la versión `codigo_nuevo`.
 
     Mismo criterio que `ui/app.py`: si ningún insumo cambió de precio
     (`comparativo.insumos_afectados == 0`) no hay nada que confirmar (409, sin `commit`).
     """
-    modelo = _buscar_modelo(sesion, codigo)
+    modelo = _buscar_modelo(sesion, codigo, proyecto)
     lista_nueva = sesion.scalars(
         select(models.ListaPrecios).where(models.ListaPrecios.nombre == peticion.lista)
     ).one_or_none()
@@ -249,19 +262,45 @@ def _parametros_costo(peticion: PresupuestoPeticion) -> ParametrosCosto:
     return ParametrosCosto(**campos)
 
 
-def _buscar_modelo(sesion: Session, codigo: str) -> models.Presupuesto:
-    """El renglón de `models.Presupuesto` de ese código. `LookupError` (404) si no existe."""
-    modelo = sesion.scalars(
-        select(models.Presupuesto).where(models.Presupuesto.codigo == codigo)
-    ).one_or_none()
-    if modelo is None:
-        raise LookupError(f"no hay ningún presupuesto con código {codigo!r}")
-    return modelo
+def _buscar_modelo(sesion: Session, codigo: str, proyecto: str | None = None) -> models.Presupuesto:
+    """El renglón de `models.Presupuesto` de ese código, acotado por proyecto si se indica.
+
+    `codigo` solo es único **por proyecto** (`UniqueConstraint(proyecto_id, codigo)` en
+    `core.models.entidades.Presupuesto`, el mismo criterio con que `cargar_presupuesto` exige
+    `proyecto_nombre`): sin `proyecto`, dos proyectos con el mismo código son ambiguos y se
+    declaran con un 409 explícito en vez de dejar que `MultipleResultsFound` llegue sin manejador
+    registrado en `api/main.py` (hallazgo de la revisión de la Tarea 2). Ninguna coincidencia sigue
+    siendo `LookupError` (404), como antes.
+    """
+    consulta = select(models.Presupuesto).where(models.Presupuesto.codigo == codigo)
+    if proyecto is not None:
+        consulta = consulta.join(models.Proyecto).where(models.Proyecto.nombre == proyecto)
+    encontrados = list(sesion.scalars(consulta))
+
+    if not encontrados:
+        detalle = f"no hay ningún presupuesto con código {codigo!r}"
+        if proyecto is not None:
+            detalle += f" en el proyecto {proyecto!r}"
+        raise LookupError(detalle)
+
+    if len(encontrados) > 1:
+        nombres = ", ".join(sorted({modelo.proyecto.nombre for modelo in encontrados}))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"el código {codigo!r} existe en más de un proyecto ({nombres}): "
+                "indique 'proyecto' en la consulta para desambiguar"
+            ),
+        )
+
+    return encontrados[0]
 
 
-def _cargar(sesion: Session, codigo: str) -> tuple[Presupuesto, InformeAuditoria]:
+def _cargar(
+    sesion: Session, codigo: str, proyecto: str | None = None
+) -> tuple[Presupuesto, InformeAuditoria]:
     """El presupuesto reconstruido desde el catálogo y su informe de auditoría, recién evaluado."""
-    modelo = _buscar_modelo(sesion, codigo)
+    modelo = _buscar_modelo(sesion, codigo, proyecto)
     catalogo = Catalogo(sesion)
     presupuesto = cargar_presupuesto(sesion, modelo.proyecto.nombre, codigo, catalogo)
     return presupuesto, auditar(presupuesto)

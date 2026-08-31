@@ -1,6 +1,6 @@
 """API FastAPI que expone las operaciones del nucleo (Sesion F.1)."""
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from api.rutas import catalogo, computos, listas, presupuestos
@@ -17,6 +17,15 @@ app.include_router(presupuestos.router)
 def manejar_catalogo_incompleto(_request: Request, exc: CatalogoIncompleto) -> JSONResponse:
     """Falta un dato imprescindible en el catalogo (precio o rendimiento vigente)."""
     return JSONResponse(status_code=409, content={"detalle": str(exc)})
+
+
+@app.exception_handler(HTTPException)
+def manejar_http_exception(_request: Request, exc: HTTPException) -> JSONResponse:
+    """Un conflicto o error explicito de una ruta (ej. codigo de presupuesto ambiguo entre
+    proyectos, o UC-02 sin nada que confirmar): mismo formato `{"detalle": ...}` que el resto de
+    la API, en vez del `{"detail": ...}` que usa FastAPI por defecto.
+    """
+    return JSONResponse(status_code=exc.status_code, content={"detalle": exc.detail})
 
 
 @app.exception_handler(LookupError)
