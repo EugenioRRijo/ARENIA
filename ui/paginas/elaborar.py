@@ -63,11 +63,12 @@ def render() -> None:
 
     codigos_civil: dict[str, str] = {}
     if dominio == Dominio.CIVIL:
-        codigos_civil = _codigos_civil(parametros["ruta"])
+        codigos_civil = _codigos_civil(parametros["ruta"]) or {}
         if not codigos_civil:
             st.warning(
-                "El catalogo no tiene partidas del dominio civil todavia: cargue primero un "
-                "presupuesto civil (por ejemplo, sembrando la linea base en la pagina de "
+                "El catalogo no tiene partidas del dominio civil todavia (o la base de datos no "
+                "se pudo leer; revise el mensaje de error de arriba, si lo hay): cargue primero "
+                "un presupuesto civil (por ejemplo, sembrando la linea base en la pagina de "
                 "Actualizacion) antes de extraer un cómputo civil."
             )
 
@@ -114,13 +115,21 @@ def _barra_lateral() -> dict[str, object]:
     }
 
 
-def _codigos_civil(ruta: Path) -> dict[str, str]:
-    """Los códigos de concreto, encofrado, excavación, tubería y (opcional) relleno del catálogo."""
+def _codigos_civil(ruta: Path) -> dict[str, str] | None:
+    """Los códigos de concreto, encofrado, excavación, tubería y (opcional) relleno del catálogo.
+
+    `None` si la base de datos no se pudo leer (el error ya se mostró con `st.error`, mismo
+    criterio que `ui/paginas/actualizacion.py`); un diccionario vacío si se pudo leer pero el
+    catálogo no tiene partidas civiles todavía.
+    """
     motor = crear_motor(f"sqlite:///{ruta.as_posix()}")
     try:
         crear_esquema(motor)
         with abrir_sesion(motor) as sesion:
             codigos = [partida.codigo for partida in Catalogo(sesion).partidas(Dominio.CIVIL)]
+    except (LookupError, ValueError, ArithmeticError, SQLAlchemyError) as error:
+        st.error(str(error))
+        return None
     finally:
         motor.dispose()
 

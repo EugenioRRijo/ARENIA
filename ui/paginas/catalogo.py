@@ -14,6 +14,7 @@ from pathlib import Path
 
 import streamlit as st
 from pandas import DataFrame
+from sqlalchemy.exc import SQLAlchemyError
 
 from core.catalog import Catalogo, CatalogoIncompleto, abrir_sesion, crear_esquema, crear_motor
 from core.verification.informe import DECIMALES_PRESENTACION
@@ -37,6 +38,10 @@ def render() -> None:
             catalogo = Catalogo(sesion)
             _mostrar_partidas(catalogo)
             _mostrar_insumos(catalogo)
+    except (LookupError, ValueError, ArithmeticError, SQLAlchemyError) as error:
+        # Mismo criterio que `ui/paginas/actualizacion.py`: un archivo de base de datos corrupto
+        # o inaccesible (`OperationalError` de `crear_esquema`) es un mensaje, no una traza cruda.
+        st.error(str(error))
     finally:
         motor.dispose()
 

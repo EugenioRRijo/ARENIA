@@ -16,6 +16,7 @@ from pathlib import Path
 import streamlit as st
 from pandas import DataFrame
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from core import models
@@ -44,6 +45,12 @@ def render() -> None:
         crear_esquema(motor)
         with abrir_sesion(motor) as sesion:
             cambios = _consultar(sesion, insumo, desde, hasta)
+    except (LookupError, ValueError, ArithmeticError, SQLAlchemyError) as error:
+        # Mismo criterio que `ui/paginas/actualizacion.py`: un archivo de base de datos corrupto
+        # o inaccesible (`OperationalError` de `crear_esquema`) es un mensaje, no una traza cruda.
+        # `return` aqui no salta el `finally`: `motor.dispose()` corre igual antes de salir.
+        st.error(str(error))
+        return
     finally:
         motor.dispose()
 
