@@ -1,4 +1,4 @@
-# Diseño — F.1 adelantada: API FastAPI, simulador de mercado y front de prueba
+# Diseño — F.1 adelantada: API FastAPI, simulador de mercado, front de prueba y gestión 3D (I3.1)
 
 **Fecha:** 2026‑08‑31 · **Estado:** aprobado en conversación (enfoque B, «aprobado tal cual») ·
 **Rama prevista:** `inc/F1-api` · **Spec de autoridad:** [CLAUDE.md](../../../CLAUDE.md),
@@ -14,7 +14,9 @@ del núcleo con esquema OpenAPI exportado a `docs/api.json`.
 
 **Alcance** (F.1 parcial, adelantada; desviación de la cascada documentada en bitácora, igual que el
 alpha): API HTTP sobre el núcleo existente, un simulador de listas de precios para ejercitar el ciclo
-de actualización, y la UI Streamlit extendida a multipágina. Casos de uso cubiertos: UC‑01 (elaborar
+de actualización, la UI Streamlit extendida a multipágina y **la gestión del sistema 3D**
+(Sesión I3.1 del plan, compuerta G1): adaptador civil IFC, modelo de muestra generado
+programáticamente y visor 3D en la UI (añadido 2026‑08‑31 a pedido del usuario). Casos de uso cubiertos: UC‑01 (elaborar
 desde cómputo de muestra por dominio), UC‑02 (actualización masiva vía API), UC‑05 (informe de
 auditoría, que se genera siempre), más consulta de catálogo e histórico.
 
@@ -114,11 +116,39 @@ en memoria sembrada con la línea base (override de la dependencia de sesión):
 Misma mecánica del sprint alpha (subagentes con revisión por tarea, fusión `--no-ff`, ledger).
 Tareas previstas: **T1** API núcleo (esquemas, dependencias, rutas de catálogo/listas/cambios),
 **T2** rutas de cómputo y presupuestos, **T3** simulador + su prueba, **T4** UI multipágina,
-**T5** OpenAPI a `docs/api.json` + bitácora + integración. Dependencias: T2 tras T1; T4 tras T3;
-T5 al final. Commits convencionales en español sin tildes (`feat(api): …`, `feat(scripts): …`,
+**T5** generador de `tanquilla.ifc`, **T6** adaptador civil IFC + entrada .ifc en la API (compuerta
+G1), **T7** visor 3D, **T8** OpenAPI a `docs/api.json` + bitácora + integración. Dependencias:
+T2 tras T1; T4 tras T3; T6 y T7 tras T5 (T7 además tras T4); T8 al final. Oleadas: (T1, T3, T5) →
+(T2, T4, T6) → (T7, T8). Commits convencionales en español sin tildes (`feat(api): …`, `feat(scripts): …`,
 `feat(ui): …`).
 
-## 7. Riesgos y decisiones abiertas
+## 7. Gestión del sistema 3D (Sesión I3.1, compuerta G1) — añadido 2026‑08‑31
+
+- **`scripts/generar_tanquilla_ifc.py`** construye `data/samples/tanquilla.ifc` (IFC 4) con
+  ifcopenshell: una tanquilla de a = 0,80 m, h = 0,80 m, e = 0,10 m como sólido real (extrusión del
+  anillo de paredes), con el conjunto de propiedades `Pset_APU` (`COVENIN_Codigo`,
+  `Partida_Descripcion`, `Unidad`) y un `IfcElementQuantity` cuyo volumen sale de la fórmula de
+  I3.2 — `(a² − (a−2e)²)·h = 0,224 m3​` — calculada con `Decimal`, no de una constante suelta.
+  El archivo es reemplazable por un export de Revit/Bonsai: el extractor no distingue el productor.
+- **`adapters/civil/ifc.py`**: `AdaptadorCivilIFC(AdaptadorDominio)` lee el IFC con ifcopenshell,
+  recorre los elementos que llevan `Pset_APU`, toma la cantidad del `IfcElementQuantity` acorde a
+  la unidad declarada y devuelve `ItemComputo` con `origen_id` = GlobalId y
+  `origen_tipo = OrigenTipo.IFC`. Solo importa `core.contracts` (e ifcopenshell, terceros).
+- **Compuerta G1:** la prueba de aceptación compara lo extraído contra el cálculo manual
+  (0,224 m3, la misma cifra de `test_reglas_civil`). Si no coincidiera, el adaptador tabular sigue
+  siendo la entrada civil y se documenta la pérdida (CLAUDE.md §8.2); el resto del sistema no cambia.
+- **API:** `POST /computos/civil` acepta `.csv` (tabular) o `.ifc` (IFC), decidido por la
+  extensión del archivo.
+- **Visor 3D:** `ui/visor3d.py` tesela el IFC con `ifcopenshell.geom` a mallas por elemento
+  (vértices, caras, GlobalId) y la página del visor las renderiza con three.js (CDN) junto a la
+  tabla elemento ↔ partida ↔ cantidad extraída. La teselación se prueba con pytest; la página no
+  (sin pruebas de UI, por diseño del proyecto).
+- **Dependencias:** el extra `civil` ya declara `ifcopenshell>=0.8` (verificado: 0.8.5 instala en
+  Python 3.13/Windows). Entorno del sprint: `uv sync --extra ui --extra api --extra civil`. Las
+  pruebas que requieren ifcopenshell usan `pytest.importorskip` para no romper entornos sin el
+  extra, pero el sprint corre con el extra instalado y su evidencia debe mostrarlas pasando.
+
+## 8. Riesgos y decisiones abiertas
 
 - **G0 sigue pendiente** (tutor): la API expone lo ya construido; si G0 pide cambios, la API los
   hereda vía el núcleo, no los absorbe.
