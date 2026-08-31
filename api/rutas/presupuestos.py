@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 import tempfile
-from decimal import Decimal
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, status
@@ -30,6 +29,7 @@ from api.esquemas import (
     PresupuestoDetalleRespuesta,
     PresupuestoPeticion,
     PresupuestoResumenRespuesta,
+    decimal_desde_texto,
 )
 from core import models
 from core.budget import (
@@ -242,12 +242,15 @@ def _a_item_computo(item: ItemComputoPeticion) -> ItemComputo:
         codigo_partida=item.codigo_partida,
         descripcion=item.descripcion,
         unidad=item.unidad,
-        cantidad=Decimal(item.cantidad),
+        cantidad=decimal_desde_texto(item.cantidad, f"cantidad de {item.codigo_partida}"),
         origen_id=item.origen_id,
         origen_tipo=OrigenTipo(item.origen_tipo),
         dominio=Dominio(item.dominio),
         regla=item.regla,
-        parametros={clave: Decimal(valor) for clave, valor in item.parametros.items()},
+        parametros={
+            clave: decimal_desde_texto(valor, f"parametro {clave} de {item.codigo_partida}")
+            for clave, valor in item.parametros.items()
+        },
         especificaciones=dict(item.especificaciones),
     )
 
@@ -255,7 +258,7 @@ def _a_item_computo(item: ItemComputoPeticion) -> ItemComputo:
 def _parametros_costo(peticion: PresupuestoPeticion) -> ParametrosCosto:
     """Los cuatro parámetros de costo; los que el cuerpo no trae quedan en su valor por defecto."""
     campos = {
-        nombre: Decimal(valor)
+        nombre: decimal_desde_texto(valor, nombre)
         for nombre in _CAMPOS_PARAMETROS
         if (valor := getattr(peticion, nombre)) is not None
     }

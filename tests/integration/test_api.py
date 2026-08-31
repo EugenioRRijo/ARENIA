@@ -141,6 +141,46 @@ def test_actualizacion_por_http_solo_revalora_el_concreto(cliente):
     assert sum(1 for f in cuerpo["filas"] if f["variacion_pct"] not in ("0", "0.00")) == 1
 
 
+def test_cantidad_decimal_malformada_responde_422_no_500(cliente):
+    """`Decimal("12,50")` lanza `InvalidOperation` (que NO hereda de `ValueError`): sin manejo en
+    la frontera seria un 500 crudo (hallazgo menor diferido de la bitacora F.1). La API debe
+    responder 422 con el campo y el texto rechazado en el detalle.
+    """
+    items = _items_payload()
+    items[0]["cantidad"] = "12,50"  # coma decimal: malformado para Decimal
+    r = cliente.post(
+        "/presupuestos",
+        json={
+            "codigo": "API-MAL",
+            "fecha": "2026-04-28",
+            "moneda": "USD",
+            "proyecto": "Drenaje de la clínica",
+            "items": items,
+        },
+    )
+    assert r.status_code == 422
+    assert "12,50" in r.json()["detalle"]
+
+
+def test_parametro_decimal_no_finito_responde_422(cliente):
+    """`Decimal("NaN")` SI parsea, pero no es un monto: debe rechazarse en la frontera, no
+    propagarse hasta que una comparacion del nucleo lance `InvalidOperation` (500 crudo).
+    """
+    r = cliente.post(
+        "/presupuestos",
+        json={
+            "codigo": "API-NAN",
+            "fecha": "2026-04-28",
+            "moneda": "USD",
+            "proyecto": "Drenaje de la clínica",
+            "fcas": "NaN",
+            "items": _items_payload(),
+        },
+    )
+    assert r.status_code == 422
+    assert "fcas" in r.json()["detalle"]
+
+
 def test_codigo_de_presupuesto_repetido_en_dos_proyectos_no_revienta_en_500(cliente, sesion):
     """`codigo` solo es unico por proyecto (`UniqueConstraint(proyecto_id, codigo)`): si dos
     proyectos comparten codigo, las rutas que resuelven `{codigo}` deben responder 409 con
