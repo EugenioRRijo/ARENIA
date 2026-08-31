@@ -130,8 +130,8 @@ METAS: tuple[Meta, ...] = (
 )
 
 
-def _archivos_de_pruebas() -> tuple[str, ...]:
-    return tuple(archivo for meta in METAS if meta.tipo == "pruebas" for archivo in meta.archivos)
+def _archivos_de_pruebas(metas: Sequence[Meta] = METAS) -> tuple[str, ...]:
+    return tuple(archivo for meta in metas if meta.tipo == "pruebas" for archivo in meta.archivos)
 
 
 # --------------------------------------------------------------------------------------
@@ -481,7 +481,12 @@ def _ramas_adaptador(base: str) -> list[tuple[str, list[str]]]:
     return ramas
 
 
-def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila]:
+def _evaluar(
+    base: str, umbral_cobertura: int, con_cobertura: bool, metas: Sequence[Meta] = METAS
+) -> list[Fila]:
+    """Evalua `metas` (las del sprint alpha por defecto; `scripts/meta_i6.py` pasa las suyas:
+    misma maquinaria, un solo lugar — DRY).
+    """
     with tempfile.TemporaryDirectory(prefix="meta_alpha_") as directorio_temp:
         xml_texto, cobertura, codigo_pytest = _ejecutar_pytest(Path(directorio_temp), con_cobertura)
     corrida_rota = estado_ejecucion_pytest(codigo_pytest, xml_texto)
@@ -490,7 +495,7 @@ def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila
     commits = _commits_nucleo_intacto(base)
     ramas = _ramas_adaptador(base)
 
-    archivos_pruebas = _archivos_de_pruebas()
+    archivos_pruebas = _archivos_de_pruebas(metas)
     if xml_texto:
         resumenes = parsear_junit(xml_texto, archivos_pruebas)
     else:
@@ -498,7 +503,7 @@ def _evaluar(base: str, umbral_cobertura: int, con_cobertura: bool) -> list[Fila
     total, fallidas, errores = _totales_suite(xml_texto)
 
     filas: list[Fila] = []
-    for meta in METAS:
+    for meta in metas:
         if meta.tipo == "pruebas":
             estado, evidencia = estado_pruebas(resumenes, meta.archivos)
             # Un archivo faltante sigue siendo PENDIENTE aunque pytest se haya roto: la ausencia
