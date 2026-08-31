@@ -192,3 +192,81 @@ class ComparativoRespuesta(BaseModel):
     total_nuevo: str
     insumos_afectados: int
     filas: list[FilaComparativoRespuesta]
+
+
+# ---------------------------------------------------------------------------------------------
+# Rendimientos y ejecuciones (UC-06, Sesion I6.2)
+# ---------------------------------------------------------------------------------------------
+
+
+class EjecucionPeticion(BaseModel):
+    """La obra ejecutada de la que se mediran rendimientos (registro, RF-25)."""
+
+    referencia: str
+    fecha_inicio: date
+    fecha_fin: date | None = None
+    descripcion: str = ""
+
+
+class EjecucionRespuesta(BaseModel):
+    """Una obra ejecutada registrada."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    referencia: str
+    fecha_inicio: date
+    fecha_fin: date | None
+    descripcion: str
+
+
+class RendimientoPeticion(BaseModel):
+    """Registro de un rendimiento sobre una partida. `valor` viaja como texto decimal."""
+
+    valor: str
+    tipo: str
+    fecha: date
+    condiciones: str = ""
+    referencia_ejecucion: str | None = None
+
+
+class RendimientoRespuesta(BaseModel):
+    """Un rendimiento del historico: estimado o medido, siempre declarado."""
+
+    valor: str
+    tipo: str
+    fecha: date
+    condiciones: str
+    referencia_ejecucion: str | None
+
+
+class DispersionRespuesta(BaseModel):
+    """RF-26: el comportamiento observado de la partida, con montos como texto exacto."""
+
+    observaciones: int
+    media: str
+    minimo: str
+    maximo: str
+    medidos: int
+    estimados: int
+
+
+class PropuestaRendimientoRespuesta(BaseModel):
+    """La propuesta al componer un APU: rendimiento elegido mas su dispersion."""
+
+    rendimiento: RendimientoRespuesta
+    dispersion: DispersionRespuesta
+
+
+class RendimientosRespuesta(BaseModel):
+    """El historico completo de una partida, con dispersion y propuesta (RF-26)."""
+
+    historico: list[RendimientoRespuesta]
+    dispersion: DispersionRespuesta | None
+    propuesta: PropuestaRendimientoRespuesta | None
+
+
+class RegistroRendimientoRespuesta(BaseModel):
+    """Lo registrado y la advertencia de RF-27 (o null): advertir nunca es impedir."""
+
+    rendimiento: RendimientoRespuesta
+    advertencia: str | None
