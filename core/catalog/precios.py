@@ -3,9 +3,14 @@
 Tres responsabilidades, en el orden en que las usa el caso de uso:
 
 1. **Leer** un archivo CSV o XLSX con las columnas `tipo`, `insumo`, `unidad` y `precio`. Todo
-   importe se construye con `Decimal` **desde el texto** del archivo (`dtype=str`): si pandas lo
-   leyera como número, `18,3` ya habría pasado por un `float` y el precio dejaría de ser exacto
-   (CLAUDE.md §2.3).
+   importe se construye con `Decimal` **desde el texto** del archivo, nunca desde un `float`
+   (CLAUDE.md §2.3). El CSV ya es texto en el archivo: `pandas.read_csv(dtype=str)` lo lee tal
+   cual. El XLSX es distinto: `pandas.read_excel(dtype=str)` **no** basta, porque el motor de
+   Excel (`openpyxl`) analiza toda celda numérica como `float` de Python *antes* de que `pandas`
+   pueda aplicar `dtype`, que solo convierte ese `float` a texto *después*, delegando el formateo a
+   un arreglo intermedio de `numpy` que este módulo no controla ni puede garantizar entre
+   versiones. Por eso el XLSX se lee celda por celda con `openpyxl` (`_leer_tabla_excel`), en
+   Python puro y sin arreglos intermedios.
 2. **Crear** la lista nueva a partir de la vigente: copia todos sus precios y sobrescribe los que
    trae el archivo. Así la lista nueva vale por sí sola para reconstruir cualquier APU, que es lo
    que exige `Catalogo.composicion`. Los insumos que el catálogo no conoce **no se crean**: se
@@ -33,6 +38,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+import openpyxl
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -140,18 +146,58 @@ def leer_lista_precios(ruta: Path) -> list[PrecioLeido]:
 
 
 def _leer_tabla(ruta: Path) -> pd.DataFrame:
-    """El archivo como tabla de texto: `dtype=str` para que ningún importe pase por `float`."""
+    """El archivo como tabla de texto: ningún importe pasa por `float` en ningún paso."""
     sufijo = ruta.suffix.lower()
     if sufijo == SUFIJO_CSV:
         tabla = pd.read_csv(ruta, dtype=str, keep_default_na=False, encoding="utf-8")
     elif sufijo in SUFIJOS_EXCEL:
-        tabla = pd.read_excel(ruta, dtype=str, keep_default_na=False)
+        tabla = _leer_tabla_excel(ruta)
     else:
         raise ValueError(
             f"{ruta.name}: formato no soportado; se leen {', '.join((SUFIJO_CSV, *SUFIJOS_EXCEL))}"
         )
     tabla.columns = [str(columna).strip().lower() for columna in tabla.columns]
     return tabla.fillna("")
+
+
+def _leer_tabla_excel(ruta: Path) -> pd.DataFrame:
+    """Lee un XLSX celda por celda con `openpyxl`, sin la ruta de `pandas.read_excel(dtype=str)`.
+
+    Esa ruta no evita el `float`: el motor `openpyxl` analiza toda celda numérica del XML como
+    `float` de Python al leer el archivo, y el parámetro `dtype` de `pandas.read_excel` solo
+    convierte ese `float` a texto *después*, pasando por un arreglo intermedio de `numpy` cuyo
+    formateo no depende de este módulo. Aquí se lee celda por celda y se convierte cada valor a
+    texto de una vez, en Python puro y sin arreglos intermedios: si la celda ya es texto se usa tal
+    cual (el caso exacto por construcción, el recomendado para la columna `precio`); si Excel la
+    guardó como número, se usa `str()` de Python sobre ese valor, que para cualquier precio real
+    (con la precisión que un ser humano puede escribir en una celda) reconstruye el mismo texto que
+    se escribió: CPython garantiza que su algoritmo de la representación más corta cumple
+    `float(str(x)) == x`.
+    """
+    libro = openpyxl.load_workbook(ruta, read_only=True, data_only=True)
+    try:
+        filas = libro.active.iter_rows(values_only=True)
+        try:
+            encabezados = [_texto_celda(valor) for valor in next(filas)]
+        except StopIteration:
+            return pd.DataFrame()
+        registros = [
+            dict(zip(encabezados, (_texto_celda(valor) for valor in fila), strict=False))
+            for fila in filas
+            if any(valor is not None for valor in fila)
+        ]
+    finally:
+        libro.close()
+    return pd.DataFrame.from_records(registros, columns=encabezados)
+
+
+def _texto_celda(valor: object) -> str:
+    """Una celda de Excel como texto exacto, sin pasar por ningún arreglo de `numpy`."""
+    if valor is None:
+        return ""
+    if isinstance(valor, str):
+        return valor.strip()
+    return str(valor).strip()
 
 
 def _a_precio_leido(fila: dict[str, object], numero: int, ruta: Path) -> PrecioLeido:

@@ -74,11 +74,20 @@ class Comparativo:
     - `incidencia_pct`: cuánto aportó esa partida a la variación del presupuesto, en porcentaje
       sobre el total anterior. Las incidencias suman la variación porcentual del total, porque el
       precio unitario es una función afín de los precios de los insumos.
+
+    `insumos_afectados` es cuántos insumos cambiaron de precio entre la lista anterior y la nueva
+    (`core.catalog.precios.insumos_afectados`, ya persistidos por `registrar_cambios`), **hayan o
+    no** afectado a este presupuesto en particular: un cambio en un insumo que no participa de
+    ninguna partida de este presupuesto deja `variacion` en cero sin que el cambio deje de ser
+    real. Quien confirma la transacción decide con este campo, no con `variacion` (hallazgo de la
+    ronda de corrección 1: `variacion == 0` no distingue «nada cambió» de «cambió algo que no
+    afecta a este presupuesto»).
     """
 
     tabla: DataFrame
     total_anterior: Decimal
     total_nuevo: Decimal
+    insumos_afectados: int
 
     @property
     def variacion(self) -> Decimal:
@@ -110,9 +119,12 @@ def actualizar_precios(
     mueve son los precios. Sin `plan` no lleva curva y la regla R2 lo hace constar como INFO.
 
     No confirma la transacción: como `guardar_presupuesto`, la deja abierta para que el llamador
-    acepte la versión nueva o la descarte (UC‑02, flujo 7a). Si ningún precio cambió, el
-    presupuesto nuevo es idéntico al anterior y el comparativo lo muestra con variación cero;
-    deshacer la transacción en ese caso (flujo 3a) es decisión de quien confirma.
+    acepte la versión nueva o la descarte (UC‑02, flujo 7a). Quien confirma decide mirando
+    `Comparativo.insumos_afectados`, no `Comparativo.variacion`: si ningún insumo cambió de precio,
+    el presupuesto nuevo es idéntico al anterior y no hay nada que guardar (flujo 3a). Si sí
+    cambiaron insumos pero ninguno participa de este presupuesto, `variacion` también da cero,
+    pero el cambio es real y su historial (`CambioPrecio`, `IncidenciaCambio`) debe quedar
+    registrado igual.
     """
     modelo = _buscar(session, proyecto_nombre, codigo_presupuesto)
     parametros = _parametros_de(modelo)
@@ -145,7 +157,7 @@ def actualizar_precios(
 
     cambios = registrar_cambios(session, lista_anterior, lista_nueva)
     _registrar_incidencias(session, cambios, anterior, nuevo.presupuesto)
-    return nuevo, _comparar(anterior, nuevo.presupuesto)
+    return nuevo, _comparar(anterior, nuevo.presupuesto, len(cambios))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -229,7 +241,7 @@ def _precio_unitario_por_partida(presupuesto: Presupuesto) -> dict[str, Decimal]
 # ---------------------------------------------------------------------------------------------
 
 
-def _comparar(anterior: Presupuesto, nuevo: Presupuesto) -> Comparativo:
+def _comparar(anterior: Presupuesto, nuevo: Presupuesto, insumos_afectados: int) -> Comparativo:
     """Arma la tabla renglón por renglón. Los dos presupuestos tienen los mismos ítems y orden."""
     total_anterior = anterior.total
     filas = [
@@ -240,6 +252,7 @@ def _comparar(anterior: Presupuesto, nuevo: Presupuesto) -> Comparativo:
         tabla=DataFrame(filas, columns=list(COLUMNAS_COMPARATIVO)),
         total_anterior=total_anterior,
         total_nuevo=nuevo.total,
+        insumos_afectados=insumos_afectados,
     )
 
 

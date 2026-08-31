@@ -167,7 +167,7 @@ def _ejecutar(parametros: dict[str, object], archivo) -> None:
 def _actualizar(
     sesion: Session, parametros: dict[str, object], archivo: Path, carpeta: Path
 ) -> Presentacion:
-    """Crea la lista, revalora, confirma si algo cambió y arma la presentación."""
+    """Crea la lista, revalora, confirma si algún insumo cambió de precio y arma la presentación."""
     resumen = crear_lista_desde_archivo(
         sesion,
         archivo,
@@ -197,9 +197,22 @@ def _actualizar(
         nombre_libro=libro.name,
     )
 
-    if comparativo.variacion == CERO:
+    if comparativo.insumos_afectados == 0:
+        # Ningun insumo cambio de precio entre la lista anterior y la nueva: no hay nada que
+        # guardar (UC-02, flujo 3a). Descartar la transaccion tambien descarta la lista nueva, que
+        # aqui es identica a la anterior en sus precios.
         st.warning("Ningun precio cambio: no se guardo una version nueva (UC-02, flujo 3a).")
     else:
+        # Algun insumo cambio de precio (se persiste siempre, ya lo hizo actualizar_precios), pero
+        # eso no implica que el presupuesto varie: si el insumo no participa de ninguna de sus
+        # partidas, `comparativo.variacion` da cero. Antes esta rama decidia con `variacion`, que
+        # confundia ambos casos y descartaba la lista y su historial de CambioPrecio cuando el
+        # unico cambio no tocaba este presupuesto (hallazgo de la ronda de correccion 1).
+        if comparativo.variacion == CERO:
+            st.info(
+                "Cambiaron precios de insumos que no afectan a este presupuesto: se guardo la "
+                "version nueva y su historial de cambios, pero el total no vario."
+            )
         sesion.commit()
     return presentacion
 

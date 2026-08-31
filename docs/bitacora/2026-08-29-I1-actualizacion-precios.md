@@ -101,3 +101,49 @@ Commit: `feat(core): actualizacion masiva de precios con registro de cambios`.
 Ninguno. `uv sync --extra ui` no modificó `uv.lock` (ya resolvía todos los extras), de modo que no
 hubo que descartar cambios en archivos compartidos: la sesión solo tocó sus rutas exclusivas más las
 líneas de reexport de los dos `__init__.py`.
+
+## Ronda de corrección 1
+
+Revisión sobre `b83171e`: «Necesita correcciones», 3 hallazgos Important. Los tres se corrigen sin
+tocar archivos compartidos ni `core/contracts/`.
+
+1. **XLSX por `float` (hallazgo 1).** `_leer_tabla` usaba `pandas.read_excel(dtype=str)`, pero ese
+   `dtype` se aplica **después** de que `openpyxl` ya analizó la celda numérica como `float` de
+   Python; el docstring afirmaba lo contrario y no había ninguna prueba con un archivo XLSX real.
+   Se reemplazó por `_leer_tabla_excel`: lee el libro celda por celda con `openpyxl` y convierte
+   cada valor a texto en Python puro (sin el arreglo `numpy` intermedio que usa `pandas` para
+   castear una columna completa), antes de construir el `DataFrame`. Se corrigió el docstring del
+   módulo y el de `_leer_tabla` para no prometer una garantía que la ruta anterior no cumplía por
+   construcción. Prueba nueva: `test_leer_lista_precios_xlsx_lee_decimales_exactos` (crea un XLSX
+   en `tmp_path` con `openpyxl`, precios 18,10 y 0,10). **Nota honesta:** en las versiones
+   instaladas (`pandas` 3.0.5, `numpy` 2.5.2, `openpyxl` 3.1.5) la ruta anterior YA daba estos dos
+   valores exactos por una garantía incidental de `str(float)` (round‑trip más corto de CPython),
+   verificado con un barrido de 3000 precios aleatorios de 2 a 6 decimales sin un solo fallo; la
+   prueba nueva no queda en rojo contra el código viejo con estos valores. La corrección se hizo
+   de todos modos porque el mecanismo interno seguía pasando por `float` (contra la letra de la
+   restricción global 3) y dependía de un comportamiento de `numpy`/`pandas` no garantizado entre
+   versiones, sin ninguna prueba que lo fijara. Detalle completo en el reporte de la tarea.
+2. **Confirmación por `variacion` en vez de `insumos_afectados` (hallazgo 2).** `ui/app.py`
+   decidía confirmar la transacción con `comparativo.variacion == 0`: si la lista nueva sube un
+   insumo que no participa de ninguna partida del presupuesto, la variación del total es cero y la
+   UI descartaba la lista y sus `CambioPrecio`, aunque el cambio de precio fuera real. Se añadió
+   `Comparativo.insumos_afectados: int` (cuenta de `CambioPrecio` que ya persiste
+   `actualizar_precios`, se construye con el mismo `cambios` que ya calculaba la función, sin
+   consultas nuevas) y la UI ahora confirma con ese campo: sin insumos afectados no confirma (UC‑02
+   flujo 3a); con insumos afectados confirma siempre, y si además el total no varió lo avisa con un
+   mensaje informativo en vez de descartar el historial. Verificado manualmente con un presupuesto
+   que excluye la partida `LB-04-CON` (la única que usa cemento y arena) revalorado con la muestra
+   del repositorio: `insumos_afectados == 2` y `variacion == 0` a la vez, que es exactamente el
+   caso que la corrección distingue.
+3. **Variantes homónimas sin prueba (hallazgo 3).** La política (una fila del archivo actualiza
+   todas las variantes con la misma `(tipo, descripción, unidad)`) ya estaba implementada
+   correctamente; solo faltaba la prueba. Se añadió
+   `test_crear_lista_actualiza_todas_las_variantes_homonimas`, que usa el homónimo real del
+   catálogo sembrado (`Cinta métrica`, códigos `EQU-007` y `EQU-007-B`) y afirma que ambas
+   variantes reciben el precio nuevo. Se verificó que la prueba detecta una regresión real: se
+   rompió temporalmente el bucle de `crear_lista_desde_archivo` para actualizar solo la primera
+   variante, la prueba falló, y se restauró el código correcto.
+
+Resultado: 295 pruebas verdes (13 en `test_actualizacion_precios.py`, dos nuevas más una aserción
+añadida a una existente), `ruff check` y `ruff format` limpios, cero advertencias.
+Commit: `fix(core): decimal exacto en xlsx, commit por insumos afectados y prueba de variantes`.

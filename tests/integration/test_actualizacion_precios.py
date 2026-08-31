@@ -17,6 +17,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
+import openpyxl
 import pytest
 from sqlalchemy import select
 
@@ -146,6 +147,30 @@ def test_leer_lista_precios_devuelve_decimales_exactos():
     assert leidos["Retroexcavadora"].unidad is None
 
 
+def test_leer_lista_precios_xlsx_lee_decimales_exactos(tmp_path):
+    """El XLSX no puede pasar por `float`: 18,10 y 0,10 no son exactos en binario, y el `Decimal`
+    debe llegar igual al que se escribio en la celda, no al que produce el motor de Excel al
+    analizarla como numero (hallazgo de la ronda de correccion 1; antes de esta correccion la
+    lectura no tenia ninguna prueba de integracion con un archivo XLSX real).
+    """
+    archivo = tmp_path / "lista.xlsx"
+    libro = openpyxl.Workbook()
+    hoja = libro.active
+    hoja.append(["tipo", "insumo", "unidad", "precio"])
+    hoja.append(["material", "Cemento Portland", "saco", 18.10])
+    hoja.append(["material", "Arena lavada", "m3", 0.10])
+    hoja.append(["equipo", "Retroexcavadora", None, 200])
+    libro.save(archivo)
+
+    leidos = {precio.descripcion: precio for precio in leer_lista_precios(archivo)}
+
+    assert leidos["Cemento Portland"].precio == Decimal("18.10")
+    assert leidos["Arena lavada"].precio == Decimal("0.10")
+    assert leidos["Retroexcavadora"].precio == Decimal("200")
+    assert all(isinstance(precio.precio, Decimal) for precio in leidos.values())
+    assert leidos["Retroexcavadora"].unidad is None
+
+
 def test_crear_lista_copia_los_precios_anteriores_y_sobrescribe_los_del_archivo(
     sesion, presupuesto_001, lista_nueva
 ):
@@ -189,6 +214,43 @@ def test_crear_lista_reporta_los_insumos_desconocidos_sin_crearlos(
     precios = {precio.insumo.descripcion: precio.precio for precio in resumen.lista.precios}
     assert precios[CEMENTO] == PRECIOS_NUEVOS[CEMENTO]
     assert "Cemento blanco" not in precios
+
+
+def test_crear_lista_actualiza_todas_las_variantes_homonimas(sesion, tmp_path):
+    """Una fila del archivo actualiza TODAS las variantes de su (tipo, descripcion, unidad).
+
+    El catalogo sembrado trae "Cinta metrica" en dos variantes con distinto factor de
+    depreciacion (`EQU-007` y `EQU-007-B`, docs/modelo_datos.md §6): la politica declarada en el
+    docstring de `core.catalog.precios` (seccion "Homonimos") es que el archivo declara un precio
+    por insumo, sin distinguir variantes, y las actualiza a todas. Sin esta prueba (hallazgo de la
+    ronda de correccion 1) la politica estaba implementada pero ninguna prueba la fijaba.
+    """
+    descripcion = "Cinta métrica"
+    catalogo = Catalogo(sesion)
+    variantes_antes = {
+        insumo.codigo for insumo in catalogo.insumos() if insumo.descripcion == descripcion
+    }
+    assert len(variantes_antes) == 2, "la linea base debe traer dos variantes de Cinta metrica"
+
+    archivo = tmp_path / "cinta_metrica.csv"
+    archivo.write_text(f"tipo,insumo,unidad,precio\nequipo,{descripcion},,50\n", encoding="utf-8")
+
+    resumen = crear_lista_desde_archivo(
+        sesion,
+        archivo,
+        nombre=NOMBRE_LISTA_NUEVA,
+        moneda=linea_base.MONEDA,
+        fecha_vigencia=FECHA_NUEVA,
+        origen=archivo.name,
+    )
+
+    precios_actualizados = {
+        precio.insumo.codigo: precio.precio
+        for precio in resumen.lista.precios
+        if precio.insumo.codigo in variantes_antes
+    }
+    assert precios_actualizados.keys() == variantes_antes
+    assert all(precio == Decimal("50") for precio in precios_actualizados.values())
 
 
 # ---------------------------------------------------------------------------------------------
@@ -280,6 +342,7 @@ def test_el_comparativo_suma_los_totales(presupuesto_001, actualizacion):
 
     assert list(tabla.columns) == list(COLUMNAS_COMPARATIVO)
     assert len(tabla.index) == len(CODIGOS)
+    assert comparativo.insumos_afectados == len(PRECIOS_NUEVOS)
     assert comparativo.total_anterior == presupuesto_001.presupuesto.total
     assert comparativo.total_nuevo == nuevo.presupuesto.total
     assert comparativo.total_nuevo == comparativo.total_anterior + INCREMENTO_TOTAL
