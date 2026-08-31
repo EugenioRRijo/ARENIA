@@ -1,0 +1,267 @@
+"""Rutas de presupuestos por HTTP: elaborar, consultar, exportar y actualizar precios.
+
+UC-01 (`POST /presupuestos`, a partir de `ItemComputo` ya extraídos), UC-05 (el informe de
+auditoría, que se genera siempre) y UC-02 (`POST /presupuestos/{codigo}/actualizacion`). Los montos
+se presentan siempre con dos decimales (`core.verification.informe.DECIMALES_PRESENTACION`), la
+misma cifra que usa `ui/app.py` y la exportación a Excel: esta capa no inventa su propio redondeo.
+"""
+
+from __future__ import annotations
+
+import os
+import tempfile
+from decimal import Decimal
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import FileResponse, PlainTextResponse
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from starlette.background import BackgroundTask
+
+from api.dependencias import SesionDep
+from api.esquemas import (
+    ActualizacionPeticion,
+    ComparativoRespuesta,
+    FilaComparativoRespuesta,
+    ItemComputoPeticion,
+    PartidaPresupuestadaRespuesta,
+    PresupuestoCreadoRespuesta,
+    PresupuestoDetalleRespuesta,
+    PresupuestoPeticion,
+    PresupuestoResumenRespuesta,
+)
+from core import models
+from core.budget import (
+    actualizar_precios,
+    cargar_presupuesto,
+    elaborar,
+    exportar_excel,
+    generar_presupuesto,
+    guardar_presupuesto,
+    plan_secuencial,
+)
+from core.catalog import Catalogo
+from core.contracts import Dominio, ItemComputo, OrigenTipo, ParametrosCosto
+from core.contracts.presupuesto import Presupuesto
+from core.verification import auditar
+from core.verification.informe import DECIMALES_PRESENTACION, InformeAuditoria
+from core.verification.texto import formatear_decimal
+
+router = APIRouter(tags=["presupuestos"])
+
+_CAMPOS_PARAMETROS = ("fcas", "bono_alimentacion", "administracion", "utilidad")
+
+
+@router.post(
+    "/presupuestos",
+    response_model=PresupuestoCreadoRespuesta,
+    status_code=status.HTTP_201_CREATED,
+)
+def crear_presupuesto(
+    sesion: SesionDep, peticion: PresupuestoPeticion
+) -> PresupuestoCreadoRespuesta:
+    """Elabora el presupuesto (UC-01), lo audita siempre (UC-05) y lo guarda."""
+    proyecto = sesion.scalars(
+        select(models.Proyecto).where(models.Proyecto.nombre == peticion.proyecto)
+    ).one_or_none()
+    if proyecto is None:
+        raise LookupError(f"no hay ningún proyecto {peticion.proyecto!r} en el catálogo")
+
+    items = [_a_item_computo(item) for item in peticion.items]
+    catalogo = Catalogo(sesion)
+    composiciones = catalogo.composiciones(
+        dict.fromkeys(item.codigo_partida for item in items), fecha=peticion.fecha
+    )
+    parametros = _parametros_costo(peticion)
+
+    borrador = generar_presupuesto(
+        items, composiciones, parametros, peticion.codigo, peticion.fecha, peticion.moneda
+    )
+    resultado = elaborar(
+        items,
+        composiciones,
+        parametros,
+        peticion.codigo,
+        peticion.fecha,
+        peticion.moneda,
+        plan=plan_secuencial(borrador),
+    )
+    guardar_presupuesto(
+        sesion,
+        resultado.presupuesto,
+        resultado.informe,
+        proyecto=proyecto,
+        lista=catalogo.lista_vigente(peticion.fecha),
+        parametros=parametros,
+    )
+    sesion.commit()
+
+    return PresupuestoCreadoRespuesta(
+        codigo=resultado.presupuesto.codigo,
+        total=formatear_decimal(resultado.presupuesto.total, DECIMALES_PRESENTACION),
+        hallazgos=len(resultado.informe.hallazgos),
+    )
+
+
+@router.get("/presupuestos", response_model=list[PresupuestoResumenRespuesta])
+def listar_presupuestos(sesion: SesionDep) -> list[PresupuestoResumenRespuesta]:
+    """Códigos y totales de todos los presupuestos guardados, ordenados por código."""
+    catalogo = Catalogo(sesion)
+    resumenes: list[PresupuestoResumenRespuesta] = []
+    consulta = select(models.Presupuesto).order_by(models.Presupuesto.codigo)
+    for modelo in sesion.scalars(consulta):
+        presupuesto = cargar_presupuesto(sesion, modelo.proyecto.nombre, modelo.codigo, catalogo)
+        resumenes.append(
+            PresupuestoResumenRespuesta(
+                codigo=presupuesto.codigo,
+                total=formatear_decimal(presupuesto.total, DECIMALES_PRESENTACION),
+            )
+        )
+    return resumenes
+
+
+@router.get("/presupuestos/{codigo}", response_model=PresupuestoDetalleRespuesta)
+def obtener_presupuesto(sesion: SesionDep, codigo: str) -> PresupuestoDetalleRespuesta:
+    """El presupuesto reconstruido desde el catálogo (`cargar_presupuesto`), con sus renglones."""
+    presupuesto, _ = _cargar(sesion, codigo)
+    return PresupuestoDetalleRespuesta(
+        codigo=presupuesto.codigo,
+        fecha=presupuesto.fecha,
+        moneda=presupuesto.moneda,
+        total=formatear_decimal(presupuesto.total, DECIMALES_PRESENTACION),
+        partidas=[
+            PartidaPresupuestadaRespuesta(
+                codigo_partida=partida.item.codigo_partida,
+                descripcion=partida.item.descripcion,
+                unidad=partida.item.unidad,
+                cantidad=formatear_decimal(partida.item.cantidad, DECIMALES_PRESENTACION),
+                precio_unitario=formatear_decimal(
+                    partida.resultado.precio_unitario, DECIMALES_PRESENTACION
+                ),
+                total=formatear_decimal(partida.total, DECIMALES_PRESENTACION),
+            )
+            for partida in presupuesto.partidas
+        ],
+    )
+
+
+@router.get("/presupuestos/{codigo}/informe")
+def informe_de_auditoria(sesion: SesionDep, codigo: str) -> PlainTextResponse:
+    """El informe de auditoría en markdown (UC-05): se genera siempre, con la misma llamada que
+    usa `ui/app.py` (`InformeAuditoria.a_markdown()`), nunca reinventada aquí.
+    """
+    _, informe = _cargar(sesion, codigo)
+    return PlainTextResponse(informe.a_markdown(), media_type="text/markdown")
+
+
+@router.get("/presupuestos/{codigo}/excel")
+def exportar_presupuesto_excel(sesion: SesionDep, codigo: str) -> FileResponse:
+    """El presupuesto, su APU, su curva y su auditoría como libro de Excel descargable."""
+    presupuesto, informe = _cargar(sesion, codigo)
+    descriptor, ruta_texto = tempfile.mkstemp(suffix=".xlsx")
+    os.close(descriptor)  # exportar_excel abre la ruta por su cuenta (openpyxl.Workbook.save)
+    ruta = exportar_excel(presupuesto, informe, Path(ruta_texto))
+    return FileResponse(
+        ruta,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=f"presupuesto_{presupuesto.codigo}.xlsx",
+        background=BackgroundTask(ruta.unlink),
+    )
+
+
+@router.post("/presupuestos/{codigo}/actualizacion", response_model=ComparativoRespuesta)
+def actualizar_presupuesto(
+    sesion: SesionDep, codigo: str, peticion: ActualizacionPeticion
+) -> ComparativoRespuesta:
+    """UC-02: revalora el presupuesto con `peticion.lista` y guarda la versión `codigo_nuevo`.
+
+    Mismo criterio que `ui/app.py`: si ningún insumo cambió de precio
+    (`comparativo.insumos_afectados == 0`) no hay nada que confirmar (409, sin `commit`).
+    """
+    modelo = _buscar_modelo(sesion, codigo)
+    lista_nueva = sesion.scalars(
+        select(models.ListaPrecios).where(models.ListaPrecios.nombre == peticion.lista)
+    ).one_or_none()
+    if lista_nueva is None:
+        raise LookupError(f"no hay ninguna lista de precios {peticion.lista!r}")
+
+    _nuevo, comparativo = actualizar_precios(
+        sesion, modelo.proyecto.nombre, codigo, lista_nueva, peticion.codigo_nuevo
+    )
+    if comparativo.insumos_afectados == 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="ningún insumo cambió de precio entre la lista anterior y la nueva: no hay "
+            "nada que confirmar (UC-02, flujo 3a)",
+        )
+    sesion.commit()
+
+    filas = [
+        FilaComparativoRespuesta(
+            codigo_partida=fila.codigo_partida,
+            descripcion=fila.descripcion,
+            cantidad=formatear_decimal(fila.cantidad, DECIMALES_PRESENTACION),
+            pu_anterior=formatear_decimal(fila.pu_anterior, DECIMALES_PRESENTACION),
+            pu_nuevo=formatear_decimal(fila.pu_nuevo, DECIMALES_PRESENTACION),
+            variacion_pct=formatear_decimal(fila.variacion_pct, DECIMALES_PRESENTACION),
+            total_anterior=formatear_decimal(fila.total_anterior, DECIMALES_PRESENTACION),
+            total_nuevo=formatear_decimal(fila.total_nuevo, DECIMALES_PRESENTACION),
+            incidencia_pct=formatear_decimal(fila.incidencia_pct, DECIMALES_PRESENTACION),
+        )
+        for fila in comparativo.tabla.itertuples(index=False)
+    ]
+    return ComparativoRespuesta(
+        total_anterior=formatear_decimal(comparativo.total_anterior, DECIMALES_PRESENTACION),
+        total_nuevo=formatear_decimal(comparativo.total_nuevo, DECIMALES_PRESENTACION),
+        insumos_afectados=comparativo.insumos_afectados,
+        filas=filas,
+    )
+
+
+# ---------------------------------------------------------------------------------------------
+# Ayudantes
+# ---------------------------------------------------------------------------------------------
+
+
+def _a_item_computo(item: ItemComputoPeticion) -> ItemComputo:
+    return ItemComputo(
+        codigo_partida=item.codigo_partida,
+        descripcion=item.descripcion,
+        unidad=item.unidad,
+        cantidad=Decimal(item.cantidad),
+        origen_id=item.origen_id,
+        origen_tipo=OrigenTipo(item.origen_tipo),
+        dominio=Dominio(item.dominio),
+        regla=item.regla,
+        parametros={clave: Decimal(valor) for clave, valor in item.parametros.items()},
+        especificaciones=dict(item.especificaciones),
+    )
+
+
+def _parametros_costo(peticion: PresupuestoPeticion) -> ParametrosCosto:
+    """Los cuatro parámetros de costo; los que el cuerpo no trae quedan en su valor por defecto."""
+    campos = {
+        nombre: Decimal(valor)
+        for nombre in _CAMPOS_PARAMETROS
+        if (valor := getattr(peticion, nombre)) is not None
+    }
+    return ParametrosCosto(**campos)
+
+
+def _buscar_modelo(sesion: Session, codigo: str) -> models.Presupuesto:
+    """El renglón de `models.Presupuesto` de ese código. `LookupError` (404) si no existe."""
+    modelo = sesion.scalars(
+        select(models.Presupuesto).where(models.Presupuesto.codigo == codigo)
+    ).one_or_none()
+    if modelo is None:
+        raise LookupError(f"no hay ningún presupuesto con código {codigo!r}")
+    return modelo
+
+
+def _cargar(sesion: Session, codigo: str) -> tuple[Presupuesto, InformeAuditoria]:
+    """El presupuesto reconstruido desde el catálogo y su informe de auditoría, recién evaluado."""
+    modelo = _buscar_modelo(sesion, codigo)
+    catalogo = Catalogo(sesion)
+    presupuesto = cargar_presupuesto(sesion, modelo.proyecto.nombre, codigo, catalogo)
+    return presupuesto, auditar(presupuesto)

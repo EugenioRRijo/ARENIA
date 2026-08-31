@@ -61,3 +61,116 @@ class CambioRespuesta(BaseModel):
     precio_nuevo: str
     variacion: str
     fecha: date
+
+
+class ItemComputoPeticion(BaseModel):
+    """Un `ItemComputo` tal como lo envía el cliente: cantidad y parámetros como texto."""
+
+    codigo_partida: str
+    descripcion: str
+    unidad: str
+    cantidad: str
+    origen_id: str
+    origen_tipo: str
+    dominio: str
+    regla: str | None = None
+    parametros: dict[str, str] = {}
+    especificaciones: dict[str, str] = {}
+
+
+class ItemComputoRespuesta(BaseModel):
+    """Un `ItemComputo` extraído por un adaptador (UC-01), con cantidad y parámetros exactos."""
+
+    codigo_partida: str
+    descripcion: str
+    unidad: str
+    cantidad: str
+    origen_id: str
+    origen_tipo: str
+    dominio: str
+    regla: str | None
+    parametros: dict[str, str]
+    especificaciones: dict[str, str]
+
+
+class PresupuestoPeticion(BaseModel):
+    """Lo que hace falta para elaborar un presupuesto (UC-01/05): items ya extraídos por un
+    adaptador o construidos a mano, y los cuatro parámetros de costo, opcionales (por defecto los
+    de `ParametrosCosto`, la línea base de CLAUDE.md §4).
+    """
+
+    codigo: str
+    fecha: date
+    moneda: str = "USD"
+    proyecto: str
+    items: list[ItemComputoPeticion]
+    fcas: str | None = None
+    bono_alimentacion: str | None = None
+    administracion: str | None = None
+    utilidad: str | None = None
+
+
+class PresupuestoCreadoRespuesta(BaseModel):
+    """Lo que confirma la elaboración: el total (dos decimales) y cuántos hallazgos audita."""
+
+    codigo: str
+    total: str
+    hallazgos: int
+
+
+class PartidaPresupuestadaRespuesta(BaseModel):
+    """Un renglón del presupuesto, tal como se presenta (dos decimales, CLAUDE.md §2.3)."""
+
+    codigo_partida: str
+    descripcion: str
+    unidad: str
+    cantidad: str
+    precio_unitario: str
+    total: str
+
+
+class PresupuestoDetalleRespuesta(BaseModel):
+    """El presupuesto completo, reconstruido desde el catálogo (`cargar_presupuesto`)."""
+
+    codigo: str
+    fecha: date
+    moneda: str
+    total: str
+    partidas: list[PartidaPresupuestadaRespuesta]
+
+
+class PresupuestoResumenRespuesta(BaseModel):
+    """Cabecera de un presupuesto guardado: código y total, para el listado."""
+
+    codigo: str
+    total: str
+
+
+class ActualizacionPeticion(BaseModel):
+    """UC-02 sobre un presupuesto guardado: la lista nueva y el código de la versión que produce."""
+
+    lista: str
+    codigo_nuevo: str
+
+
+class FilaComparativoRespuesta(BaseModel):
+    """Una fila de `core.budget.Comparativo`, con todos sus montos presentados a dos decimales."""
+
+    codigo_partida: str
+    descripcion: str
+    cantidad: str
+    pu_anterior: str
+    pu_nuevo: str
+    variacion_pct: str
+    total_anterior: str
+    total_nuevo: str
+    incidencia_pct: str
+
+
+class ComparativoRespuesta(BaseModel):
+    """El comparativo completo de UC-02: totales antes y después, y una fila por renglón."""
+
+    total_anterior: str
+    total_nuevo: str
+    insumos_afectados: int
+    filas: list[FilaComparativoRespuesta]

@@ -3,12 +3,14 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from api.rutas import catalogo, listas
+from api.rutas import catalogo, computos, listas, presupuestos
 from core.catalog import CatalogoIncompleto
 
 app = FastAPI(title="Sistema APU multidominio", version="0.1.0")
 app.include_router(catalogo.router)
 app.include_router(listas.router)
+app.include_router(computos.router)
+app.include_router(presupuestos.router)
 
 
 @app.exception_handler(CatalogoIncompleto)
