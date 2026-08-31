@@ -9,5 +9,6 @@ def test_las_paginas_se_importan_sin_efectos():
         "ui.paginas.elaborar",
         "ui.paginas.historico",
         "ui.paginas.simulador",
+        "ui.paginas.visor",
     ):
         importlib.import_module(mod)
