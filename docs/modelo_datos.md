@@ -631,8 +631,11 @@ se añadirán explícitamente si el perfilado de I1 los reclama.
 - Los nombres de las entidades son los del diagrama ER aunque siete de ellos coincidan con nombres de
   `core.contracts` (`Presupuesto`, `PartidaPresupuestada`, `PuntoCurva`, `ItemComputo`,
   `ComposicionAPU`, `Rendimiento`, `Hallazgo`). El código los usa **siempre cualificados**
-  (`from core import models` → `models.Presupuesto`) y `core/catalog/mapeo.py` es el único lugar donde
-  se convierte de modelo a contrato y viceversa.
+  (`from core import models` → `models.Presupuesto`). La frontera modelo↔contrato se cruza en dos
+  lugares y solo en dos: `core/catalog/mapeo.py` para el catálogo (partidas, insumos, composiciones,
+  rendimientos) y `core/budget/persistencia.py` para el presupuesto emitido (renglones, curva,
+  hallazgos, ítems de cómputo). Hallazgo de la Sesión 0.3: la formulación anterior ("único lugar")
+  quedó desactualizada al implementar I0.5.
 - Las enumeraciones (`dominio`, `tipo` de insumo, `tipo` de rendimiento, `origen_tipo`) se persisten
   como **texto** con el valor del `StrEnum`, y `severidad` como **entero** con el valor del `IntEnum`.
   No se usa `sqlalchemy.Enum`: el tipo nativo obligaría a una migración de esquema cada vez que se

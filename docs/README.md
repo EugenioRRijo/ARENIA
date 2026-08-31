@@ -5,9 +5,9 @@
 | [../CLAUDE.md](../CLAUDE.md) — constitución del proyecto | completo | — |
 | [metodologia.md](metodologia.md) — Scrum‑Cascada y DRY | completo | — |
 | [linea_base.md](linea_base.md) — el caso auditado y sus siete inconsistencias | completo | — |
-| [ERS.md](ERS.md) — Especificación de Requerimientos de Software (IEEE 830) | esqueleto | 0.1 |
-| [modelo_datos.md](modelo_datos.md) — modelo entidad‑relación | esqueleto | 0.2 |
-| [arquitectura.md](arquitectura.md) — vistas 4+1 de Kruchten | esqueleto con vista de desarrollo | 0.3 |
+| [ERS.md](ERS.md) — Especificación de Requerimientos de Software (IEEE 830) | completo, pendiente de revisión del tutor (G0) | 0.1 ✔ |
+| [modelo_datos.md](modelo_datos.md) — modelo entidad‑relación | completo, pendiente de revisión del tutor (G0) | 0.2 ✔ |
+| [arquitectura.md](arquitectura.md) — vistas 4+1 de Kruchten | completo, pendiente de revisión del tutor (G0) | 0.3 ✔ |
 | [tesis/esqueleto_tesis.md](tesis/esqueleto_tesis.md) — capítulos y matriz de trazabilidad | completo | se actualiza por fase |
 | [bitacora/](bitacora/) — una entrada por sprint | en curso | cada sesión |
 | resultados_ml.md | pendiente | I6.3 |
