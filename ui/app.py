@@ -26,6 +26,7 @@ from pathlib import Path
 
 import streamlit as st
 from pandas import DataFrame
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from core.budget import Comparativo, actualizar_precios, exportar_excel
@@ -157,7 +158,12 @@ def _ejecutar(parametros: dict[str, object], archivo) -> None:
             st.session_state[CLAVE_RESULTADO] = _actualizar(
                 sesion, parametros, ruta_archivo, Path(carpeta)
             )
-    except (LookupError, ValueError) as error:
+    except (LookupError, ValueError, ArithmeticError, SQLAlchemyError) as error:
+        # Los cuatro fallos previsibles de UC-02, que en una pantalla deben ser un mensaje y no una
+        # traza cruda: `CatalogoIncompleto` (LookupError) y los errores de lectura del archivo
+        # (ValueError); el `IntegrityError` de un segundo clic con el mismo codigo de presupuesto
+        # (SQLAlchemyError); y `decimal.InvalidOperation` (ArithmeticError) desde cualquier
+        # importe que llegue mal formado (revision final, item 5).
         st.session_state[CLAVE_RESULTADO] = None
         st.error(str(error))
     finally:

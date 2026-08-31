@@ -21,6 +21,7 @@ from adapters.civil.reglas import (
 )
 from adapters.civil.tabular import AdaptadorCivilTabular
 from core.contracts import Dominio, OrigenTipo
+from core.verification.expresiones import evaluar, sustituir_codigos
 from tests.fixtures import apu_linea_base as linea_base
 
 # Supuestos de esta muestra, declarados en data/samples/civil/README.md: la memoria auditada no fija
@@ -43,6 +44,7 @@ CODIGOS = {
 RUTA_MUESTRA = (
     Path(__file__).resolve().parents[2] / "data" / "samples" / "civil" / "tanquillas_y_zanja.csv"
 )
+CABECERA_CSV = RUTA_MUESTRA.read_text(encoding="utf-8").splitlines()[0]
 
 
 def _computar_una_tanquilla(n: Decimal):
@@ -142,6 +144,67 @@ def test_adaptador_tabular_extrae_la_muestra():
 
     assert CLAVE_BALANCE in relleno.especificaciones
     assert relleno.especificaciones[CLAVE_BALANCE].startswith(f"{{{CODIGOS['excavacion']}}}")
+
+
+def _csv_de_filas(tmp_path: Path, *filas: str) -> Path:
+    """Escribe un CSV de geometría con la cabecera de la muestra del repositorio."""
+    archivo = tmp_path / "geometria.csv"
+    archivo.write_text("\n".join((CABECERA_CSV, *filas)) + "\n", encoding="utf-8")
+    return archivo
+
+
+def _cantidades_por_codigo(items) -> dict[str, Decimal]:
+    """Lo mismo que hace R5 antes de evaluar un balance: sumar cantidades por código."""
+    cantidades: dict[str, Decimal] = {}
+    for item in items:
+        cantidades[item.codigo_partida] = (
+            cantidades.get(item.codigo_partida, Decimal("0")) + item.cantidad
+        )
+    return cantidades
+
+
+def test_adaptador_tabular_rechaza_dos_zanjas_de_diametros_distintos(tmp_path):
+    """El balance de relleno lleva un solo factor de volumen de tubería.
+
+    Con dos diámetros, el término `{tuberia} * factor` de la expresión solo puede llevar uno de
+    los dos, y R5 evaluaría un volumen de tubería que no es el del cómputo: un ERROR falso sobre
+    datos consistentes (revisión final, ítem 1). Un término por diámetro exigiría un código de
+    partida por diámetro, que el catálogo del alpha no tiene: el límite se declara y se rechaza.
+    """
+    archivo = _csv_de_filas(
+        tmp_path,
+        "Z-01,zanja,,,,,,,40.00,0.40,0.80,0.30,0.05,",
+        "Z-02,zanja,,,,,,,10.00,0.40,0.80,0.0508,0.05,",
+    )
+
+    with pytest.raises(ValueError, match="dos diametros"):
+        AdaptadorCivilTabular(codigos=CODIGOS).extraer(archivo)
+
+
+def test_adaptador_tabular_balancea_dos_zanjas_del_mismo_diametro(tmp_path):
+    """Con un solo diámetro el balance sí cierra: la expresión que evalúa R5 da la cantidad."""
+    archivo = _csv_de_filas(
+        tmp_path,
+        "T-01,tanquilla,0.80,0.80,0.10,4,0.10,0.10,,,,,,",
+        "Z-01,zanja,,,,,,,40.00,0.40,0.80,0.1016,0.05,",
+        "Z-02,zanja,,,,,,,10.00,0.40,0.80,0.1016,0.05,",
+    )
+
+    items = AdaptadorCivilTabular(codigos=CODIGOS).extraer(archivo)
+    relleno = items[-1]
+
+    expandido = sustituir_codigos(
+        relleno.especificaciones[CLAVE_BALANCE], _cantidades_por_codigo(items)
+    )
+    assert evaluar(expandido, {}) == relleno.cantidad
+
+
+def test_adaptador_tabular_exige_una_zanja_para_el_balance_de_relleno(tmp_path):
+    """Sin fila de zanja no hay diámetro con el que construir el término de tubería."""
+    archivo = _csv_de_filas(tmp_path, "T-01,tanquilla,0.80,0.80,0.10,4,0.10,0.10,,,,,,")
+
+    with pytest.raises(ValueError, match="sin una fila de zanja"):
+        AdaptadorCivilTabular(codigos=CODIGOS).extraer(archivo)
 
 
 def test_evaluador_rechaza_llamadas_y_atributos():

@@ -168,6 +168,38 @@ def test_estado_nucleo_intacto_pendiente_sin_commits():
     assert estado is meta_alpha.Estado.PENDIENTE
 
 
+def test_estado_nucleo_intacto_falla_si_una_rama_de_adaptador_cambia_core():
+    """El agujero que cerró la revisión final (ítem 3): un commit que toca **solo** `core/`.
+
+    `git log -- adapters ml` no lo lista, así que la regla por commit no lo ve; el `git diff
+    core/` del rango completo de la rama sí. Es la evidencia que CLAUDE.md §1 atribuye a M9.
+    """
+    ramas = [("9c54669e merge: I5 adaptador telecom (inc/I5-telecom)", ["core/costing/motor.py"])]
+
+    estado, detalle = meta_alpha.estado_nucleo_intacto([], ramas)
+
+    assert estado is meta_alpha.Estado.FALLA
+    assert "core/costing/motor.py" in detalle
+    assert "inc/I5-telecom" in detalle
+
+
+def test_estado_nucleo_intacto_ok_con_ramas_de_adaptador_con_diff_de_core_vacio():
+    commits = [("abc123def", ["adapters/telecom/adaptador.py"])]
+    ramas = [("abc123de merge: I5 adaptador telecom (inc/I5-telecom)", [])]
+
+    estado, detalle = meta_alpha.estado_nucleo_intacto(commits, ramas)
+
+    assert estado is meta_alpha.Estado.OK
+    assert "1 commits" in detalle
+    assert "1 ramas" in detalle
+
+
+def test_estado_nucleo_intacto_pendiente_sin_commits_ni_ramas():
+    estado, _ = meta_alpha.estado_nucleo_intacto([], [])
+
+    assert estado is meta_alpha.Estado.PENDIENTE
+
+
 def test_estado_cobertura_falla_bajo_el_umbral():
     estado, _ = meta_alpha.estado_cobertura(Decimal("79.9"), 80)
 

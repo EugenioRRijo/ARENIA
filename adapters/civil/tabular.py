@@ -49,6 +49,15 @@ class AdaptadorCivilTabular(AdaptadorDominio):
     Cada fila es una tanquilla o una zanja (columna `tipo`); si `codigos` declara un código de
     partida para `relleno`, se emite además un ítem de relleno que balancea toda la excavación, el
     concreto y el volumen de tubería de la fuente completa (regla R5, Sesión I4).
+
+    **Límite declarado del balance de relleno:** la expresión que evalúa R5 lleva un único término
+    `{tuberia} * factor`, y ese factor es el área de la sección de un solo diámetro. Por eso el
+    adaptador rechaza con `ValueError` una fuente con dos zanjas de diámetros distintos cuando hay
+    que construir el balance: escribirlo con uno solo de los dos haría que R5 comparase la cantidad
+    del cómputo contra un volumen de tubería que no es el suyo y reportase un ERROR falso sobre
+    datos consistentes. Un término por diámetro exigiría un código de partida de tubería por
+    diámetro, y el catálogo del alpha tiene uno solo; el límite se declara en vez de rodearse
+    (hallazgo de la revisión final del sprint alpha, ítem 1).
     """
 
     dominio = Dominio.CIVIL
@@ -63,6 +72,7 @@ class AdaptadorCivilTabular(AdaptadorDominio):
         concreto_total = Decimal("0")
         volumen_tuberia_total = Decimal("0")
         factor_volumen_tuberia: Decimal | None = None
+        diametro_balance: Decimal | None = None
 
         with open(fuente, newline="", encoding="utf-8") as archivo:
             for fila in csv.DictReader(archivo):
@@ -100,6 +110,13 @@ class AdaptadorCivilTabular(AdaptadorDominio):
                     )
                     items.extend([excavacion, tuberia])
                     excavacion_total += excavacion.cantidad
+                    if diametro_balance is not None and diametro_zanja != diametro_balance:
+                        raise ValueError(
+                            f"el balance de relleno no admite dos diametros de tuberia: la fila "
+                            f"{fila_id!r} declara {diametro_zanja} y una fila anterior declara "
+                            f"{diametro_balance}"
+                        )
+                    diametro_balance = diametro_zanja
                     # Factor de conversión m -> m3 de la tubería (área de la sección): se deriva
                     # de REGLA_VOLUMEN_TUBERIA con longitud=1 para no repetir el coeficiente 0.7854.
                     factor_volumen_tuberia = evaluar_regla(

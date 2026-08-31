@@ -3,8 +3,9 @@
 Siete nombres coinciden a propósito con tipos de `core.contracts` (`ComposicionAPU`,
 `ItemComputo`, `Rendimiento`, `Presupuesto`, `PartidaPresupuestada`, `PuntoCurva`, `Hallazgo`):
 son la misma idea en dos capas. Para que nunca se confundan, se usa **siempre cualificado**
-(`from core import models` → `models.Presupuesto`) y `core/catalog/mapeo.py` es el único sitio donde
-se convierte de modelo a contrato.
+(`from core import models` → `models.Presupuesto`), y la conversión entre modelo y contrato vive en
+exactamente dos módulos: `core/catalog/mapeo.py` (catálogo) y `core/budget/persistencia.py`
+(presupuesto), como fija el ADR 12 de docs/arquitectura.md.
 
 Las enumeraciones se persisten como texto (el valor del `StrEnum`) o entero (el del `IntEnum`), no
 como `sqlalchemy.Enum`: añadir un dominio nuevo no debe exigir una migración de esquema.

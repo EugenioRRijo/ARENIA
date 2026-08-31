@@ -238,8 +238,14 @@ def _a_precio(valor: str, numero: int, ruta: Path) -> Decimal:
         raise ValueError(
             f"{ruta.name}, fila {numero}: el precio {valor!r} no es un número decimal"
         ) from error
-    if precio < 0:
-        raise ValueError(f"{ruta.name}, fila {numero}: el precio {valor} es negativo")
+    # `is_finite()` va primero y en la misma condicion: `Decimal("nan") < 0` lanzaria
+    # `InvalidOperation` (un `ArithmeticError`, no el `ValueError` que promete el docstring de
+    # `leer_lista_precios`) y `Decimal("Infinity") < 0` es `False`, asi que un precio infinito
+    # entraria a la lista en silencio.
+    if not precio.is_finite() or precio < 0:
+        raise ValueError(
+            f"{ruta.name}, fila {numero}: el precio {valor} no es un numero no negativo"
+        )
     return precio
 
 

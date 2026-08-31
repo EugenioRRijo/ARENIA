@@ -4,8 +4,11 @@
 resultado va a cruzar una frontera de paquete (`ComposicionAPU`, `Rendimiento`) y **modelos** cuando
 el llamador va a seguir trabajando con la sesión (`Partida`, `Insumo`, `ListaPrecios`).
 
-Aquí se orquestan la sesión y las consultas; **ninguna conversión entre modelo y contrato vive en
-este módulo**: las dos direcciones están en `core/catalog/mapeo.py`.
+Aquí se orquestan la sesión y las consultas; **ningún contrato se arma ni se traduce a modelo en
+este módulo**: las dos direcciones están en `core/catalog/mapeo.py` (`a_composicion`,
+`a_modelo_insumo`…). La única fila que este módulo construye por su cuenta es `models.PrecioInsumo`
+en `_fijar_precio`, que no traduce ningún contrato: es la relación (lista, insumo) → precio, sin
+contraparte en `core.contracts`.
 """
 
 from __future__ import annotations
