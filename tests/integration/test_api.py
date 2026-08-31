@@ -262,6 +262,65 @@ def test_codigo_de_presupuesto_repetido_en_dos_proyectos_no_revienta_en_500(clie
     )
 
 
+def test_actualizacion_sin_cambios_de_precio_responde_409_sin_persistir(cliente, sesion):
+    """UC-02, flujo 3a (rama sin prueba dedicada hasta esta sesion, bitacora F.1): si ningun
+    insumo cambio de precio entre la lista del presupuesto y la nueva, no hay nada que
+    confirmar: 409 y el `codigo_nuevo` NO queda guardado (la ruta no hace `commit`).
+    """
+    cliente.post(
+        "/presupuestos",
+        json={
+            "codigo": "API-001",
+            "fecha": "2026-04-28",
+            "moneda": "USD",
+            "proyecto": "Drenaje de la clínica",
+            "items": _items_payload(),
+        },
+    )
+    with MUESTRA_PRECIOS.open("rb") as f:
+        cliente.post(
+            "/listas-precios",
+            files={"archivo": (MUESTRA_PRECIOS.name, f, "text/csv")},
+            data={"nombre": "L2", "moneda": "USD", "fecha_vigencia": "2026-06-01"},
+        )
+    r1 = cliente.post(
+        "/presupuestos/API-001/actualizacion", json={"lista": "L2", "codigo_nuevo": "API-002"}
+    )
+    assert r1.status_code == 200  # L2 si cambia precios respecto de la lista sembrada
+
+    # API-002 quedo valorado con L2: revalorarlo con la misma L2 no afecta ningun insumo.
+    r2 = cliente.post(
+        "/presupuestos/API-002/actualizacion", json={"lista": "L2", "codigo_nuevo": "API-003"}
+    )
+    assert r2.status_code == 409
+    assert "nada que confirmar" in r2.json()["detalle"]
+
+    # En produccion la sesion por peticion se cierra sin commit (rollback implicito); aqui la
+    # sesion compartida del fixture obliga a reproducir ese cierre a mano antes de comprobar.
+    sesion.rollback()
+    assert cliente.get("/presupuestos/API-003").status_code == 404
+    codigos = {p["codigo"] for p in cliente.get("/presupuestos").json()}
+    assert "API-003" not in codigos and {"API-001", "API-002"} <= codigos
+
+
+def test_computo_ifc_sin_extra_civil_responde_400(cliente, monkeypatch):
+    """La rama `ImportError -> 400` de `/computos/civil` no tenia evidencia RED real (bitacora
+    F.1: no se podia desinstalar el extra del entorno compartido). Bloquear el modulo en
+    `sys.modules` reproduce el entorno sin `ifcopenshell` sin tocar el venv.
+    """
+    import sys
+
+    monkeypatch.setitem(sys.modules, "adapters.civil.ifc", None)  # import -> ImportError
+    ruta = RAIZ / "data" / "samples" / "tanquilla.ifc"
+    with ruta.open("rb") as f:
+        r = cliente.post(
+            "/computos/civil",
+            files={"archivo": (ruta.name, f, "application/octet-stream")},
+        )
+    assert r.status_code == 400
+    assert "extra civil" in r.json()["detalle"]
+
+
 def test_computo_civil_desde_un_modelo_ifc(cliente):
     """Compuerta G1 por HTTP: `.ifc` como entrada de `/computos/civil`, decidido por la extension
     del archivo (docs/superpowers/specs/2026-08-31-f1-api-simulador-design.md, seccion 7). No hace
