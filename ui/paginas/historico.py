@@ -2,9 +2,8 @@
 
 Solo lectura, la misma consulta que expone `api/rutas/listas.py::listar_cambios_precio`, pero
 llamando a `core` directo: la UI no consume la API por HTTP (decision del usuario, 2026-08-31, spec
-F.1 §4). `core.catalog` no tiene una funcion propia para este listado (la ruta de la API arma la
-consulta con `sqlalchemy.select` sobre `core.models` directamente); esta pagina reproduce esa misma
-consulta, en el mismo orden y con los mismos tres filtros.
+F.1 §4). La consulta vive una sola vez en `core.catalog.cambios_precio` (hallazgo menor diferido
+de la bitacora F.1, consolidado); esta pagina solo presenta.
 """
 
 from __future__ import annotations
@@ -15,12 +14,10 @@ from pathlib import Path
 
 import streamlit as st
 from pandas import DataFrame
-from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
 from core import models
-from core.catalog import abrir_sesion, crear_esquema, crear_motor
+from core.catalog import abrir_sesion, cambios_precio, crear_esquema, crear_motor
 from core.verification.informe import DECIMALES_PRESENTACION
 from core.verification.texto import formatear_decimal
 
@@ -44,7 +41,7 @@ def render() -> None:
     try:
         crear_esquema(motor)
         with abrir_sesion(motor) as sesion:
-            cambios = _consultar(sesion, insumo, desde, hasta)
+            cambios = cambios_precio(sesion, insumo=insumo or None, desde=desde, hasta=hasta)
     except (LookupError, ValueError, ArithmeticError, SQLAlchemyError) as error:
         # Mismo criterio que `ui/paginas/actualizacion.py`: un archivo de base de datos corrupto
         # o inaccesible (`OperationalError` de `crear_esquema`) es un mensaje, no una traza cruda.
@@ -69,23 +66,6 @@ def _filtros() -> tuple[str, date | None, date | None]:
         hasta = st.date_input("Hasta", value=date.today()) if con_hasta else None
 
     return insumo, desde, hasta
-
-
-def _consultar(
-    sesion: Session, insumo: str, desde: date | None, hasta: date | None
-) -> list[models.CambioPrecio]:
-    consulta = (
-        select(models.CambioPrecio)
-        .join(models.Insumo)
-        .order_by(models.CambioPrecio.fecha, models.CambioPrecio.id)
-    )
-    if insumo:
-        consulta = consulta.where(models.Insumo.descripcion == insumo)
-    if desde is not None:
-        consulta = consulta.where(models.CambioPrecio.fecha >= desde)
-    if hasta is not None:
-        consulta = consulta.where(models.CambioPrecio.fecha <= hasta)
-    return list(sesion.scalars(consulta))
 
 
 def _mostrar(cambios: list[models.CambioPrecio]) -> None:

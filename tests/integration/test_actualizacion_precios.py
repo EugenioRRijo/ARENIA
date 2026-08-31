@@ -13,7 +13,7 @@ mano. Es la comprobación que exige RF‑12 y RF‑13 de docs/ERS.md.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -469,3 +469,28 @@ def test_el_presupuesto_nuevo_trae_su_informe_de_auditoria(actualizacion):
     assert f"presupuesto {CODIGO_NUEVO}" in nuevo.informe.a_markdown()
     # Con plan de trabajo la curva del presupuesto nuevo cierra en su total (regla R2).
     assert nuevo.presupuesto.total_curva == nuevo.presupuesto.total
+
+
+# ---------------------------------------------------------------------------------------------
+# Consulta consolidada del historial (hallazgo menor diferido de la bitacora F.1)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_cambios_precio_consulta_consolidada_con_filtros(sesion, actualizacion):
+    """`core.catalog.cambios_precio` es la unica consulta del historial de `CambioPrecio`:
+    `api/rutas/listas.py` y `ui/paginas/historico.py` la reproducian por separado (DRY).
+    Orden estable (fecha, id); filtros por descripcion exacta y rango de fechas inclusivo.
+    """
+    from core.catalog import cambios_precio
+
+    todos = cambios_precio(sesion)
+    assert {cambio.insumo.descripcion for cambio in todos} == set(PRECIOS_NUEVOS)
+
+    solo_cemento = cambios_precio(sesion, insumo=CEMENTO)
+    assert [cambio.insumo.descripcion for cambio in solo_cemento] == [CEMENTO]
+    assert solo_cemento[0].precio_nuevo == PRECIOS_NUEVOS[CEMENTO]
+
+    assert cambios_precio(sesion, desde=FECHA_NUEVA) == todos
+    assert cambios_precio(sesion, hasta=FECHA_NUEVA) == todos
+    assert cambios_precio(sesion, desde=FECHA_NUEVA + timedelta(days=1)) == []
+    assert cambios_precio(sesion, hasta=FECHA_NUEVA - timedelta(days=1)) == []

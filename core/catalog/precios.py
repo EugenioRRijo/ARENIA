@@ -53,6 +53,7 @@ __all__ = [
     "CambioDetectado",
     "PrecioLeido",
     "ResumenLista",
+    "cambios_precio",
     "crear_lista_desde_archivo",
     "insumos_afectados",
     "leer_lista_precios",
@@ -380,6 +381,33 @@ def registrar_cambios(
     session.add_all(cambios)
     session.flush()
     return cambios
+
+
+def cambios_precio(
+    session: Session,
+    insumo: str | None = None,
+    desde: date | None = None,
+    hasta: date | None = None,
+) -> list[models.CambioPrecio]:
+    """El historial de `CambioPrecio`, en orden estable (fecha, id), con filtros opcionales.
+
+    Única consulta del historial del sistema: la usan `api/rutas/listas.py` y
+    `ui/paginas/historico.py`, que antes la reproducían por separado (hallazgo menor diferido de
+    la bitácora F.1; principio DRY). `insumo` filtra por descripción exacta; `desde` y `hasta`
+    acotan la fecha del cambio, ambos inclusivos.
+    """
+    consulta = (
+        select(models.CambioPrecio)
+        .join(models.Insumo)
+        .order_by(models.CambioPrecio.fecha, models.CambioPrecio.id)
+    )
+    if insumo is not None:
+        consulta = consulta.where(models.Insumo.descripcion == insumo)
+    if desde is not None:
+        consulta = consulta.where(models.CambioPrecio.fecha >= desde)
+    if hasta is not None:
+        consulta = consulta.where(models.CambioPrecio.fecha <= hasta)
+    return list(session.scalars(consulta))
 
 
 def _precios_de(session: Session, lista: models.ListaPrecios) -> dict[int, Decimal]:

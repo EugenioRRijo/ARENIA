@@ -141,6 +141,41 @@ def test_actualizacion_por_http_solo_revalora_el_concreto(cliente):
     assert sum(1 for f in cuerpo["filas"] if f["variacion_pct"] not in ("0", "0.00")) == 1
 
 
+def test_cambios_precio_por_http_con_filtro_de_insumo(cliente):
+    """GET /cambios-precio (sin prueba propia hasta esta sesion): tras una actualizacion, el
+    historial responde con montos como texto exacto y respeta el filtro `insumo`. La ruta
+    delega en `core.catalog.cambios_precio`, la unica consulta del historial.
+    """
+    cliente.post(
+        "/presupuestos",
+        json={
+            "codigo": "API-001",
+            "fecha": "2026-04-28",
+            "moneda": "USD",
+            "proyecto": "Drenaje de la clínica",
+            "items": _items_payload(),
+        },
+    )
+    with MUESTRA_PRECIOS.open("rb") as f:
+        cliente.post(
+            "/listas-precios",
+            files={"archivo": (MUESTRA_PRECIOS.name, f, "text/csv")},
+            data={"nombre": "L2", "moneda": "USD", "fecha_vigencia": "2026-06-01"},
+        )
+    cliente.post(
+        "/presupuestos/API-001/actualizacion", json={"lista": "L2", "codigo_nuevo": "API-002"}
+    )
+
+    r = cliente.get("/cambios-precio", params={"insumo": "Cemento Portland"})
+    assert r.status_code == 200
+    cambios = r.json()
+    assert len(cambios) == 1
+    assert cambios[0]["precio_anterior"] == "15" and cambios[0]["precio_nuevo"] == "18"
+
+    todos = cliente.get("/cambios-precio").json()
+    assert {c["insumo"] for c in todos} == {"Cemento Portland", "Arena lavada"}
+
+
 def test_cantidad_decimal_malformada_responde_422_no_500(cliente):
     """`Decimal("12,50")` lanza `InvalidOperation` (que NO hereda de `ValueError`): sin manejo en
     la frontera seria un 500 crudo (hallazgo menor diferido de la bitacora F.1). La API debe

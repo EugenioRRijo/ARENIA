@@ -13,7 +13,7 @@ from sqlalchemy import select
 from api.dependencias import SesionDep
 from api.esquemas import CambioRespuesta, CargaListaRespuesta, ListaRespuesta
 from core import models
-from core.catalog import crear_lista_desde_archivo
+from core.catalog import cambios_precio, crear_lista_desde_archivo
 
 router = APIRouter(tags=["listas"])
 
@@ -58,18 +58,11 @@ def listar_cambios_precio(
     desde: date | None = None,
     hasta: date | None = None,
 ) -> list[CambioRespuesta]:
-    """Historial de `CambioPrecio`, filtrable por descripcion de insumo y rango de fecha."""
-    consulta = (
-        select(models.CambioPrecio)
-        .join(models.Insumo)
-        .order_by(models.CambioPrecio.fecha, models.CambioPrecio.id)
-    )
-    if insumo is not None:
-        consulta = consulta.where(models.Insumo.descripcion == insumo)
-    if desde is not None:
-        consulta = consulta.where(models.CambioPrecio.fecha >= desde)
-    if hasta is not None:
-        consulta = consulta.where(models.CambioPrecio.fecha <= hasta)
+    """Historial de `CambioPrecio`, filtrable por descripcion de insumo y rango de fecha.
+
+    La consulta vive una sola vez en `core.catalog.cambios_precio` (la misma que usa
+    `ui/paginas/historico.py`); esta ruta solo serializa.
+    """
     return [
         CambioRespuesta(
             insumo=cambio.insumo.descripcion,
@@ -78,5 +71,5 @@ def listar_cambios_precio(
             variacion=str(cambio.variacion),
             fecha=cambio.fecha,
         )
-        for cambio in sesion.scalars(consulta)
+        for cambio in cambios_precio(sesion, insumo=insumo, desde=desde, hasta=hasta)
     ]
