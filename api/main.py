@@ -6,7 +6,16 @@ from fastapi.responses import JSONResponse
 from api.rutas import catalogo, computos, listas, presupuestos
 from core.catalog import CatalogoIncompleto
 
-app = FastAPI(title="Sistema APU multidominio", version="0.1.0")
+DESCRIPCION = """API HTTP sobre el nucleo del sistema de Analisis de Precios Unitarios (APU).
+
+**Los montos viajan como texto, nunca como numero JSON.** Todo campo monetario o dimensional
+(precios, cantidades, factores, totales) se serializa como `str` en formato decimal
+(por ejemplo `"1586.61"`) tanto en las peticiones como en las respuestas; la conversion a
+`Decimal` ocurre siempre en la frontera de la API, construyendo desde el texto exacto. Esto evita
+la perdida de precision de `float` en JSON (regla 3 de CLAUDE.md).
+"""
+
+app = FastAPI(title="Sistema APU multidominio", version="0.1.0", description=DESCRIPCION)
 app.include_router(catalogo.router)
 app.include_router(listas.router)
 app.include_router(computos.router)

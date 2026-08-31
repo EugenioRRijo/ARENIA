@@ -1,0 +1,1370 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Sistema APU multidominio",
+    "description": "API HTTP sobre el nucleo del sistema de Analisis de Precios Unitarios (APU).\n\n**Los montos viajan como texto, nunca como numero JSON.** Todo campo monetario o dimensional\n(precios, cantidades, factores, totales) se serializa como `str` en formato decimal\n(por ejemplo `\"1586.61\"`) tanto en las peticiones como en las respuestas; la conversion a\n`Decimal` ocurre siempre en la frontera de la API, construyendo desde el texto exacto. Esto evita\nla perdida de precision de `float` en JSON (regla 3 de CLAUDE.md).\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/salud": {
+      "get": {
+        "tags": [
+          "catalogo"
+        ],
+        "summary": "Salud",
+        "description": "Ping de disponibilidad, sin tocar la base de datos.",
+        "operationId": "salud_salud_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Salud Salud Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/partidas": {
+      "get": {
+        "tags": [
+          "catalogo"
+        ],
+        "summary": "Listar Partidas",
+        "description": "Partidas del catalogo, ordenadas por codigo; filtradas por dominio si se indica.",
+        "operationId": "listar_partidas_partidas_get",
+        "parameters": [
+          {
+            "name": "dominio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Dominio"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dominio"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PartidaRespuesta"
+                  },
+                  "title": "Response Listar Partidas Partidas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/insumos": {
+      "get": {
+        "tags": [
+          "catalogo"
+        ],
+        "summary": "Listar Insumos",
+        "description": "Insumos del catalogo con su precio en la lista vigente; `None` si no hay lista vigente.",
+        "operationId": "listar_insumos_insumos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InsumoRespuesta"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Insumos Insumos Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listas-precios": {
+      "get": {
+        "tags": [
+          "listas"
+        ],
+        "summary": "Listar Listas Precios",
+        "description": "Listas de precios registradas, de la mas antigua a la mas reciente.",
+        "operationId": "listar_listas_precios_listas_precios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ListaRespuesta"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Listas Precios Listas Precios Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "listas"
+        ],
+        "summary": "Cargar Lista Precios",
+        "description": "Crea una lista de precios desde un archivo CSV o XLSX y confirma la transaccion (UC-02).",
+        "operationId": "cargar_lista_precios_listas_precios_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_cargar_lista_precios_listas_precios_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargaListaRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cambios-precio": {
+      "get": {
+        "tags": [
+          "listas"
+        ],
+        "summary": "Listar Cambios Precio",
+        "description": "Historial de `CambioPrecio`, filtrable por descripcion de insumo y rango de fecha.",
+        "operationId": "listar_cambios_precio_cambios_precio_get",
+        "parameters": [
+          {
+            "name": "insumo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Insumo"
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CambioRespuesta"
+                  },
+                  "title": "Response Listar Cambios Precio Cambios Precio Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/computos/{dominio}": {
+      "post": {
+        "tags": [
+          "computos"
+        ],
+        "summary": "Computar",
+        "description": "Extrae las cantidades de obra de la fuente subida con el adaptador del dominio pedido.\n\n`codigos` es un JSON de texto (form field) con el mapeo que exige el adaptador civil; el resto\nde los dominios no lo necesita. El archivo se guarda en un directorio temporal con su nombre\noriginal, porque los adaptadores leen por extensión.",
+        "operationId": "computar_computos__dominio__post",
+        "parameters": [
+          {
+            "name": "dominio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dominio"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_computar_computos__dominio__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ItemComputoRespuesta"
+                  },
+                  "title": "Response Computar Computos  Dominio  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/presupuestos": {
+      "get": {
+        "tags": [
+          "presupuestos"
+        ],
+        "summary": "Listar Presupuestos",
+        "description": "Códigos y totales de todos los presupuestos guardados, ordenados por código.",
+        "operationId": "listar_presupuestos_presupuestos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PresupuestoResumenRespuesta"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Presupuestos Presupuestos Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "presupuestos"
+        ],
+        "summary": "Crear Presupuesto",
+        "description": "Elabora el presupuesto (UC-01), lo audita siempre (UC-05) y lo guarda.",
+        "operationId": "crear_presupuesto_presupuestos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresupuestoPeticion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresupuestoCreadoRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/presupuestos/{codigo}": {
+      "get": {
+        "tags": [
+          "presupuestos"
+        ],
+        "summary": "Obtener Presupuesto",
+        "description": "El presupuesto reconstruido desde el catálogo (`cargar_presupuesto`), con sus renglones.\n\n`codigo` es único solo por proyecto: si dos proyectos comparten código, indique `proyecto`\npara desambiguar (`_buscar_modelo` responde 409 en vez de una ambigüedad silenciosa).",
+        "operationId": "obtener_presupuesto_presupuestos__codigo__get",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codigo"
+            }
+          },
+          {
+            "name": "proyecto",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Proyecto"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresupuestoDetalleRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/presupuestos/{codigo}/informe": {
+      "get": {
+        "tags": [
+          "presupuestos"
+        ],
+        "summary": "Informe De Auditoria",
+        "description": "El informe de auditoría en markdown (UC-05): se genera siempre, con la misma llamada que\nusa `ui/app.py` (`InformeAuditoria.a_markdown()`), nunca reinventada aquí.",
+        "operationId": "informe_de_auditoria_presupuestos__codigo__informe_get",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codigo"
+            }
+          },
+          {
+            "name": "proyecto",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Proyecto"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/presupuestos/{codigo}/excel": {
+      "get": {
+        "tags": [
+          "presupuestos"
+        ],
+        "summary": "Exportar Presupuesto Excel",
+        "description": "El presupuesto, su APU, su curva y su auditoría como libro de Excel descargable.",
+        "operationId": "exportar_presupuesto_excel_presupuestos__codigo__excel_get",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codigo"
+            }
+          },
+          {
+            "name": "proyecto",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Proyecto"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/presupuestos/{codigo}/actualizacion": {
+      "post": {
+        "tags": [
+          "presupuestos"
+        ],
+        "summary": "Actualizar Presupuesto",
+        "description": "UC-02: revalora el presupuesto con `peticion.lista` y guarda la versión `codigo_nuevo`.\n\nMismo criterio que `ui/app.py`: si ningún insumo cambió de precio\n(`comparativo.insumos_afectados == 0`) no hay nada que confirmar (409, sin `commit`).",
+        "operationId": "actualizar_presupuesto_presupuestos__codigo__actualizacion_post",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codigo"
+            }
+          },
+          {
+            "name": "proyecto",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Proyecto"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizacionPeticion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparativoRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActualizacionPeticion": {
+        "properties": {
+          "lista": {
+            "type": "string",
+            "title": "Lista"
+          },
+          "codigo_nuevo": {
+            "type": "string",
+            "title": "Codigo Nuevo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lista",
+          "codigo_nuevo"
+        ],
+        "title": "ActualizacionPeticion",
+        "description": "UC-02 sobre un presupuesto guardado: la lista nueva y el código de la versión que produce."
+      },
+      "Body_cargar_lista_precios_listas_precios_post": {
+        "properties": {
+          "archivo": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Archivo"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "moneda": {
+            "type": "string",
+            "title": "Moneda"
+          },
+          "fecha_vigencia": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Vigencia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "archivo",
+          "nombre",
+          "moneda",
+          "fecha_vigencia"
+        ],
+        "title": "Body_cargar_lista_precios_listas_precios_post"
+      },
+      "Body_computar_computos__dominio__post": {
+        "properties": {
+          "archivo": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Archivo"
+          },
+          "codigos": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "archivo"
+        ],
+        "title": "Body_computar_computos__dominio__post"
+      },
+      "CambioRespuesta": {
+        "properties": {
+          "insumo": {
+            "type": "string",
+            "title": "Insumo"
+          },
+          "precio_anterior": {
+            "type": "string",
+            "title": "Precio Anterior"
+          },
+          "precio_nuevo": {
+            "type": "string",
+            "title": "Precio Nuevo"
+          },
+          "variacion": {
+            "type": "string",
+            "title": "Variacion"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "insumo",
+          "precio_anterior",
+          "precio_nuevo",
+          "variacion",
+          "fecha"
+        ],
+        "title": "CambioRespuesta",
+        "description": "Un cambio de precio del historial (UC-02)."
+      },
+      "CargaListaRespuesta": {
+        "properties": {
+          "lista": {
+            "$ref": "#/components/schemas/ListaRespuesta"
+          },
+          "desconocidos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Desconocidos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lista",
+          "desconocidos"
+        ],
+        "title": "CargaListaRespuesta",
+        "description": "Lo que produjo cargar un archivo de precios: la lista creada y los insumos desconocidos."
+      },
+      "ComparativoRespuesta": {
+        "properties": {
+          "total_anterior": {
+            "type": "string",
+            "title": "Total Anterior"
+          },
+          "total_nuevo": {
+            "type": "string",
+            "title": "Total Nuevo"
+          },
+          "insumos_afectados": {
+            "type": "integer",
+            "title": "Insumos Afectados"
+          },
+          "filas": {
+            "items": {
+              "$ref": "#/components/schemas/FilaComparativoRespuesta"
+            },
+            "type": "array",
+            "title": "Filas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_anterior",
+          "total_nuevo",
+          "insumos_afectados",
+          "filas"
+        ],
+        "title": "ComparativoRespuesta",
+        "description": "El comparativo completo de UC-02: totales antes y después, y una fila por renglón."
+      },
+      "Dominio": {
+        "type": "string",
+        "enum": [
+          "civil",
+          "telecom",
+          "industrial",
+          "sistemas"
+        ],
+        "title": "Dominio"
+      },
+      "FilaComparativoRespuesta": {
+        "properties": {
+          "codigo_partida": {
+            "type": "string",
+            "title": "Codigo Partida"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "cantidad": {
+            "type": "string",
+            "title": "Cantidad"
+          },
+          "pu_anterior": {
+            "type": "string",
+            "title": "Pu Anterior"
+          },
+          "pu_nuevo": {
+            "type": "string",
+            "title": "Pu Nuevo"
+          },
+          "variacion_pct": {
+            "type": "string",
+            "title": "Variacion Pct"
+          },
+          "total_anterior": {
+            "type": "string",
+            "title": "Total Anterior"
+          },
+          "total_nuevo": {
+            "type": "string",
+            "title": "Total Nuevo"
+          },
+          "incidencia_pct": {
+            "type": "string",
+            "title": "Incidencia Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo_partida",
+          "descripcion",
+          "cantidad",
+          "pu_anterior",
+          "pu_nuevo",
+          "variacion_pct",
+          "total_anterior",
+          "total_nuevo",
+          "incidencia_pct"
+        ],
+        "title": "FilaComparativoRespuesta",
+        "description": "Una fila de `core.budget.Comparativo`, con todos sus montos presentados a dos decimales."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InsumoRespuesta": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "unidad": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unidad"
+          },
+          "precio_vigente": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precio Vigente"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "descripcion",
+          "tipo",
+          "unidad",
+          "precio_vigente"
+        ],
+        "title": "InsumoRespuesta",
+        "description": "Un insumo del catalogo, con su precio en la lista vigente si la hay."
+      },
+      "ItemComputoPeticion": {
+        "properties": {
+          "codigo_partida": {
+            "type": "string",
+            "title": "Codigo Partida"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "unidad": {
+            "type": "string",
+            "title": "Unidad"
+          },
+          "cantidad": {
+            "type": "string",
+            "title": "Cantidad"
+          },
+          "origen_id": {
+            "type": "string",
+            "title": "Origen Id"
+          },
+          "origen_tipo": {
+            "type": "string",
+            "title": "Origen Tipo"
+          },
+          "dominio": {
+            "type": "string",
+            "title": "Dominio"
+          },
+          "regla": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regla"
+          },
+          "parametros": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Parametros",
+            "default": {}
+          },
+          "especificaciones": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Especificaciones",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo_partida",
+          "descripcion",
+          "unidad",
+          "cantidad",
+          "origen_id",
+          "origen_tipo",
+          "dominio"
+        ],
+        "title": "ItemComputoPeticion",
+        "description": "Un `ItemComputo` tal como lo envía el cliente: cantidad y parámetros como texto."
+      },
+      "ItemComputoRespuesta": {
+        "properties": {
+          "codigo_partida": {
+            "type": "string",
+            "title": "Codigo Partida"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "unidad": {
+            "type": "string",
+            "title": "Unidad"
+          },
+          "cantidad": {
+            "type": "string",
+            "title": "Cantidad"
+          },
+          "origen_id": {
+            "type": "string",
+            "title": "Origen Id"
+          },
+          "origen_tipo": {
+            "type": "string",
+            "title": "Origen Tipo"
+          },
+          "dominio": {
+            "type": "string",
+            "title": "Dominio"
+          },
+          "regla": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regla"
+          },
+          "parametros": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Parametros"
+          },
+          "especificaciones": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Especificaciones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo_partida",
+          "descripcion",
+          "unidad",
+          "cantidad",
+          "origen_id",
+          "origen_tipo",
+          "dominio",
+          "regla",
+          "parametros",
+          "especificaciones"
+        ],
+        "title": "ItemComputoRespuesta",
+        "description": "Un `ItemComputo` extraído por un adaptador (UC-01), con cantidad y parámetros exactos."
+      },
+      "ListaRespuesta": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "moneda": {
+            "type": "string",
+            "title": "Moneda"
+          },
+          "fecha_vigencia": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Vigencia"
+          },
+          "origen": {
+            "type": "string",
+            "title": "Origen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre",
+          "moneda",
+          "fecha_vigencia",
+          "origen"
+        ],
+        "title": "ListaRespuesta",
+        "description": "Cabecera de una lista de precios registrada."
+      },
+      "PartidaPresupuestadaRespuesta": {
+        "properties": {
+          "codigo_partida": {
+            "type": "string",
+            "title": "Codigo Partida"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "unidad": {
+            "type": "string",
+            "title": "Unidad"
+          },
+          "cantidad": {
+            "type": "string",
+            "title": "Cantidad"
+          },
+          "precio_unitario": {
+            "type": "string",
+            "title": "Precio Unitario"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo_partida",
+          "descripcion",
+          "unidad",
+          "cantidad",
+          "precio_unitario",
+          "total"
+        ],
+        "title": "PartidaPresupuestadaRespuesta",
+        "description": "Un renglón del presupuesto, tal como se presenta (dos decimales, CLAUDE.md §2.3)."
+      },
+      "PartidaRespuesta": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "unidad": {
+            "type": "string",
+            "title": "Unidad"
+          },
+          "dominio": {
+            "type": "string",
+            "title": "Dominio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "descripcion",
+          "unidad",
+          "dominio"
+        ],
+        "title": "PartidaRespuesta",
+        "description": "Cabecera de una partida del catalogo."
+      },
+      "PresupuestoCreadoRespuesta": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          },
+          "hallazgos": {
+            "type": "integer",
+            "title": "Hallazgos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "total",
+          "hallazgos"
+        ],
+        "title": "PresupuestoCreadoRespuesta",
+        "description": "Lo que confirma la elaboración: el total (dos decimales) y cuántos hallazgos audita."
+      },
+      "PresupuestoDetalleRespuesta": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          },
+          "moneda": {
+            "type": "string",
+            "title": "Moneda"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          },
+          "partidas": {
+            "items": {
+              "$ref": "#/components/schemas/PartidaPresupuestadaRespuesta"
+            },
+            "type": "array",
+            "title": "Partidas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "fecha",
+          "moneda",
+          "total",
+          "partidas"
+        ],
+        "title": "PresupuestoDetalleRespuesta",
+        "description": "El presupuesto completo, reconstruido desde el catálogo (`cargar_presupuesto`)."
+      },
+      "PresupuestoPeticion": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          },
+          "moneda": {
+            "type": "string",
+            "title": "Moneda",
+            "default": "USD"
+          },
+          "proyecto": {
+            "type": "string",
+            "title": "Proyecto"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemComputoPeticion"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "fcas": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fcas"
+          },
+          "bono_alimentacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bono Alimentacion"
+          },
+          "administracion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administracion"
+          },
+          "utilidad": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Utilidad"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "fecha",
+          "proyecto",
+          "items"
+        ],
+        "title": "PresupuestoPeticion",
+        "description": "Lo que hace falta para elaborar un presupuesto (UC-01/05): items ya extraídos por un\nadaptador o construidos a mano, y los cuatro parámetros de costo, opcionales (por defecto los\nde `ParametrosCosto`, la línea base de CLAUDE.md §4)."
+      },
+      "PresupuestoResumenRespuesta": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "total"
+        ],
+        "title": "PresupuestoResumenRespuesta",
+        "description": "Cabecera de un presupuesto guardado: código y total, para el listado."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
