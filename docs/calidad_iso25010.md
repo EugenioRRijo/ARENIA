@@ -60,7 +60,8 @@ pruebas, incluido el modelo de lenguaje de I2) corre en 100,9 s.
 ## 4. Usabilidad (RNF‑04)
 
 La meta (juicio de expertos ≥ 4/5 en Likert sobre el informe de auditoría) **no es automatizable y
-está pendiente**: el instrumento se aplica con el tutor en la Fase 6. Lo que el producto ya
+está pendiente**: el instrumento ya está redactado ([dossier_g0.md, anexo A](dossier_g0.md)) y se
+aplica con el tutor en la Fase 6. Lo que el producto ya
 aporta a esa evaluación: hallazgos en español con severidad, impacto cuantificado y los
 `origen_id` involucrados; UI multipágina con los flujos implementados y visor 3D del modelo; API
 autodocumentada (OpenAPI en `docs/api.json`).
