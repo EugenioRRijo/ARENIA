@@ -14,9 +14,10 @@ actualizada el mismo día tras el cierre de UC‑08 (`inc/UC08-escenarios`).
 queda sin prueba**: la brecha de UC‑08 (RF‑30, RF‑31) se cerró el 2026‑08‑31 con
 `core/budget/escenarios.py` y `tests/unit/test_escenarios.py`. El único RF parcial es RF‑16 (su
 persistencia espera un flujo de creación de partidas que no existe en ningún UC implementado —
-hallazgo recurrente de I2 e I6, elevado a G0). Los ocho casos de uso tienen su flujo
-implementado; UC‑08 opera desde la API de `core.budget` y aún no tiene página propia en la UI
-(anotado en la bitácora del cierre, para F.3/G0).
+hallazgo recurrente de I2 e I6, elevado a G0). Los ocho casos de uso operan de extremo a
+extremo: UC‑08 quedó cableado el mismo día en las tres capas (núcleo `core.budget`, ruta
+`POST /presupuestos/{codigo}/escenarios` y página «Escenarios (UC‑08)» en la UI), con lo que la
+interfaz cumple lo que la ERS §3.1 promete.
 
 **Corrección funcional (RNF‑01).** El presupuesto de la línea base corregida se reproduce con
 desviación 0,00 % — los cinco precios unitarios dentro de ± 0,01 y los totales exactos en
@@ -31,8 +32,8 @@ CLAUDE.md §2): `elaborar()` no tiene un modo sin auditoría.
 
 ## 2. Fiabilidad
 
-**Madurez.** 392 pruebas, 0 fallos, 0 omitidas, con `-W error` (ninguna advertencia tolerada) en
-la corrida registrada. La suite creció de 88 (Sprint 0) a 392 sin retirar ninguna prueba de valor:
+**Madurez.** 395 pruebas, 0 fallos, 0 omitidas, con `-W error` (ninguna advertencia tolerada) en
+la corrida registrada. La suite creció de 88 (Sprint 0) a 395 sin retirar ninguna prueba de valor:
 la línea base que validó el motor en I0.3 sigue vigilándolo intacta.
 
 **Reproducibilidad (RNF‑02).** Cualquier presupuesto se reconstruye con los precios vigentes a su
@@ -51,8 +52,8 @@ archivo y fila antes de valorar nada; un rendimiento atípico advierte pero no i
 Medición reproducible con `uv run python scripts/medir_rnf03.py` (2026‑08‑31, equipo de
 desarrollo, SQLite local, sin exportación): el ciclo completo de UC‑02 — revalorar 100 partidas
 con 41 insumos cambiados, reelaborar con auditoría R1–R7, guardar la versión nueva y su histórico
-de incidencias — tarda **1,17 s**, contra la meta de < 5 s: margen de 4×. La suite completa (392
-pruebas, incluido el modelo de lenguaje de I2) corre en 96,7 s.
+de incidencias — tarda **1,17 s**, contra la meta de < 5 s: margen de 4×. La suite completa (395
+pruebas, incluido el modelo de lenguaje de I2) corre en 100,9 s.
 
 **Veredicto: cumple.**
 
@@ -75,7 +76,7 @@ parametrización sobre los módulos existentes) la vuelve a comprobar en cada co
 adaptador que importe de `core` algo distinto de `core.contracts` rompe la suite.
 
 **Capacidad de prueba (RNF‑06).** Cobertura de `core/` **98,05 %** (meta ≥ 80 %); `ml/` 99,29 %,
-`api/` 94,04 %, `adapters/` 88,78 %; total medido 96,05 %.
+`api/` 94,56 %, `adapters/` 88,78 %; total medido 96,11 %.
 
 **Analizabilidad.** Cada hecho vive en un solo lugar (DRY: constantes en `ParametrosCosto`, alias
 de unidades en `contracts.unidades`, línea base en el fixture); toda cantidad lleva su origen
@@ -119,7 +120,7 @@ p. ej. Revit y Bonsai) sigue abierta; la alternativa tabular documentada existe 
 | Característica | Meta de la ERS | Resultado | Veredicto |
 |---|---|---|---|
 | Adecuación funcional | clase 3 AACE; RF cubiertos | desviación 0,00 %; 30/31 RF en verde (26/26 esenciales); 7 de 7 | cumple |
-| Fiabilidad | reproducibilidad 100 % | comparación exacta en verde; 392/392 | cumple |
+| Fiabilidad | reproducibilidad 100 % | comparación exacta en verde; 395/395 | cumple |
 | Eficiencia de desempeño | < 5 s con ≤ 100 partidas | **1,17 s** con 100 partidas | cumple |
 | Usabilidad | Likert ≥ 4/5 | instrumento por aplicar (Fase 6) | pendiente |
 | Mantenibilidad | `core/` intacto; cobertura ≥ 80 % | diff vacío + 65 pruebas; **98,05 %** | cumple |

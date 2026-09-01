@@ -48,7 +48,7 @@ No hay más pasos (RNF‑07). Notas:
 
 ## 3. Las pantallas
 
-La interfaz tiene siete páginas (menú lateral). Todas presentan los montos con dos decimales,
+La interfaz tiene ocho páginas (menú lateral). Todas presentan los montos con dos decimales,
 pero **ningún cálculo interno redondea**: el redondeo es solo de presentación.
 
 | Página | Caso de uso | Qué hace |
@@ -56,6 +56,7 @@ pero **ningún cálculo interno redondea**: el redondeo es solo de presentación
 | **Actualización de precios** | UC‑02 | Cargar una lista de precios nueva (CSV/XLSX) y revalorar un presupuesto guardado |
 | **Catálogo** | consulta | Partidas e insumos con su precio vigente |
 | **Elaborar presupuesto** | UC‑01 | Extraer cantidades de una fuente por dominio y presupuestarlas |
+| **Escenarios** | UC‑08 | Recalcular un presupuesto bajo supuestos («¿y si…?») sin alterarlo |
 | **Histórico de precios** | UC‑02 | Cambios de precio registrados, con filtros |
 | **Partidas similares** | UC‑03 | Buscar en texto libre partidas parecidas para reutilizar su desglose |
 | **Simulador de listas** | apoyo | Generar listas de precios de prueba, deterministas |
@@ -112,23 +113,19 @@ construido contra el estimado en el rango de la clase 3 de AACE.
 
 ### 3.6 Escenarios de sensibilidad (UC‑08)
 
-Los escenarios («¿y si la utilidad fuera 20 %?», «¿y si el cemento sube a 18?») se generan hoy
-desde Python con `core.budget` — todavía no tienen página propia en la interfaz:
+En la página **Escenarios (UC‑08)**: elegir el presupuesto base, darle nombre al escenario y
+declarar los supuestos — los cuatro parámetros de costo (precargados con los del base) y/o una
+tabla de precios de ensayo por insumo (lo no mencionado conserva su precio vigente). Cada
+escenario generado se suma a la tabla comparativa: el base en la primera fila y una fila por
+escenario con su total y su variación absoluta y porcentual, descargable en CSV con los valores
+exactos. El detalle por partida de cada escenario se despliega debajo, con los hallazgos de su
+propia auditoría (que se genera siempre).
 
-```python
-from decimal import Decimal
-from core.budget import comparar_escenarios, generar_escenario
-
-escenario = generar_escenario(
-    "cemento a 18", base, composiciones, parametros,
-    precios={"Cemento Portland": Decimal("18")},
-)
-tabla = comparar_escenarios(base, [escenario])   # exportable con tabla.to_csv(...)
-```
-
-El presupuesto base nunca se altera; cada escenario trae su propio informe de auditoría. Para
-convertir un escenario en presupuesto real se usa la actualización de precios (UC‑02) con la
-lista correspondiente.
+El presupuesto base **nunca** se altera y ningún escenario se guarda: al cambiar de presupuesto
+la comparación se descarta. Para convertir un escenario en presupuesto real se usa la
+actualización de precios (UC‑02) con la lista correspondiente. Por software, la misma operación
+está en `POST /presupuestos/{codigo}/escenarios` (API) y en `core.budget.generar_escenario`
+(Python).
 
 ## 4. El informe de auditoría
 
@@ -151,7 +148,8 @@ inconsistencias del presupuesto original.
   `GET /presupuestos/{codigo}/excel` en la API). Las celdas presentan dos decimales; los totales
   del libro cuadran con los del sistema porque el redondeo es solo de celda.
 - **Informe:** `GET /presupuestos/{codigo}/informe`.
-- **Tabla de escenarios:** `to_csv` / `to_excel` (sección 3.6).
+- **Tabla de escenarios:** botón de descarga CSV en la página de escenarios (valores exactos,
+  sin redondeo de presentación).
 
 ## 6. Archivos de muestra
 
