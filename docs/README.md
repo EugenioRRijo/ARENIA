@@ -13,7 +13,7 @@
 | [resultados_ml.md](resultados_ml.md) — métricas del módulo predictivo y compuerta G2 | completo | I6.3 ✔ |
 | [api.json](api.json) — esquema OpenAPI exportado | completo | F.1 ✔ |
 | [plan_pruebas.md](plan_pruebas.md) (IEEE 829), [calidad_iso25010.md](calidad_iso25010.md) | completos | F.2 ✔ |
-| manual_usuario.md, manual_tecnico.md | pendientes | F.3 |
+| [manual_usuario.md](manual_usuario.md), [manual_tecnico.md](manual_tecnico.md) — operación y extensión (guía del adaptador nuevo) | completos | F.3 ✔ |
 
 ## Fuentes (`fuentes/`)
 
