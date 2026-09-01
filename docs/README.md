@@ -15,6 +15,7 @@
 | [plan_pruebas.md](plan_pruebas.md) (IEEE 829), [calidad_iso25010.md](calidad_iso25010.md) | completos | F.2 ✔ |
 | [manual_usuario.md](manual_usuario.md), [manual_tecnico.md](manual_tecnico.md) — operación y extensión (guía del adaptador nuevo) | completos | F.3 ✔ |
 | [dossier_g0.md](dossier_g0.md) — decisiones D1–D8 para el tutor e instrumento RNF‑04 | listo para la reunión | post‑PLAN |
+| [tesis/plan_redaccion.md](tesis/plan_redaccion.md) — guión por capítulo, cifras citables y tablero de avance | listo; capítulos por redactar | post‑PLAN |
 
 ## Fuentes (`fuentes/`)
 

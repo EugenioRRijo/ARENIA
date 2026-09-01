@@ -6,7 +6,9 @@ de drenaje de una clínica* (Bases del anteproyecto, `docs/fuentes/`). El PLAN d
 sistema a **multidominio** (civil, telecom, industrial, sistemas); ver la nota de la sección 3.
 
 Este archivo es la **única** matriz que relaciona objetivos, fases, sesiones, productos, indicadores y
-capítulos. Los demás documentos la enlazan.
+capítulos. Los demás documentos la enlazan. El guión operativo para escribir los capítulos —
+orden, convenciones, cifras citables y tablero de avance — está en
+[plan_redaccion.md](plan_redaccion.md).
 
 ## 1. Estructura de capítulos
 
