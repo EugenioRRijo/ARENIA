@@ -25,22 +25,34 @@ from core.budget.curva import (
     generar_curva,
     plan_secuencial,
 )
+from core.budget.escenarios import (
+    COLUMNAS_ESCENARIOS,
+    Escenario,
+    comparar_escenarios,
+    comparar_por_partida,
+    generar_escenario,
+)
 from core.budget.excel import exportar_excel
 from core.budget.persistencia import cargar_presupuesto, guardar_presupuesto
 from core.budget.presupuesto import ResultadoElaboracion, elaborar, generar_presupuesto
 
 __all__ = [
     "COLUMNAS_COMPARATIVO",
+    "COLUMNAS_ESCENARIOS",
     "Comparativo",
+    "Escenario",
     "PeriodoPlan",
     "PlanInvalido",
     "ResultadoElaboracion",
     "actualizar_precios",
     "cargar_presupuesto",
+    "comparar_escenarios",
+    "comparar_por_partida",
     "con_curva",
     "elaborar",
     "exportar_excel",
     "generar_curva",
+    "generar_escenario",
     "generar_presupuesto",
     "guardar_presupuesto",
     "plan_secuencial",
