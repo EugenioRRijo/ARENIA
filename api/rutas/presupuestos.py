@@ -22,6 +22,10 @@ from api.dependencias import SesionDep
 from api.esquemas import (
     ActualizacionPeticion,
     ComparativoRespuesta,
+    EscenarioPeticion,
+    EscenarioRespuesta,
+    EscenariosPeticion,
+    EscenariosRespuesta,
     FilaComparativoRespuesta,
     ItemComputoPeticion,
     PartidaPresupuestadaRespuesta,
@@ -33,10 +37,13 @@ from api.esquemas import (
 )
 from core import models
 from core.budget import (
+    Comparativo,
     actualizar_precios,
     cargar_presupuesto,
+    comparar_por_partida,
     elaborar,
     exportar_excel,
+    generar_escenario,
     generar_presupuesto,
     guardar_presupuesto,
     plan_secuencial,
@@ -210,25 +217,64 @@ def actualizar_presupuesto(
         )
     sesion.commit()
 
-    filas = [
-        FilaComparativoRespuesta(
-            codigo_partida=fila.codigo_partida,
-            descripcion=fila.descripcion,
-            cantidad=formatear_decimal(fila.cantidad, DECIMALES_PRESENTACION),
-            pu_anterior=formatear_decimal(fila.pu_anterior, DECIMALES_PRESENTACION),
-            pu_nuevo=formatear_decimal(fila.pu_nuevo, DECIMALES_PRESENTACION),
-            variacion_pct=formatear_decimal(fila.variacion_pct, DECIMALES_PRESENTACION),
-            total_anterior=formatear_decimal(fila.total_anterior, DECIMALES_PRESENTACION),
-            total_nuevo=formatear_decimal(fila.total_nuevo, DECIMALES_PRESENTACION),
-            incidencia_pct=formatear_decimal(fila.incidencia_pct, DECIMALES_PRESENTACION),
-        )
-        for fila in comparativo.tabla.itertuples(index=False)
-    ]
     return ComparativoRespuesta(
         total_anterior=formatear_decimal(comparativo.total_anterior, DECIMALES_PRESENTACION),
         total_nuevo=formatear_decimal(comparativo.total_nuevo, DECIMALES_PRESENTACION),
         insumos_afectados=comparativo.insumos_afectados,
-        filas=filas,
+        filas=_filas_comparativo(comparativo),
+    )
+
+
+@router.post("/presupuestos/{codigo}/escenarios", response_model=EscenariosRespuesta)
+def escenarios_de_presupuesto(
+    sesion: SesionDep,
+    codigo: str,
+    peticion: EscenariosPeticion,
+    proyecto: str | None = None,
+) -> EscenariosRespuesta:
+    """UC-08: recalcula el presupuesto bajo los supuestos de cada escenario, sin persistir nada.
+
+    Los parámetros que un escenario no declara heredan los congelados en el presupuesto base;
+    un parámetro fuera de rango lo rechaza el contrato (`ParametrosCosto`) y responde 422
+    (flujo 1a). La sesión no confirma nada: el base queda como única versión guardada (RF-30).
+    """
+    modelo = _buscar_modelo(sesion, codigo, proyecto)
+    catalogo = Catalogo(sesion)
+    base = cargar_presupuesto(sesion, modelo.proyecto.nombre, codigo, catalogo)
+    composiciones = {
+        codigo_partida: catalogo.composicion(
+            codigo_partida, fecha=modelo.fecha, lista=modelo.lista_precios
+        )
+        for codigo_partida in dict.fromkeys(
+            partida.item.codigo_partida for partida in base.partidas
+        )
+    }
+
+    respuestas: list[EscenarioRespuesta] = []
+    for datos in peticion.escenarios:
+        precios = {
+            descripcion: decimal_desde_texto(texto, f"precio de {descripcion}")
+            for descripcion, texto in datos.precios.items()
+        }
+        escenario = generar_escenario(
+            datos.nombre, base, composiciones, _parametros_escenario(modelo, datos), precios=precios
+        )
+        comparativo = comparar_por_partida(base, escenario)
+        respuestas.append(
+            EscenarioRespuesta(
+                nombre=escenario.nombre,
+                total=formatear_decimal(escenario.presupuesto.total, DECIMALES_PRESENTACION),
+                variacion=formatear_decimal(comparativo.variacion, DECIMALES_PRESENTACION),
+                variacion_pct=formatear_decimal(comparativo.variacion_pct, DECIMALES_PRESENTACION),
+                hallazgos=len(escenario.informe.hallazgos),
+                insumos_variados=escenario.insumos_variados,
+                partidas=_filas_comparativo(comparativo),
+            )
+        )
+    return EscenariosRespuesta(
+        codigo_base=base.codigo,
+        total_base=formatear_decimal(base.total, DECIMALES_PRESENTACION),
+        escenarios=respuestas,
     )
 
 
@@ -263,6 +309,40 @@ def _parametros_costo(peticion: PresupuestoPeticion) -> ParametrosCosto:
         if (valor := getattr(peticion, nombre)) is not None
     }
     return ParametrosCosto(**campos)
+
+
+def _parametros_escenario(
+    modelo: models.Presupuesto, escenario: EscenarioPeticion
+) -> ParametrosCosto:
+    """Los parámetros del escenario: los del presupuesto base con los del cuerpo por encima.
+
+    A diferencia de `_parametros_costo`, lo omitido hereda del **base** (los valores congelados
+    en su fila), no del contrato: el escenario varía lo que el presupuesto realmente usa.
+    """
+    campos = {nombre: getattr(modelo, nombre) for nombre in _CAMPOS_PARAMETROS}
+    for nombre in _CAMPOS_PARAMETROS:
+        texto = getattr(escenario, nombre)
+        if texto is not None:
+            campos[nombre] = decimal_desde_texto(texto, nombre)
+    return ParametrosCosto(**campos)
+
+
+def _filas_comparativo(comparativo: Comparativo) -> list[FilaComparativoRespuesta]:
+    """Las filas de un `Comparativo` presentadas a dos decimales (UC-02 y UC-08 por igual)."""
+    return [
+        FilaComparativoRespuesta(
+            codigo_partida=fila.codigo_partida,
+            descripcion=fila.descripcion,
+            cantidad=formatear_decimal(fila.cantidad, DECIMALES_PRESENTACION),
+            pu_anterior=formatear_decimal(fila.pu_anterior, DECIMALES_PRESENTACION),
+            pu_nuevo=formatear_decimal(fila.pu_nuevo, DECIMALES_PRESENTACION),
+            variacion_pct=formatear_decimal(fila.variacion_pct, DECIMALES_PRESENTACION),
+            total_anterior=formatear_decimal(fila.total_anterior, DECIMALES_PRESENTACION),
+            total_nuevo=formatear_decimal(fila.total_nuevo, DECIMALES_PRESENTACION),
+            incidencia_pct=formatear_decimal(fila.incidencia_pct, DECIMALES_PRESENTACION),
+        )
+        for fila in comparativo.tabla.itertuples(index=False)
+    ]
 
 
 def _buscar_modelo(sesion: Session, codigo: str, proyecto: str | None = None) -> models.Presupuesto:

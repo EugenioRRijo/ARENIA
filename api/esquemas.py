@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def decimal_desde_texto(texto: str, campo: str) -> Decimal:
@@ -192,6 +192,56 @@ class ComparativoRespuesta(BaseModel):
     total_nuevo: str
     insumos_afectados: int
     filas: list[FilaComparativoRespuesta]
+
+
+# ---------------------------------------------------------------------------------------------
+# Escenarios de sensibilidad (UC-08)
+# ---------------------------------------------------------------------------------------------
+
+
+class EscenarioPeticion(BaseModel):
+    """Un escenario de UC-08: parámetros de costo opcionales y precios nuevos por insumo.
+
+    Los parámetros que la petición no trae heredan los del presupuesto **base** (los congelados
+    en su fila), no los valores por defecto del contrato: un escenario pregunta «¿y si cambiara
+    esto?» sobre lo que el presupuesto realmente usa. `precios` mapea descripción de insumo a su
+    precio de ensayo, como texto decimal.
+    """
+
+    nombre: str
+    fcas: str | None = None
+    bono_alimentacion: str | None = None
+    administracion: str | None = None
+    utilidad: str | None = None
+    precios: dict[str, str] = Field(default_factory=dict)
+
+
+class EscenariosPeticion(BaseModel):
+    """UC-08 sobre un presupuesto guardado: uno o más escenarios a comparar contra el base."""
+
+    escenarios: list[EscenarioPeticion] = Field(min_length=1)
+
+
+class EscenarioRespuesta(BaseModel):
+    """Una fila de la tabla de RF-31 con su detalle: total, variación contra el base, hallazgos
+    de su auditoría (que se genera siempre) y el diferencial por partida (paso 3 del flujo).
+    """
+
+    nombre: str
+    total: str
+    variacion: str
+    variacion_pct: str
+    hallazgos: int
+    insumos_variados: int
+    partidas: list[FilaComparativoRespuesta]
+
+
+class EscenariosRespuesta(BaseModel):
+    """La comparación completa de UC-08. Nada de esto queda persistido (RF-30)."""
+
+    codigo_base: str
+    total_base: str
+    escenarios: list[EscenarioRespuesta]
 
 
 # ---------------------------------------------------------------------------------------------
