@@ -506,3 +506,11 @@ Total, 20 sesiones de trabajo.
 **Sesión I3.1, compuerta G1.** Si la extracción IFC falla, se sabe en la semana 19, con los incrementos I0, I1 e I2 ya entregados y nueve semanas por delante. Nunca se pierde el trabajo.
 
 **Sesión I5.** El comando `git diff --stat core/` devolviendo vacío es la prueba empírica de la hipótesis central. Ese resultado es la tesis.
+
+---
+
+## Continuación
+
+Este plan se completó el 2026‑08‑31 (20 de 20 sesiones). Su continuación — poblar los dominios
+telecom, industrial y sistemas con catálogos, presupuestos auditados y precios reales de la
+fuente natural de cada ingeniería — está en [PLAN_MULTIDOMINIO.md](PLAN_MULTIDOMINIO.md).
