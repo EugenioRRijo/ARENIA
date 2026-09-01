@@ -16,8 +16,9 @@ caso de prueba cita su RF; los enunciados de los RF viven **una sola vez** en
 
 ## 2. Elementos de prueba
 
-Versión probada: rama `main` en el commit `02f961a` (cierre del sprint I6), ejercitada desde la
-rama de esta sesión. Elementos:
+Versión probada: rama `main` en el commit `02f961a` (cierre del sprint I6) más el cierre de
+UC‑08 (`inc/UC08-escenarios`, 2026‑08‑31), que motivó la segunda corrida registrada en §10.
+Elementos:
 
 | Paquete | Contenido | Nivel de prueba |
 |---|---|---|
@@ -47,9 +48,9 @@ por medición (RNF‑01, 02, 03, 05, 06, 08; sección 9).
   reproduce exacto el cálculo manual, pero contra `data/samples/tanquilla.ifc` generado
   programáticamente, no contra un export BIM real (bitácora
   [2026‑08‑31‑F1](bitacora/2026-08-31-F1-api-3d.md)).
-- **RF‑30 y RF‑31 (UC‑08, escenarios):** quedaron fuera del alcance de la Sesión F.1 por decisión
-  documentada en su diseño (usan el mecanismo de UC‑02 sin persistir; se añaden después). Son el
-  único RF deseable y el único opcional sin prueba; los esenciales están todos cubiertos.
+(RF‑30 y RF‑31 figuraban aquí en la primera versión de este plan: UC‑08 había quedado fuera del
+alcance de F.1. La brecha se cerró el mismo día — `core/budget/escenarios.py` con
+`tests/unit/test_escenarios.py`, TDD con RED observado — y sus filas están ahora en §8.)
 
 ## 4. Enfoque
 
@@ -61,7 +62,8 @@ por medición (RNF‑01, 02, 03, 05, 06, 08; sección 9).
    elaborar → auditar → actualizar precios → reconstruir a fecha).
 3. **Exactitud decimal.** Los importes se comparan como `Decimal` exactos; la única tolerancia
    admitida es ± 0,01 sobre el precio unitario de los cinco APU reales (CLAUDE.md §4).
-4. **Arquitectura como prueba.** `test_arquitectura.py` (64 casos) falla si un adaptador importa
+4. **Arquitectura como prueba.** `test_arquitectura.py` (65 casos, uno más por cada módulo que
+   nace: el cierre de UC‑08 añadió el suyo solo) falla si un adaptador importa
    de `core` algo distinto de `core.contracts`: la hipótesis central se vigila en cada corrida.
 5. **Advertencias como errores.** La suite corre con `-W error`: cualquier advertencia de
    dependencia o de código propio rompe la corrida.
@@ -110,19 +112,19 @@ uv run python scripts/medir_rnf03.py
 
 Una fila por RF; el enunciado y el criterio de aceptación están en la fila homónima de
 [ERS.md §3.2](ERS.md#32-requisitos-funcionales). «Casos» cuenta las funciones de prueba del
-archivo en la corrida registrada (total de la suite: 385).
+archivo en la corrida registrada (total de la suite: 392).
 
 | RF | Prueba(s) que lo demuestran | Casos | Resultado |
 |---|---|---|---|
 | RF‑01 | `tests/unit/test_costing.py` (5 APU ± 0,01, errores vigilados: materiales sin dividir por rendimiento, cascada admin→utilidad) | 7 | verde |
 | RF‑02 | `tests/integration/test_auditoria_7_de_7.py`; `elaborar` audita siempre (`tests/integration/test_presupuesto_linea_base.py`) | 4 + 9 | verde |
 | RF‑03 | `tests/unit/test_contracts.py` (`TestItemComputo`: sin `origen_id` se rechaza; REGLA sin expresión se rechaza); `tests/unit/test_linea_base.py` | 8 + 14 | verde |
-| RF‑04 | `tests/unit/test_arquitectura.py`; `tests/unit/test_adapter_civil_ifc.py` (`origen_id` = GlobalId) | 64 + 3 | verde, con la salvedad G1 (§3) |
+| RF‑04 | `tests/unit/test_arquitectura.py`; `tests/unit/test_adapter_civil_ifc.py` (`origen_id` = GlobalId) | 65 + 3 | verde, con la salvedad G1 (§3) |
 | RF‑05 | `tests/integration/test_persistencia.py` (los 5 APU recuperados dan los mismos PU que el fixture) | 14 | verde |
 | RF‑06 | `tests/unit/test_budget.py`; `tests/integration/test_presupuesto_linea_base.py` | 12 + 9 | verde |
 | RF‑07 | ídem RF‑06: `total_curva == total` exacto | — | verde |
 | RF‑08 | `tests/unit/test_budget.py::test_exportar_excel_escribe_cuatro_hojas` | 1 | verde |
-| RF‑09 | `test_arquitectura.py` + `test_adapter_telecom.py`, `test_adapter_industrial.py`, `test_adapter_sistemas.py` + `git diff --stat core/` vacío tras I5 | 64 + 7 + 4 + 4 | verde (indicador 4) |
+| RF‑09 | `test_arquitectura.py` + `test_adapter_telecom.py`, `test_adapter_industrial.py`, `test_adapter_sistemas.py` + `git diff --stat core/` vacío tras I5 | 65 + 7 + 4 + 4 | verde (indicador 4) |
 | RF‑10 – RF‑13 | `tests/integration/test_actualizacion_precios.py` (lista de muestra: cambios exactos, composiciones intactas, un registro por insumo, variaciones que cuadran) | 20 | verde |
 | RF‑14 | `tests/integration/test_persistencia.py::test_precios_se_reconstruyen_a_fecha` + `test_actualizacion_precios.py` | — | verde |
 | RF‑15 | `tests/unit/test_normalizacion.py::test_propuestas_ordenadas_por_puntaje_y_sobre_el_umbral` | 6 | verde |
@@ -138,12 +140,12 @@ archivo en la corrida registrada (total de la suite: 385).
 | RF‑27 | `tests/unit/test_anomalias.py` (`evaluar_rendimiento`); `test_api_rendimientos.py` (201 con `advertencia`, el registro persiste) | 8 | verde |
 | RF‑28 | `tests/unit/test_prediccion.py`; `tests/unit/test_resultados_ml.py`; [resultados_ml.md](resultados_ml.md) con MAPE, RMSE, R² | 8 + 2 | verde (G2: reglas; indicador 5) |
 | RF‑29 | `test_anomalias.py` (`precios_atipicos`); `test_prediccion.py` (desviación % y hallazgo fuera del rango AACE clase 3) | — | verde |
-| RF‑30 | sin prueba: UC‑08 fuera del alcance de F.1 (§3) | 0 | **pendiente** (deseable) |
-| RF‑31 | sin prueba: UC‑08 fuera del alcance de F.1 (§3) | 0 | **pendiente** (opcional) |
+| RF‑30 | `tests/unit/test_escenarios.py` (parámetros verificados contra el motor; base y composiciones intactos) | 6 | verde |
+| RF‑31 | `tests/unit/test_escenarios.py` (tabla base + una fila por escenario, exportada a CSV; detalle por partida) | — | verde |
 
-**Resumen:** 28 de 31 RF con prueba automatizada en verde; RF‑16 parcial (su parte de UI está
-cubierta, su persistencia espera un flujo que no existe — hallazgo registrado); RF‑30 y RF‑31
-pendientes. **Los 26 RF esenciales tienen prueba en verde.**
+**Resumen:** 30 de 31 RF con prueba automatizada en verde; RF‑16 parcial (su parte de UI está
+cubierta, su persistencia espera un flujo que no existe — hallazgo registrado). **Los 26 RF
+esenciales tienen prueba en verde y ningún RF queda sin prueba.**
 
 Cobertura adicional no exigida por RF: `test_generador_ifc.py` (1), `test_visor3d.py` (4),
 `test_openapi.py` (2), `test_simulador.py` (2), `test_api.py` (14), `test_civil_verificacion.py`
@@ -166,19 +168,23 @@ Cobertura adicional no exigida por RF: `test_generador_ifc.py` (1), `test_visor3
 ## 10. Registro de la ejecución (2026‑08‑31)
 
 ```
-385 passed in 104.54s          (pytest -W error, plataforma win32, Python 3.13.2)
+392 passed in 96.69s           (pytest -W error, plataforma win32, Python 3.13.2)
 ruff check .                   sin observaciones
 ```
+
+Corrida tras el cierre de UC‑08 (las 385 de la Sesión F.2 + 6 de `test_escenarios.py` + 1 caso
+de arquitectura que el módulo nuevo genera por parametrización). La corrida original de F.2,
+previa a UC‑08: 385 passed en 104,54 s con `core/` al 97,99 %.
 
 Cobertura de líneas por paquete (pytest‑cov sobre la corrida completa):
 
 | Paquete | Líneas cubiertas | Cobertura |
 |---|---|---|
-| `core/` | 1 661 / 1 695 | **97,99 %** |
+| `core/` | 1 706 / 1 740 | **98,05 %** |
 | `ml/` | 139 / 140 | 99,29 % |
 | `api/` | 410 / 436 | 94,04 % |
 | `adapters/` | 372 / 419 | 88,78 % |
-| **Total medido** | 2 582 / 2 690 | **95,99 %** |
+| **Total medido** | 2 627 / 2 735 | **96,05 %** |
 
-Distribución de la suite: 301 casos unitarios y 84 de integración, 0 fallos, 0 omitidos.
+Distribución de la suite: 308 casos unitarios y 84 de integración, 0 fallos, 0 omitidos.
 La evaluación de calidad sobre estos resultados está en [calidad_iso25010.md](calidad_iso25010.md).
