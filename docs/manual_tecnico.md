@@ -192,8 +192,9 @@ sensibilidad, declarado limitación). Métricas reproducibles:
   `medir_rnf03.py` la importan a propósito; duplicarla en cualquier otro lado viola DRY.
 - **No modificar `tests/unit/test_costing.py`** para poner nada en verde: se corrige la
   implementación.
-- **UC‑08 vive solo en `core.budget`** (`escenarios.py`): sin página de UI ni ruta de API
-  todavía (hallazgo registrado en la bitácora del cierre de UC‑08, para G0).
+- **UC‑08 no persiste nada.** `core/budget/escenarios.py` es la lógica; la ruta
+  `POST /presupuestos/{codigo}/escenarios` y la página «Escenarios (UC‑08)» solo componen y
+  presentan. Promover un escenario a presupuesto es UC‑02 con la lista nueva, a propósito.
 - Los hallazgos abiertos del proyecto (flujo de creación de partidas para RF‑16, IFC real para
   G1, Linux para RNF‑07) están en las bitácoras de [bitacora/](bitacora/) — leerlas antes de
   «arreglar» algo que en realidad es una limitación declarada.

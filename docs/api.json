@@ -631,6 +631,75 @@
         }
       }
     },
+    "/presupuestos/{codigo}/escenarios": {
+      "post": {
+        "tags": [
+          "presupuestos"
+        ],
+        "summary": "Escenarios De Presupuesto",
+        "description": "UC-08: recalcula el presupuesto bajo los supuestos de cada escenario, sin persistir nada.\n\nLos parámetros que un escenario no declara heredan los congelados en el presupuesto base;\nun parámetro fuera de rango lo rechaza el contrato (`ParametrosCosto`) y responde 422\n(flujo 1a). La sesión no confirma nada: el base queda como única versión guardada (RF-30).",
+        "operationId": "escenarios_de_presupuesto_presupuestos__codigo__escenarios_post",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Codigo"
+            }
+          },
+          {
+            "name": "proyecto",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Proyecto"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscenariosPeticion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscenariosRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ejecuciones": {
       "get": {
         "tags": [
@@ -1079,6 +1148,163 @@
         ],
         "title": "EjecucionRespuesta",
         "description": "Una obra ejecutada registrada."
+      },
+      "EscenarioPeticion": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "fcas": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fcas"
+          },
+          "bono_alimentacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bono Alimentacion"
+          },
+          "administracion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administracion"
+          },
+          "utilidad": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Utilidad"
+          },
+          "precios": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Precios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre"
+        ],
+        "title": "EscenarioPeticion",
+        "description": "Un escenario de UC-08: parámetros de costo opcionales y precios nuevos por insumo.\n\nLos parámetros que la petición no trae heredan los del presupuesto **base** (los congelados\nen su fila), no los valores por defecto del contrato: un escenario pregunta «¿y si cambiara\nesto?» sobre lo que el presupuesto realmente usa. `precios` mapea descripción de insumo a su\nprecio de ensayo, como texto decimal."
+      },
+      "EscenarioRespuesta": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          },
+          "variacion": {
+            "type": "string",
+            "title": "Variacion"
+          },
+          "variacion_pct": {
+            "type": "string",
+            "title": "Variacion Pct"
+          },
+          "hallazgos": {
+            "type": "integer",
+            "title": "Hallazgos"
+          },
+          "insumos_variados": {
+            "type": "integer",
+            "title": "Insumos Variados"
+          },
+          "partidas": {
+            "items": {
+              "$ref": "#/components/schemas/FilaComparativoRespuesta"
+            },
+            "type": "array",
+            "title": "Partidas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre",
+          "total",
+          "variacion",
+          "variacion_pct",
+          "hallazgos",
+          "insumos_variados",
+          "partidas"
+        ],
+        "title": "EscenarioRespuesta",
+        "description": "Una fila de la tabla de RF-31 con su detalle: total, variación contra el base, hallazgos\nde su auditoría (que se genera siempre) y el diferencial por partida (paso 3 del flujo)."
+      },
+      "EscenariosPeticion": {
+        "properties": {
+          "escenarios": {
+            "items": {
+              "$ref": "#/components/schemas/EscenarioPeticion"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Escenarios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "escenarios"
+        ],
+        "title": "EscenariosPeticion",
+        "description": "UC-08 sobre un presupuesto guardado: uno o más escenarios a comparar contra el base."
+      },
+      "EscenariosRespuesta": {
+        "properties": {
+          "codigo_base": {
+            "type": "string",
+            "title": "Codigo Base"
+          },
+          "total_base": {
+            "type": "string",
+            "title": "Total Base"
+          },
+          "escenarios": {
+            "items": {
+              "$ref": "#/components/schemas/EscenarioRespuesta"
+            },
+            "type": "array",
+            "title": "Escenarios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo_base",
+          "total_base",
+          "escenarios"
+        ],
+        "title": "EscenariosRespuesta",
+        "description": "La comparación completa de UC-08. Nada de esto queda persistido (RF-30)."
       },
       "FilaComparativoRespuesta": {
         "properties": {

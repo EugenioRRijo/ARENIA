@@ -140,8 +140,8 @@ archivo en la corrida registrada (total de la suite: 392).
 | RF‑27 | `tests/unit/test_anomalias.py` (`evaluar_rendimiento`); `test_api_rendimientos.py` (201 con `advertencia`, el registro persiste) | 8 | verde |
 | RF‑28 | `tests/unit/test_prediccion.py`; `tests/unit/test_resultados_ml.py`; [resultados_ml.md](resultados_ml.md) con MAPE, RMSE, R² | 8 + 2 | verde (G2: reglas; indicador 5) |
 | RF‑29 | `test_anomalias.py` (`precios_atipicos`); `test_prediccion.py` (desviación % y hallazgo fuera del rango AACE clase 3) | — | verde |
-| RF‑30 | `tests/unit/test_escenarios.py` (parámetros verificados contra el motor; base y composiciones intactos) | 6 | verde |
-| RF‑31 | `tests/unit/test_escenarios.py` (tabla base + una fila por escenario, exportada a CSV; detalle por partida) | — | verde |
+| RF‑30 | `tests/unit/test_escenarios.py` (parámetros verificados contra el motor; base y composiciones intactos); `tests/integration/test_api_escenarios.py` (`POST /presupuestos/{codigo}/escenarios`: nada se persiste, 422 ante parámetro fuera de rango) | 6 + 3 | verde |
+| RF‑31 | `tests/unit/test_escenarios.py` (tabla base + una fila por escenario, exportada a CSV; detalle por partida); la página «Escenarios (UC‑08)» cubierta por humo en `test_ui_importable.py` | — | verde |
 
 **Resumen:** 30 de 31 RF con prueba automatizada en verde; RF‑16 parcial (su parte de UI está
 cubierta, su persistencia espera un flujo que no existe — hallazgo registrado). **Los 26 RF
@@ -168,13 +168,13 @@ Cobertura adicional no exigida por RF: `test_generador_ifc.py` (1), `test_visor3
 ## 10. Registro de la ejecución (2026‑08‑31)
 
 ```
-392 passed in 96.69s           (pytest -W error, plataforma win32, Python 3.13.2)
+395 passed in 100.93s          (pytest -W error, plataforma win32, Python 3.13.2)
 ruff check .                   sin observaciones
 ```
 
-Corrida tras el cierre de UC‑08 (las 385 de la Sesión F.2 + 6 de `test_escenarios.py` + 1 caso
-de arquitectura que el módulo nuevo genera por parametrización). La corrida original de F.2,
-previa a UC‑08: 385 passed en 104,54 s con `core/` al 97,99 %.
+Tercera corrida del día, tras cablear UC‑08 en la API y la UI (+3 de
+`test_api_escenarios.py`). Las anteriores: 385 en F.2 (`core/` 97,99 %) y 392 tras el cierre de
+UC‑08 en el núcleo (+6 de `test_escenarios.py` +1 caso de arquitectura parametrizado).
 
 Cobertura de líneas por paquete (pytest‑cov sobre la corrida completa):
 
@@ -182,9 +182,9 @@ Cobertura de líneas por paquete (pytest‑cov sobre la corrida completa):
 |---|---|---|
 | `core/` | 1 706 / 1 740 | **98,05 %** |
 | `ml/` | 139 / 140 | 99,29 % |
-| `api/` | 410 / 436 | 94,04 % |
+| `api/` | 452 / 478 | 94,56 % |
 | `adapters/` | 372 / 419 | 88,78 % |
-| **Total medido** | 2 627 / 2 735 | **96,05 %** |
+| **Total medido** | 2 669 / 2 777 | **96,11 %** |
 
-Distribución de la suite: 308 casos unitarios y 84 de integración, 0 fallos, 0 omitidos.
+Distribución de la suite: 308 casos unitarios y 87 de integración, 0 fallos, 0 omitidos.
 La evaluación de calidad sobre estos resultados está en [calidad_iso25010.md](calidad_iso25010.md).
