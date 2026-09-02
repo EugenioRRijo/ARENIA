@@ -18,14 +18,24 @@ obra de ARENAZA ya mostró que no hace falta
 
 ---
 
-## 0. Situación de partida (2026‑08‑31)
+## 0. Situación de partida (2026‑08‑31, actualizada 2026‑09‑02)
 
 | Dominio | Adaptador | Catálogo/APU | Precios reales | Fuente natural |
 |---|---|---|---|---|
-| civil | ✔ IFC + tabular | ✔ 5 APU auditados | línea base 28/04/2026; falta ronda vigente | MaPreX/Lulowin, cotizaciones, convención colectiva |
-| telecom | ✔ topología CSV | 0 | **✔ ya en el repo**: 2 presupuestos ARENAZA (14 + 26 renglones, 1 109,29 y 5 410,73 USD) | distribuidores de redes; los PDF ARENAZA |
-| industrial | ✔ activos CSV | 0 | 0 | cotizaciones de repuestos/servicios, contratos de mantenimiento |
-| sistemas | ✔ alcance CSV | 0 | 0 | tarifario CIV, encuestas salariales TI, benchmark ISBSG (HH/PF) |
+| civil | ✔ IFC + tabular | ✔ 5 APU auditados | línea base 28/04/2026; ✔ referencia MaPreX jul‑2026 en el repo; falta ronda vigente | MaPreX/Lulowin, cotizaciones, convención colectiva |
+| telecom | ✔ topología CSV | 0 | **✔ ya en el repo**: 2 presupuestos ARENAZA (14 + 26 renglones, 1 109,29 y 5 410,73 USD) + referencia MaPreX jul‑2026 para contraste | distribuidores de redes; los PDF ARENAZA; MaPreX |
+| industrial | ✔ activos CSV | 0 | ✔ referencia MaPreX jul‑2026 (repuestos, equipos de taller, técnicos por tabulador); faltan cotizaciones de los activos concretos | cotizaciones de repuestos/servicios, contratos de mantenimiento; MaPreX como proxy fechado |
+| sistemas | ✔ alcance CSV | 0 | ✔ tabulador CIV al 01/07/2026 dentro del listado MO de MaPreX (43 filas, P‑1…P‑10); faltan tarifas TI de mercado | tarifario CIV (ya en el repo vía MaPreX), encuestas salariales TI, benchmark ISBSG (HH/PF) |
+
+**Actualización 2026‑09‑02.** El autor incorporó los tres listados oficiales MaPreX de julio 2026
+(materiales ≈ 12 500 renglones, equipos ≈ 2 850 con factor de depreciación por equipo, mano de
+obra ≈ 790 con tabuladores construcción/CIV/sectoriales). Evidencia y reglas de uso en
+[data/precios/maprex_2026-07/README.md](data/precios/maprex_2026-07/README.md). Qué resuelve:
+referencia nacional fechada para civil, contraste de mercado para ARENAZA, proxy declarable para
+GM2 y el tarifario CIV que GM3 esperaba. Qué no resuelve: es un listado de un mes pasado (los
+precios están en Bs con tasa declarada 633,3644 Bs/USD al 01/07/2026), no una ronda vigente; y no
+trae tarifas TI de mercado ni productividad HH/PF. La estructuración a CSV canónico es la nueva
+Sesión M0.2.
 
 Telecom va primero: su evidencia primaria ya está en `data/samples/telecom/` y trae su propia
 inconsistencia documentada (el tubo corrugado: 80 m en cómputos vs 90 m en presupuesto del mismo
@@ -37,7 +47,9 @@ PDF), que convierte al dominio en el **segundo caso de auditoría** de la tesis.
    (`tipo,insumo,unidad,precio`) con `fecha_vigencia` y `origen`. Un conector por fuente,
    siempre fuera de `core/`.
 2. **Evidencia primaria versionada.** Cada precio citable tiene su respaldo (PDF, cotización,
-   captura fechada, tarifario) en `data/<dominio>/fuentes/`; la bitácora de la sesión lo lista.
+   captura fechada, tarifario) en `data/<dominio>/fuentes/`; la evidencia transversal a varios
+   dominios (como los listados MaPreX) vive en `data/precios/<fuente>_<periodo>/`. La bitácora de
+   la sesión lo lista.
 3. **Supuestos declarados, nunca silenciosos.** Lo que no venga de la fuente (reparto de metros
    por tramo, horizonte de mantenimiento, HH por punto de función) se declara en el README de la
    muestra, como ya hacen las muestras civil y telecom.
@@ -51,8 +63,8 @@ PDF), que convierte al dominio en el **segundo caso de auditoría** de la tesis.
 | Compuerta | Criterio de cruce | Degradación declarada si falla |
 |---|---|---|
 | **GM1** (telecom, tras M1.3) | El presupuesto ARENAZA se reproduce del catálogo ± 0,01 y la auditoría detecta la inconsistencia 80/90 m | sin degradación posible: los datos ya están en el repo |
-| **GM2** (industrial, tras M2.2) | Presupuesto de mantenimiento con ≥ 3 activos costeados con precios cotizados reales | si no llegan cotizaciones: precios de contrato/factura histórica aportados por el autor, con origen declarado; última instancia: referencia internacional (RSMeans/Richardson) declarada como proxy |
-| **GM3** (sistemas, tras M3.2) | Presupuesto del alcance funcional costeado con tarifas reales (CIV o encuesta fechada) y productividad HH/PF con fuente | si el tarifario CIV no está vigente/accesible: encuesta salarial fechada; la productividad HH/PF siempre se toma de benchmark declarado (ISBSG o literatura), nunca inventada |
+| **GM2** (industrial, tras M2.2) | Presupuesto de mantenimiento con ≥ 3 activos costeados con precios cotizados reales | si no llegan cotizaciones: precios de contrato/factura histórica aportados por el autor, con origen declarado; siguiente instancia: referencia nacional MaPreX jul‑2026 (`data/precios/maprex_2026-07/`) declarada como proxy fechado; última instancia, solo para insumos ausentes en MaPreX: referencia internacional (RSMeans/Richardson) |
+| **GM3** (sistemas, tras M3.2) | Presupuesto del alcance funcional costeado con tarifas reales (CIV o encuesta fechada) y productividad HH/PF con fuente | el tabulador CIV jul‑2026 ya está en el repo (listado MO de MaPreX, estructurado en M0.2); si un rol no aparece ahí: encuesta salarial fechada; la productividad HH/PF siempre se toma de benchmark declarado (ISBSG o literatura), nunca inventada |
 | **GM4** (cierre, tras M4.1) | Recuento G2 regenerado por dominio y `resultados_ml.md` reflejando los dominios poblados | — (informativa) |
 
 Los cuatro dominios seguirán < 50 registros: la técnica de `ml/prediction/` **sigue siendo
@@ -61,7 +73,7 @@ limitación quede demostrada con datos reales en vez de con ausencia de datos.
 
 ---
 
-## Fase M0 — Protocolo transversal (1 sesión + trabajo de campo del autor)
+## Fase M0 — Protocolo transversal (2 sesiones + trabajo de campo del autor)
 
 ### Sesión M0.1 — Protocolo de levantamiento de precios multidominio
 
@@ -74,15 +86,43 @@ de fuentes por dominio con su forma de acceso y su cita.
 Genera las plantillas data/<dominio>/plantilla_precios.csv con los insumos
 exactos que cada catálogo necesita, listas para llenar en campo.
 
-Incluye el borrador de carta de solicitud de acceso académico (MaPreX/Lulowin)
-para la firma del tutor.
+Incluye el borrador de carta de acceso académico continuo (MaPreX/Lulowin)
+para la firma del tutor: los listados de julio 2026 ya están en el repo como
+referencia (data/precios/maprex_2026-07/); la carta busca la serie mensual
+para el histórico de UC-02.
 ```
 
 **Commit.** `docs(datos): protocolo de levantamiento de precios multidominio`
 
 **Trabajo de campo (dueño: el autor, en paralelo a M1):** enviar la carta; ronda de cotizaciones
-civil (~9–14 insumos) e industrial (3–5 activos); obtener tarifario CIV o encuesta TI fechada.
-El plan no se bloquea esperando: M1 no necesita nada de esto.
+civil (~9–14 insumos) e industrial (3–5 activos); encuesta TI fechada si se quiere superar el
+tabulador CIV (que ya está en el repo vía MaPreX). El plan no se bloquea esperando: M1 no
+necesita nada de esto.
+
+### Sesión M0.2 — Referencia MaPreX estructurada
+
+```
+Deriva de data/precios/maprex_2026-07/ los CSV canónicos de referencia POR
+DOMINIO, solo con los insumos que los catálogos necesitan (nunca el volcado de
+los ~16 000 renglones): civil (los insumos de la línea base), telecom (los
+renglones comparables con ARENAZA: fibra, UTP, racks, canalización), industrial
+(repuestos/servicios aplicables a los activos de activos_planta.csv) y sistemas
+(las 43 filas del tabulador CIV). PyMuPDF asiste; cada fila extraída se
+verifica a mano contra el PDF y lleva origen (archivo + Ref MaPreX) y
+fecha_vigencia (2026-07-09; mano de obra 2026-07-01). Precios convertidos a
+USD con la tasa declarada 633,3644 Bs/USD (01/07/2026), registrada en cada CSV.
+
+Registra en el README de la carpeta la tabla de factores de depreciación
+MaPreX de los equipos de la línea base (criterio externo para R6) y el par
+jornal + bono del tabulador de la construcción (evidencia para la decisión de
+fuente del FCAS del dossier G0).
+
+Criterio de cierre: CSV por dominio verificados fila a fila; ningún precio
+entra al catálogo todavía (eso corresponde a M1-M3); git diff --stat core/
+vacío.
+```
+
+**Commit.** `feat(datos): referencia maprex julio 2026 estructurada por dominio`
 
 ---
 
@@ -136,8 +176,10 @@ tener datos en este dominio (R5 es volumétrica-civil: que reporte INFO es el
 comportamiento correcto de RF-23, no un defecto a corregir).
 
 Carga una lista de precios telecom real y fechada (los precios ARENAZA como
-lista 1; si hay cotizaciones nuevas de distribuidores, lista 2) y corre UC-02:
-primer histórico de CambioPrecio real fuera de civil.
+lista 1; la referencia MaPreX jul-2026 estructurada en M0.2 como lista 2 —
+primer contraste de mercado real del proyecto; si llegan cotizaciones de
+distribuidores, lista 3) y corre UC-02: primer histórico de CambioPrecio real
+fuera de civil.
 
 Criterio de cierre: 80/90 detectado; UC-02 telecom en verde; GM1 CRUZADA.
 ```
@@ -158,7 +200,8 @@ mantenimiento: repuestos (materiales), servicio/herramienta (equipos), técnico
 Fixture único tests/fixtures/mantenimiento_industrial.py con supuestos
 declarados (alcance de cada intervención).
 
-Si las cotizaciones no llegaron: degradación GM2 declarada, no inventar.
+Si las cotizaciones no llegaron: degradación GM2 declarada con la referencia
+MaPreX jul-2026 (M0.2) como proxy fechado, no inventar.
 ```
 
 **Commit.** `feat(industrial): catalogo de mantenimiento con precios cotizados`
@@ -183,12 +226,16 @@ precios con evidencia; GM2 CRUZADA (o degradación documentada).
 ### Sesión M3.1 — Tarifas y productividad con fuente
 
 ```
-Estructura las tarifas reales: HH por rol (tarifario CIV vigente o encuesta
-salarial TI fechada, evidencia en data/sistemas/fuentes/) y productividad
-HH por punto de función tomada de benchmark declarado (ISBSG o literatura del
-marco teórico, con cita). Compone las partidas SI-*: el APU de un punto de
-función por módulo = horas de cada rol x tarifa. Fixture único
-tests/fixtures/tarifas_sistemas.py; todo supuesto declarado.
+Estructura las tarifas reales: HH por rol desde el tabulador CIV jul-2026 ya
+estructurado en M0.2 (43 filas P-1..P-10; incluye ingeniero computista y
+analistas), complementado si existe con encuesta salarial TI fechada
+(evidencia adicional en data/sistemas/fuentes/), y productividad HH por punto
+de función tomada de benchmark declarado (ISBSG o literatura del marco
+teórico, con cita). Compone las partidas SI-*: el APU de un punto de función
+por módulo = horas de cada rol x tarifa. Fixture único
+tests/fixtures/tarifas_sistemas.py; todo supuesto declarado (en particular la
+correspondencia rol del APU -> fila del tabulador y la conversion jornal ->
+HH).
 ```
 
 **Commit.** `feat(sistemas): tarifas reales y apu por punto de funcion`
@@ -243,15 +290,17 @@ cuatro compuertas GM.
 
 | Fase | Sesiones | Producto | Depende de |
 |---|---|---|---|
-| M0 Protocolo | 1 | protocolo + plantillas + carta | — |
-| M1 Telecom | 3 | catálogo, presupuesto y auditoría ARENAZA; GM1 | nada externo (datos en el repo) |
-| M2 Industrial | 2 | mantenimiento costeado real; GM2 | cotizaciones del autor (M0) |
-| M3 Sistemas | 2 | puntos de función costeados; GM3 | tarifario/encuesta (M0) |
+| M0 Protocolo | 2 | protocolo + plantillas + carta; referencia MaPreX estructurada por dominio | — (la evidencia MaPreX ya está en el repo) |
+| M1 Telecom | 3 | catálogo, presupuesto y auditoría ARENAZA; contraste MaPreX; GM1 | nada externo (datos en el repo) |
+| M2 Industrial | 2 | mantenimiento costeado real; GM2 | cotizaciones del autor (M0); degradación MaPreX disponible |
+| M3 Sistemas | 2 | puntos de función costeados; GM3 | tabulador CIV ya en el repo (M0.2); encuesta TI opcional |
 | M4 Consolidación | 2 | G2 regenerada, docs al día; GM4 | M1–M3 |
 
-Total: **10 sesiones**, más el trabajo de campo del autor (que corre en paralelo y solo bloquea
-M2/M3, nunca M1). Las convenciones operativas son las de CLAUDE.md §3: una rama por incremento
-(`inc/M1.1-fuentes-arenaza`), bitácora por sesión, `uv run pytest` y `ruff` al cierre.
+Total: **11 sesiones**, más el trabajo de campo del autor (que corre en paralelo y ya no bloquea
+ninguna compuerta: GM2 y GM3 tienen degradación o fuente en el repo; las cotizaciones y la
+encuesta solo mejoran la evidencia). Las convenciones operativas son las de CLAUDE.md §3: una
+rama por incremento (`inc/M1.1-fuentes-arenaza`), bitácora por sesión, `uv run pytest` y `ruff`
+al cierre.
 
 ## Los tres momentos que definen este plan
 
