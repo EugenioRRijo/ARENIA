@@ -1,6 +1,16 @@
-"""Extrae los dos presupuestos ARENAZA (Sesion M1.1 del PLAN_MULTIDOMINIO) a CSV canonicos
+"""Genera y verifica los dos CSV de presupuestos ARENAZA (Sesion M1.1 del PLAN_MULTIDOMINIO)
 en `data/telecom/fuentes/`: `presupuesto_1_arenaza.csv` (14 renglones, 1109.29 USD) y
 `presupuesto_2_arenaza.csv` (26 renglones, 5410.73 USD).
+
+Unica copia estructurada de los 40 renglones (CLAUDE.md seccion 2, principio DRY)
+------------------------------------------------------------------------------
+`tests/fixtures/presupuestos_arenaza.py` (`PRESUPUESTO_1`, `PRESUPUESTO_2`) es la UNICA
+transcripcion de los 40 renglones en todo el repositorio. Este script no repite esos datos: los
+importa y (a) escribe los CSV a partir de ellos, (b) verifica el fixture contra el texto de los
+PDF, recien extraido con PyMuPDF, cada vez que corre. Mismo patron que `scripts/seed.py`, el
+unico modulo fuera de `tests/` que importa `tests.fixtures.apu_linea_base` (linea base civil):
+un script de infraestructura puede importar un fixture de pruebas cuando ese fixture es,
+deliberadamente, la unica copia de un dato real del dominio.
 
 PyMuPDF no es dependencia del proyecto (mismo criterio que `scripts/extraer_maprex.py`, Sesion
 M0.2: los PDF son evidencia de una sola sesion, no un flujo de la aplicacion). Ejecutar con:
@@ -9,73 +19,45 @@ M0.2: los PDF son evidencia de una sola sesion, no un flujo de la aplicacion). E
 
 Que hace este script
 --------------------
-1. Lee el texto de `Presupuesto_1_ARENAZA.pdf` y `Presupuesto_2_ARENAZA.pdf`
-   (`data/samples/telecom/`) con PyMuPDF. Cada PDF trae dos tablas: "Computos metricos"
-   (pagina 1: item, unidad, cantidad) y "Presupuesto" (pagina 2: item, unidad, cantidad,
-   precio unitario, total). Esta sesion transcribe la tabla "Presupuesto" (la que trae precio
-   y total, que es lo que exige la cabecera del CSV) y usa "Computos metricos" solo para
-   completar la descripcion cuando la columna de "Presupuesto" la trunca por ancho de columna
-   fijo (ver `_FILAS_1`/`_FILAS_2`, mismo fenomeno que `_desc_material_o_equipo` en
-   `extraer_maprex.py`) y para registrar la discrepancia del tubo corrugado.
-2. Las 14 + 26 filas de `_FILAS_1`/`_FILAS_2` son una transcripcion curada, verificada a mano
-   digito a digito contra el texto/tabla de cada PDF durante esta sesion (ver la bitacora
-   `docs/bitacora/2026-09-02-M1.1-fuentes-arenaza.md`). `main()` no confia ciegamente en esa
-   transcripcion: antes de escribir los CSV, `_verificar_contra_pdf()` comprueba que cada total
-   de renglon y el total impreso del PDF (columna derecha de la tabla "Presupuesto", con coma de
-   millar) aparecen efectivamente en el texto extraido por PyMuPDF de esa pagina. Si un total no
-   aparece, `main()` se detiene con un error explicito en vez de escribir un CSV no verificado.
+1. Lee, con PyMuPDF, el texto de cada pagina de `Presupuesto_1_ARENAZA.pdf` y
+   `Presupuesto_2_ARENAZA.pdf` (`data/samples/telecom/`). Cada PDF trae dos tablas: "Computos
+   metricos" (pagina 1) y "Presupuesto" (pagina 2, la que tiene precio unitario y total, y la
+   que transcribe el fixture).
+2. `_verificar_contra_pdf()` comprueba que el `total` de cada renglon del fixture y el total
+   impreso del PDF (con coma de millar, derivado de `TOTAL_1`/`TOTAL_2` del fixture, no
+   duplicado a mano) aparecen literalmente en el texto que PyMuPDF extrae de la pagina 2. Si
+   alguno no aparece -- un renglon del fixture no transcribe lo que dice el PDF, o el PDF
+   cambio -- el script se detiene con un error explicito en vez de escribir un CSV no
+   verificado. No revalida cantidad/unidad/precio por renglon: el layout de dos columnas del
+   PDF intercala esos valores con los de otras filas de forma no trivial de emparejar por texto
+   plano; el total por renglon mas el total impreso ya bastan para detectar un renglon omitido,
+   una transcripcion incorrecta o un PDF que cambio.
 3. Escribe la cabecera exacta `renglon,descripcion,unidad,cantidad,precio_unitario,total,origen`
-   (`origen` = `<pdf>:<pagina>:<renglon>`, pagina 1-indexada: 1 = Computos metricos, 2 =
-   Presupuesto).
+   a partir de los campos de cada `RenglonPresupuesto` del fixture. `cantidad` y
+   `precio_unitario` en `None` (unicamente el renglon "Micelaneos" del presupuesto 1, una
+   partida global sin base de cantidad x precio -- ver el docstring del fixture) se escriben
+   como celda vacia, igual que en el PDF de origen.
 
-Convenciones y hallazgos declarados (para quien lea los CSV; ver tambien el README de la
-carpeta y la bitacora de esta sesion)
+Regenerar los CSV con este script es un no-op: sus columnas ya se derivan integramente del
+fixture, asi que dos corridas sucesivas (o una corrida despues de que otra persona edito el CSV
+a mano) producen exactamente el mismo contenido. Si algun dia el fixture cambia un valor, correr
+este script vuelve a dejar los CSV consistentes con el; si el cambio no coincide con el PDF,
+`_verificar_contra_pdf` lo detiene antes de escribir nada.
+
+Hallazgos declarados (documentados con mas detalle en el docstring del fixture y en
+`data/telecom/fuentes/README.md`; no se repiten aqui los numeros, solo se referencian)
 -------------------------------------------------------------------------------------------
-- `precio_unitario` vacio en la tabla "Presupuesto" de un renglon con `cantidad = 1` significa
-  que el propio PDF omite el precio unitario por ser identico al total (columna redundante):
-  este script SI completa ese vacio con `total / cantidad` (aqui, con el mismo valor que
-  `total`, ya que dividir entre 1 no cambia el importe). Es una derivacion directa del mismo
-  dato ya impreso, no un precio inventado.
-- El renglon 14 de `presupuesto_1_arenaza.csv` ("Micelaneos") no tiene cantidad ni precio
-  unitario en ninguna de las dos tablas del PDF: es una partida global de contingencia, sin
-  base de cantidad x precio. Se deja `cantidad` y `precio_unitario` vacios (no se inventa una
-  cantidad de "1" ni un precio "100.00" que el PDF no declara); `total` si esta en el PDF
-  (100.00) y es el unico valor de esa fila que entra en la suma verificada por
-  `tests/unit/test_fuentes_arenaza.py`.
-- El renglon del "Tubo Corrugado Flexible 1 Pulgada" del presupuesto 2 (item 5) trae
-  `cantidad = 90` en la tabla "Presupuesto" (unidad "Metros") pero `cantidad = 80` en la tabla
-  "Computos metricos" de ESE MISMO PDF: es la inconsistencia de la fuente primaria que esta
-  sesion registra tal cual (no se corrige), igual que las siete de la linea base civil. El CSV
-  usa el valor de la tabla "Presupuesto" (90, la que trae precio y total); el fixture
-  `tests/fixtures/presupuestos_arenaza.py` expone ambos valores en `TUBO_CORRUGADO`. Ademas, el
-  precio unitario de ese renglon (99.75) esta cotizado POR TUBO DE 30 METROS, no por metro: el
-  propio PDF anota el calculo como "3*99.75" (3 tubos x 30 m = 90 m); `total` = 299.25 es
-  correcto para esa base de calculo, aunque `cantidad (90, en metros) x precio_unitario (99.75,
-  por tubo)` no reproduce el total con una multiplicacion literal. Se preserva tal cual: no es
-  el error que esta sesion debe registrar (ese es el 80/90), pero tampoco se oculta.
-- Dos renglones del presupuesto 2 tienen un `total` impreso que no coincide con
-  `cantidad x precio_unitario` (item 14, "Camara Bullet Ip 4mp Intemperie": 5 x 289.00 = 1445.00
-  contra un total impreso de 1446.65; item 18, "Conector Jack Coupler Ubiquiti Rj45": 7 x 42.99 =
-  300.93 contra un total impreso de 303.93). Se transcriben los tres valores tal como los
-  imprime el PDF (no se recalcula `total` para que cuadre): son hallazgos adicionales del mismo
-  tipo que las inconsistencias de la linea base civil, documentados en el README de la carpeta,
-  fuera del alcance obligatorio de esta sesion (que solo debe registrar el 80/90 del tubo
-  corrugado). No afectan el total del presupuesto: este script suma los `total` impresos, no
-  los recalculados, y esa suma SI cierra exactamente en 5410.73 (verificado por
-  `_verificar_contra_pdf` y por `tests/unit/test_fuentes_arenaza.py`).
-- Varias descripciones de la tabla "Presupuesto" llegan truncadas por el ancho fijo de columna
-  (por ejemplo "Switch Escritorio Gigabit De 10 Puertos" sin su sufijo "Con Poe De"): se
-  completan con la version de la tabla "Computos metricos" del mismo PDF, que tiene una columna
-  de Descripcion mas ancha. Cuando ninguna de las dos tablas trae el nombre completo sin
-  truncar y el renglon ya fue verificado en `data/telecom/plantilla_precios.csv` (Sesion M0.1),
-  se reutiliza esa transcripcion (misma fuente primaria, ya verificada a mano en esa sesion).
+- El renglon del "Tubo Corrugado Flexible 1 Pulgada" del presupuesto 2 (item 5) trae una
+  cantidad distinta en cada tabla del mismo PDF (`TUBO_CORRUGADO` del fixture): la
+  inconsistencia que esta sesion registra tal cual, sin corregir.
+- Dos renglones del presupuesto 2 (items 14 y 18) tienen un `total` impreso que no coincide con
+  `cantidad x precio_unitario`: hallazgos adicionales, tambien preservados tal cual.
 """
 
 from __future__ import annotations
 
 import csv
 import sys
-from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
@@ -87,7 +69,22 @@ except ImportError as exc:  # pragma: no cover - guia de uso, no logica de negoc
         "  uv run --with pymupdf python scripts/extraer_arenaza.py"
     ) from exc
 
+# Ejecutado como `python scripts/extraer_arenaza.py`, sys.path[0] es scripts/, no la raiz del
+# repositorio: `tests` no se resuelve sin este ajuste (mismo problema y misma solucion que
+# `scripts/seed.py`, que importa `tests.fixtures.apu_linea_base`).
 RAIZ = Path(__file__).resolve().parents[1]
+if str(RAIZ) not in sys.path:
+    sys.path.insert(0, str(RAIZ))
+
+from tests.fixtures.presupuestos_arenaza import (  # noqa: E402
+    PRESUPUESTO_1,
+    PRESUPUESTO_2,
+    TOTAL_1,
+    TOTAL_2,
+    TUBO_CORRUGADO,
+    RenglonPresupuesto,
+)
+
 CARPETA_PDF = RAIZ / "data" / "samples" / "telecom"
 CARPETA_SALIDA = RAIZ / "data" / "telecom" / "fuentes"
 
@@ -99,16 +96,6 @@ CABECERA = ["renglon", "descripcion", "unidad", "cantidad", "precio_unitario", "
 PAGINA_PRESUPUESTO = 2  # 1-indexada: pagina 1 = Computos metricos, pagina 2 = Presupuesto
 
 
-@dataclass(frozen=True, slots=True)
-class FilaCurada:
-    renglon: int
-    descripcion: str
-    unidad: str
-    cantidad: str | None
-    precio_unitario: str | None
-    total: str
-
-
 def _paginas_pdf(ruta: Path) -> list[str]:
     """El texto de cada pagina del PDF, por separado (no concatenado): la verificacion contra
     el PDF necesita distinguir la pagina 1 ("Computos metricos") de la pagina 2
@@ -117,102 +104,22 @@ def _paginas_pdf(ruta: Path) -> list[str]:
         return [pagina.get_text() for pagina in doc]
 
 
-# --------------------------------------------------------------------------------------
-# Transcripcion curada de la tabla "Presupuesto" de cada PDF (pagina 2), verificada a mano
-# digito a digito contra el render de la tabla durante esta sesion. Ver el docstring del
-# modulo para las convenciones (precio_unitario derivado, Micelaneos sin cantidad/precio,
-# descripciones completadas desde "Computos metricos").
-# --------------------------------------------------------------------------------------
-
-_FILAS_1: tuple[FilaCurada, ...] = (
-    FilaCurada(1, "BOBINA CABLE UTP CAT 6 (300 M)", "Pieza", "1", "82.68", "82.68"),
-    FilaCurada(
-        2, "Switch Escritorio Gigabit De 10 Puertos Con Poe De", "Pieza", "1", "157.99", "157.99"
-    ),
-    FilaCurada(3, "Tubo Corrugado Flexible 1 Pulgada", "Metros", "90", "99.75", "299.25"),
-    FilaCurada(4, "Conectores Rj45 Cat6 Utp Bolsa (100 unidades)", "Pieza", "1", "5.00", "5.00"),
-    FilaCurada(5, "Bosla Tirrap (100 unidades)", "Pieza", "5", "2.00", "10.00"),
-    FilaCurada(
-        6, "Organizador De Cables Individuales 20cm 100 Und", "Pieza", "5", "18.00", "90.00"
-    ),
-    FilaCurada(7, "Bobina Cable Utp Cat6 305 m Int", "Pieza", "1", "211.21", "211.21"),
-    FilaCurada(8, "Teipe Eléctrico Negro Cobra", "Pieza", "1", "9.99", "9.99"),
-    FilaCurada(9, "Teipe Aislante Para Cableado Eléctrico", "Pieza", "1", "10.00", "10.00"),
-    FilaCurada(
-        10, "Toma Doble Con Tierra 270 20a Con Placa Blanca", "Pieza", "5", "5.05", "25.25"
-    ),
-    FilaCurada(11, "Anillo E.m.t. 2", "Pieza", "2", "3.96", "7.92"),
-    FilaCurada(12, "Guaya Guia Pasa Cable De Acero", "Pieza", "1", "90.00", "90.00"),
-    FilaCurada(
-        13, "Cajetin Plástico 4x2 Pvc Con Grapa Metálica.", "Pieza", "5", "2.00", "10.00"
-    ),
-    FilaCurada(14, "Micelaneos", "", None, None, "100.00"),
-)
-TOTAL_PDF_1 = "1,109.29"
-
-_FILAS_2: tuple[FilaCurada, ...] = (
-    FilaCurada(1, "BOBINA CABLE UTP CAT 6 (300 M) Ext", "Pieza", "1", "96.99", "96.99"),
-    FilaCurada(2, "Bobina Cable Utp Cat6 305 m Int", "Pieza", "1", "211.21", "211.21"),
-    FilaCurada(3, "Punto De Acceso Rap Ruijie", "Pieza", "4", "208.92", "835.68"),
-    FilaCurada(4, "Switch Tp-link Tl-sg108 8 Puertos", "Pieza", "1", "278.56", "278.56"),
-    # Renglon del hallazgo 80/90: cantidad 90 aqui (tabla "Presupuesto"), 80 en "Computos
-    # metricos" del mismo PDF. Precio unitario cotizado por tubo de 30 m (3*99.75=299.25).
-    FilaCurada(5, "Tubo Corrugado Flexible 1 Pulgada 30 MTS", "Metros", "90", "99.75", "299.25"),
-    FilaCurada(6, "Conectores Rj45 Cat6 Utp Bolsa (100 unidades)", "Pieza", "1", "5.00", "5.00"),
-    FilaCurada(7, "Amarre Tiewrap Negro Plástico 20 Cm", "Pieza", "5", "2.84", "14.20"),
-    FilaCurada(
-        8, "Organizador De Cables Individuales 20cm 100 Und", "Pieza", "5", "19.00", "95.00"
-    ),
-    FilaCurada(9, "Protector De Voltaje Exceline", "Pieza", "4", "33.00", "132.00"),
-    FilaCurada(10, "Rack Fijo Onlink 12u", "Pieza", "1", "202.00", "202.00"),
-    FilaCurada(11, "Switch Tp-link 16 Puertos", "Pieza", "1", "160.00", "160.00"),
-    FilaCurada(12, "Mini Ups Spidertec 17600mah", "Pieza", "1", "120.00", "120.00"),
-    FilaCurada(13, "Nvr Hikvision 7600 Ds-7616ni-q2 16 Canales", "Pieza", "1", "118.75", "118.75"),
-    # Total impreso (1446.65) no coincide con cantidad x precio_unitario (5*289.00=1445.00):
-    # hallazgo adicional, no corregido (ver docstring del modulo y el README de la carpeta).
-    FilaCurada(14, "Camara Bullet Ip 4mp Intemperie", "Pieza", "5", "289.00", "1446.65"),
-    FilaCurada(15, "Cámara Domo Ip Hikvision 4mp", "Pieza", "5", "127.35", "636.75"),
-    FilaCurada(16, "Cajetin Superficial 4x2 Hembra", "Pieza", "5", "50.00", "250.00"),
-    FilaCurada(17, "Conector Rj-45 Ftp Cat6 Blindado 50 U", "Pieza", "2", "8.80", "17.60"),
-    # Total impreso (303.93) no coincide con cantidad x precio_unitario (7*42.99=300.93):
-    # segundo hallazgo adicional, mismo criterio de no corregir.
-    FilaCurada(18, "Conector Jack Coupler Ubiquiti Rj45", "Pieza", "7", "42.99", "303.93"),
-    FilaCurada(19, "Teipe Eléctrico Negro Cobra", "Pieza", "1", "9.99", "9.99"),
-    FilaCurada(20, "Teipe Aislante Para Cableado Eléctrico", "Pieza", "1", "10.00", "10.00"),
-    FilaCurada(21, "Canaleta Plastica 40x40x2mts", "Pieza", "2", "12.00", "24.00"),
-    FilaCurada(22, "Base Para Tirrap Tirraje 10 u", "Pieza", "2", "5.00", "10.00"),
-    FilaCurada(
-        23, "Toma Doble Con Tierra 270 20a Con Placa Blanca", "Pieza", "5", "5.05", "25.25"
-    ),
-    FilaCurada(24, "Anillo E.m.t. 2", "Pieza", "2", "3.96", "7.92"),
-    FilaCurada(
-        25, "Cajetin Plástico 4x2 Pvc Con Grapa Metálica.", "Pieza", "5", "2.00", "10.00"
-    ),
-    FilaCurada(26, "Guaya Guia Pasa Cable De Acero", "Pieza", "1", "90.00", "90.00"),
-)
-TOTAL_PDF_2 = "5,410.73"
-
-# Cantidad del tubo corrugado en la tabla "Computos metricos" (pagina 1) de cada PDF: PDF 1
-# coincide con su propio presupuesto (90 y 90, sin inconsistencia); PDF 2 no (80 en computos
-# metricos, 90 en presupuesto). Verificado a mano contra el render de ambas tablas.
-CANTIDAD_COMPUTOS_TUBO_PDF_1 = "90"
-CANTIDAD_COMPUTOS_TUBO_PDF_2 = "80"
-
-
-def _verificar_contra_pdf(nombre_pdf: str, texto_paginas: list[str], filas, total_impreso) -> None:
-    """Comprueba que cada total de renglon y el total impreso del PDF aparecen literalmente en
-    el texto extraido de la pagina 2 ("Presupuesto"). No revalida cantidad/unidad/precio por
-    renglon (el layout de dos columnas del PDF intercala esos valores con los de otras filas de
-    forma no trivial de emparejar por texto plano); el total por renglon mas el total impreso
-    ya bastan para detectar un renglon omitido, un total mal transcrito o un total del PDF que
-    cambio, que es la verificacion critica para que la suma de la Meta 4 sea correcta.
+def _verificar_contra_pdf(
+    nombre_pdf: str,
+    texto_paginas: list[str],
+    filas: tuple[RenglonPresupuesto, ...],
+    total_impreso: str,
+) -> None:
+    """Comprueba que el `total` de cada renglon del FIXTURE y el total impreso del PDF aparecen
+    literalmente en el texto extraido de la pagina 2 ("Presupuesto"). Ver el docstring del
+    modulo (punto 2) para el porque no revalida cantidad/unidad/precio por renglon.
     """
     texto_presupuesto = texto_paginas[PAGINA_PRESUPUESTO - 1]
     faltantes = [
         f"{nombre_pdf} renglon {fila.renglon} ({fila.descripcion}): total {fila.total} no "
         "aparece en el texto de la pagina 2 del PDF"
         for fila in filas
-        if fila.total not in texto_presupuesto
+        if str(fila.total) not in texto_presupuesto
     ]
     if total_impreso not in texto_presupuesto:
         faltantes.append(
@@ -221,29 +128,20 @@ def _verificar_contra_pdf(nombre_pdf: str, texto_paginas: list[str], filas, tota
         )
     if faltantes:
         raise SystemExit(
-            "Verificacion contra el PDF fallida (revisar _FILAS_1/_FILAS_2 o si el PDF "
-            "cambio):\n  " + "\n  ".join(faltantes)
+            "Verificacion contra el PDF fallida (revisar tests/fixtures/presupuestos_arenaza.py "
+            "o si el PDF cambio):\n  " + "\n  ".join(faltantes)
         )
 
 
-def _precio_unitario(fila: FilaCurada) -> str:
-    """`total / cantidad` cuando el PDF omite el precio unitario por ser igual al total
-    (`cantidad = 1`); ya viene resuelto en `_FILAS_1`/`_FILAS_2`. Sin cantidad (Micelaneos) no
-    hay precio unitario que derivar."""
-    if fila.precio_unitario is None:
-        return ""
-    return fila.precio_unitario
-
-
-def _fila_csv(nombre_pdf: str, fila: FilaCurada) -> dict[str, str]:
+def _fila_csv(fila: RenglonPresupuesto) -> dict[str, str]:
     return {
         "renglon": str(fila.renglon),
         "descripcion": fila.descripcion,
         "unidad": fila.unidad,
-        "cantidad": fila.cantidad or "",
-        "precio_unitario": _precio_unitario(fila),
-        "total": fila.total,
-        "origen": f"{nombre_pdf}:{PAGINA_PRESUPUESTO}:{fila.renglon}",
+        "cantidad": "" if fila.cantidad is None else str(fila.cantidad),
+        "precio_unitario": "" if fila.precio_unitario is None else str(fila.precio_unitario),
+        "total": str(fila.total),
+        "origen": fila.origen,
     }
 
 
@@ -255,43 +153,49 @@ def escribir_csv(ruta: Path, filas: list[dict[str, str]]) -> None:
         escritor.writerows(filas)
 
 
-def _suma(filas) -> Decimal:
-    return sum((Decimal(fila.total) for fila in filas), Decimal("0"))
+def _suma(filas: tuple[RenglonPresupuesto, ...]) -> Decimal:
+    return sum((fila.total for fila in filas), Decimal("0"))
 
 
 def main() -> int:
     paginas_1 = _paginas_pdf(RUTA_PDF_1)
     paginas_2 = _paginas_pdf(RUTA_PDF_2)
 
-    _verificar_contra_pdf("Presupuesto_1_ARENAZA.pdf", paginas_1, _FILAS_1, TOTAL_PDF_1)
-    _verificar_contra_pdf("Presupuesto_2_ARENAZA.pdf", paginas_2, _FILAS_2, TOTAL_PDF_2)
+    # Con coma de millar (formato en que el PDF imprime "TOTAL PRESUPUESTO"), derivado de
+    # TOTAL_1/TOTAL_2 del fixture -- no un literal "1,109.29" duplicado a mano.
+    total_impreso_1 = format(TOTAL_1, ",")
+    total_impreso_2 = format(TOTAL_2, ",")
 
-    total_1 = _suma(_FILAS_1)
-    total_2 = _suma(_FILAS_2)
-    if total_1 != Decimal("1109.29"):
+    _verificar_contra_pdf(RUTA_PDF_1.name, paginas_1, PRESUPUESTO_1, total_impreso_1)
+    _verificar_contra_pdf(RUTA_PDF_2.name, paginas_2, PRESUPUESTO_2, total_impreso_2)
+
+    # El fixture ya fija estos totales en tests/unit/test_fuentes_arenaza.py::test_totales_
+    # exactos; esta comprobacion es barata y evita escribir un CSV si alguien edito una fila del
+    # fixture sin actualizar TOTAL_1/TOTAL_2.
+    suma_1, suma_2 = _suma(PRESUPUESTO_1), _suma(PRESUPUESTO_2)
+    if suma_1 != TOTAL_1:
         raise SystemExit(
-            f"La suma de _FILAS_1 da {total_1}, se esperaba 1109.29. Revisar _FILAS_1 antes de "
-            "escribir el CSV (no se debe forzar el total)."
+            f"La suma de PRESUPUESTO_1 da {suma_1}, no coincide con TOTAL_1={TOTAL_1}."
         )
-    if total_2 != Decimal("5410.73"):
+    if suma_2 != TOTAL_2:
         raise SystemExit(
-            f"La suma de _FILAS_2 da {total_2}, se esperaba 5410.73. Revisar _FILAS_2 antes de "
-            "escribir el CSV (no se debe forzar el total)."
+            f"La suma de PRESUPUESTO_2 da {suma_2}, no coincide con TOTAL_2={TOTAL_2}."
         )
 
-    filas_csv_1 = [_fila_csv("Presupuesto_1_ARENAZA.pdf", fila) for fila in _FILAS_1]
-    filas_csv_2 = [_fila_csv("Presupuesto_2_ARENAZA.pdf", fila) for fila in _FILAS_2]
+    filas_csv_1 = [_fila_csv(fila) for fila in PRESUPUESTO_1]
+    filas_csv_2 = [_fila_csv(fila) for fila in PRESUPUESTO_2]
 
     escribir_csv(CARPETA_SALIDA / "presupuesto_1_arenaza.csv", filas_csv_1)
     escribir_csv(CARPETA_SALIDA / "presupuesto_2_arenaza.csv", filas_csv_2)
 
-    print("Fuentes ARENAZA generadas:")
-    print(f"  presupuesto_1_arenaza.csv -> {len(filas_csv_1)} renglones, total {total_1}")
-    print(f"  presupuesto_2_arenaza.csv -> {len(filas_csv_2)} renglones, total {total_2}")
+    print("Fuentes ARENAZA generadas desde tests/fixtures/presupuestos_arenaza.py:")
+    print(f"  presupuesto_1_arenaza.csv -> {len(filas_csv_1)} renglones, total {suma_1}")
+    print(f"  presupuesto_2_arenaza.csv -> {len(filas_csv_2)} renglones, total {suma_2}")
     print(
-        "  tubo corrugado (presupuesto 2, renglon 5): 90 m en la tabla Presupuesto vs "
-        f"{CANTIDAD_COMPUTOS_TUBO_PDF_2} m en Computos metricos (inconsistencia registrada, "
-        "no corregida)"
+        f"  tubo corrugado (presupuesto 2, renglon 5): "
+        f"{TUBO_CORRUGADO['cantidad_presupuesto']} m en la tabla Presupuesto vs "
+        f"{TUBO_CORRUGADO['cantidad_computos']} m en Computos metricos (inconsistencia "
+        "registrada, no corregida)"
     )
     return 0
 
