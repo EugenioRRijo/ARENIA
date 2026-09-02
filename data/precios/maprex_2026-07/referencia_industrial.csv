@@ -1,0 +1,14 @@
+tipo,insumo,unidad,precio_bs,bono_bs,factor_depreciacion,precio_usd,fecha_vigencia,archivo,ref_maprex,notas
+material,RODAMIENTOS DE ALTERNADOR,und,43790.00,,,69.1387,2026-07-09,materiales.pdf,MZ0623,rodamiento de referencia para motores/bombas rotativas (MaPreX solo lista rodamiento de alternador; sin SKU generico de rodamiento industrial)
+material,GRASA PARA RODAMIENTOS,env,12835.00,,,20.2648,2026-07-09,materiales.pdf,MZ0341,grasa para rodamientos; lubricante de mantenimiento de rodamientos
+material,CORREA INDUSTRIAL A41 PARA MOTOR,pza,6795.00,,,10.7284,2026-07-09,materiales.pdf,MEC528,correa industrial A41 para motor; repuesto de transmision aplicable a compresores/motores
+material,"VALVULA PASO BOLA D= 2"" ACERO INOXIDABLE",pza,199018.00,,,314.2235,2026-07-09,materiales.pdf,PLOG46,"repuesto para IN-005 Valvula de control neumatica (diametro=4 pulg; MaPreX solo tiene bola D=2"" en acero inoxidable, diametro distinto)"
+material,"VALVULA CHECK D= 1"" PISTON ACERO INOXIDABLE",pza,75500.00,,,119.2047,2026-07-09,materiales.pdf,PLO887,"valvula check D=1"" piston acero inoxidable; repuesto adicional de valvuleria para bombas"
+material,ACEITE PARA MAQUINAS/MOTORES,lt,9815.00,,,15.4966,2026-07-09,materiales.pdf,COM032,aceite para maquinas/motores; lubricante generico de mantenimiento
+material,FILTRO DE ACEITE DE MOTOR,und,9060.00,,,14.3046,2026-07-09,materiales.pdf,MZ0294,filtro de aceite de motor; repuesto de mantenimiento generico
+material,MAT. P/INSTALACION SELLO MECANICO TIPO CARTUCHO,sg,188750.00,,,298.0117,2026-07-09,materiales.pdf,MZ0471,material para instalacion de sello mecanico tipo cartucho; repuesto de IN-001/IN-007 (bombas centrifuga y sumergible)
+material,TRANSFORMADOR EN ACEITE 100 KVA 13.8/120/240,und,3435250.00,,,5423.8129,2026-07-09,materiales.pdf,ELA073,"repuesto/referencia para IN-004 Transformador de distribucion (150 kVA); MaPreX no tiene 150 kVA exacto, se usa 100 kVA monofasico como proxy de capacidad"
+material,TRANSFORMADOR MONOF. ACEITE 75 KVA 13800/120/220,und,3020000.00,,,4768.1872,2026-07-09,materiales.pdf,ELA067,repuesto/referencia para IN-010 Transformador de emergencia (75 kVA exacto)
+equipo,"TALADRO INDUSTRIAL BANCO 3/4"" 750W",dia,13590.00,,1.000000,21.4568,2026-07-09,equipos.pdf,EZ0453,"herramienta de taller (README: 'herramientas y equipos de taller'); taladro industrial de banco 3/4"" 750W"
+mano_obra,MECANICO DE EQUIPO PESADO DE 1RA -N8,dia,1618.86,3445.50,,2.5560,2026-07-01,mano_de_obra.pdf,24-6.7,"tecnico de mantenimiento; mecanico de equipo pesado de 1ra, tabulador construccion"
+mano_obra,ELECTRICISTA DE 1RA -N5,dia,1385.63,3679.85,,2.1877,2026-07-01,mano_de_obra.pdf,19-215,"tecnico electricista; electricista de 1ra, tabulador construccion"
