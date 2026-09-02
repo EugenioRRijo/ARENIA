@@ -28,7 +28,7 @@ equipo,VIBRADOR PARA CONCRETO,dia,604000.00,,0.009500,953.6374,2026-07-09,equipo
 equipo,CARRETILLA PARA CONSTRUCCION,dia,153265.00,,0.020000,241.9855,2026-07-09,equipos.pdf,ALB073,equivalente de 'Carretilla'; carretilla para construccion
 equipo,TOBO PLASTICO CAP= 10 LT DE ALBAÑILERIA,dia,9060.00,,0.070000,14.3046,2026-07-09,equipos.pdf,ALB146,equivalente de 'Tobos plasticos'; tobo plastico 10 lt de albañileria
 equipo,COMPACTADORA RANA / PLANCHA 0.50 X 1.0M - 280 KG,dia,60400.00,,1.000000,95.3637,2026-07-09,equipos.pdf,CPT018,"equivalente de 'Compactadora de percusion tipo sapo'; MaPreX la llama 'rana' (sinonimo), 280 kg"
-equipo,HERRAMIENTAS MENORES,dia,9060.00,,1.000000,14.3046,2026-07-09,equipos.pdf,ALB213,equivalente de 'Herramientas menores'
+equipo,HERRAMIENTAS MENORES,dia,9060.00,,1.000000,14.3046,2026-07-09,equipos.pdf,ALB213,"equivalente de 'Herramientas menores'; MaPreX tiene tres filas con la misma descripcion exacta (ALB213 9.060 Bs, ALB171 30.200 Bs, EZ0263 37.750 Bs) sin ningun otro campo que las distinga; se elige la de menor precio (ALB213) como referencia conservadora ante la falta de un criterio propio de MaPreX"
 mano_obra,OPERADOR DE EQUIPO PESADO DE 1RA -N8,dia,1618.86,3445.50,,2.5560,2026-07-01,mano_de_obra.pdf,24-5.4,"equivalente de 'Operador de equipo de 1ra'; tabulador construccion, operador de equipo pesado 1ra"
 mano_obra,AYUDANTE - TABULADOR CONSTRUCCION -N2,dia,1128.42,3939.53,,1.7816,2026-07-01,mano_de_obra.pdf,1-1.2,"equivalente de 'Ayudante'; tabulador construccion, ayudante generico"
 mano_obra,CHOFER DE 2DA (DE 3 A 8 TON) -N4,dia,1262.81,3806.52,,1.9938,2026-07-01,mano_de_obra.pdf,8-3.5,"equivalente de 'Chofer de 2da'; tabulador construccion, chofer de 2da (3 a 8 ton)"

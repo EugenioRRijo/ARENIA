@@ -32,11 +32,18 @@ Que hace este script
    red/camaras/UPS que MaPreX no lista) se documentan en la bitacora, no se inventan aqui.
 3. Vuelve a resolver cada referencia contra el diccionario recien parseado (no contra un valor
    copiado a mano): si el PDF cambiara o la referencia no existiera, el script falla con un
-   error explicito en vez de escribir un CSV con datos obsoletos o inventados.
+   error explicito en vez de escribir un CSV con datos obsoletos o inventados. Para
+   `equipos.pdf` en particular (unico listado con un descarte automatico, ver punto 5) el
+   error distingue las dos causas posibles: la Ref nunca aparecio en el PDF, o aparecio pero
+   su fila fue descartada por el cruce Total = Precio x Factor (`_resolver_equipo`).
 4. Convierte cada precio en bolivares a USD con la tasa declarada en el README de la carpeta
    (633,3644 Bs/USD al 01/07/2026) y escribe los cuatro CSV con la cabecera exacta:
    `tipo,insumo,unidad,precio_bs,bono_bs,factor_depreciacion,precio_usd,fecha_vigencia,
    archivo,ref_maprex,notas`.
+5. En `equipos.pdf`, descarta (no usa) toda fila cuyo Total impreso no coincida con
+   Precio x Factor (`parsear_equipos`): es la unica verificacion cruzada automatica del
+   script. Cada descarte queda registrado con Ref, descripcion y los dos valores que no
+   coincidieron, e impreso al final de `main()` (auditoria, no solo un `continue` silencioso).
 
 Convenciones declaradas (para quien lea los CSV)
 -------------------------------------------------
@@ -173,8 +180,13 @@ def parsear_materiales(texto: str) -> dict[str, FilaMaterial]:
     return filas
 
 
-def parsear_equipos(texto: str) -> dict[str, FilaEquipo]:
+def parsear_equipos(texto: str) -> tuple[dict[str, FilaEquipo], dict[str, str]]:
+    """Devuelve (filas_validas, descartadas). `descartadas` es un diagnostico por Ref
+    (ref -> mensaje) de toda fila que el cruce Total = Precio x Factor rechazo: sirve para
+    que `_resolver_equipo` distinga "la Ref no existe en el PDF" de "la Ref existe pero su
+    fila fue descartada por el cruce" cuando una seleccion curada falle mas abajo."""
     filas: dict[str, FilaEquipo] = {}
+    descartadas: dict[str, str] = {}
     for ref, desc, precio, factor, total, _resto, _fecha in PATRON_EQUIPOS.findall(texto):
         desc_limpia, truncada = _desc_material_o_equipo(desc)
         precio_dec, factor_dec, total_dec = _bs(precio), _bs(factor), _bs(total)
@@ -182,10 +194,36 @@ def parsear_equipos(texto: str) -> dict[str, FilaEquipo]:
         # coincide (redondeo del propio MaPreX aparte, tolerancia 0.01), el dato es dudoso
         # y no se usa: mejor detenerse aqui que arrastrar una fila mal alineada por el parser.
         calculado = (precio_dec * factor_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        if abs(calculado - total_dec.quantize(Decimal("0.01"))) > Decimal("0.02"):
+        total_redondeado = total_dec.quantize(Decimal("0.01"))
+        if abs(calculado - total_redondeado) > Decimal("0.02"):
+            descartadas[ref] = (
+                f"{ref} ({desc_limpia}): Total del PDF={total_redondeado} vs "
+                f"Precio x Factor calculado={calculado} (precio={precio_dec}, "
+                f"factor={factor_dec}) -> fila descartada por el cruce Total=Precio x Factor"
+            )
             continue
         filas[ref] = FilaEquipo(desc_limpia, precio_dec, factor_dec, total_dec, truncada)
-    return filas
+    return filas, descartadas
+
+
+def _resolver_equipo(
+    ref: str, dic: dict[str, FilaEquipo], descartadas: dict[str, str]
+) -> FilaEquipo:
+    """Resuelve una Ref de equipos.pdf distinguiendo las dos causas de fallo posibles:
+    la Ref nunca aparecio en el PDF, o aparecio pero su fila fue descartada por el cruce
+    Total = Precio x Factor (ver `parsear_equipos`). Un `KeyError` sin este contexto no
+    deja saber cual de las dos paso."""
+    if ref in dic:
+        return dic[ref]
+    if ref in descartadas:
+        raise KeyError(
+            f"La referencia '{ref}' SI aparece en equipos.pdf pero fue descartada por el "
+            f"cruce de verificacion (no falta en el PDF): {descartadas[ref]}"
+        )
+    raise KeyError(
+        f"La referencia '{ref}' no aparece en equipos.pdf (no se encontro al parsear el "
+        "PDF con PATRON_EQUIPOS; revisar si el Ref es correcto o si el layout del PDF cambio)."
+    )
 
 
 # Tres referencias del tabulador CIV cuya descripcion viene truncada sin abrir parentesis
@@ -248,8 +286,10 @@ def fila_material(
     }
 
 
-def fila_equipo(ref: str, dic: dict[str, FilaEquipo], nota: str) -> dict[str, str]:
-    dato = dic[ref]
+def fila_equipo(
+    ref: str, dic: dict[str, FilaEquipo], nota: str, descartadas: dict[str, str]
+) -> dict[str, str]:
+    dato = _resolver_equipo(ref, dic, descartadas)
     precio_usd = _usd(dato.precio_bs)
     return {
         "tipo": "equipo",
@@ -337,7 +377,10 @@ CIVIL_EQUIPOS: tuple[tuple[str, str], ...] = (
     ("ALB146", "equivalente de 'Tobos plasticos'; tobo plastico 10 lt de albañileria"),
     ("CPT018", "equivalente de 'Compactadora de percusion tipo sapo'; MaPreX la llama 'rana' "
                "(sinonimo), 280 kg"),
-    ("ALB213", "equivalente de 'Herramientas menores'"),
+    ("ALB213", "equivalente de 'Herramientas menores'; MaPreX tiene tres filas con la misma "
+               "descripcion exacta (ALB213 9.060 Bs, ALB171 30.200 Bs, EZ0263 37.750 Bs) sin "
+               "ningun otro campo que las distinga; se elige la de menor precio (ALB213) como "
+               "referencia conservadora ante la falta de un criterio propio de MaPreX"),
 )
 
 CIVIL_MANO_OBRA: tuple[tuple[str, str], ...] = (
@@ -438,22 +481,30 @@ INDUSTRIAL_MANO_OBRA: tuple[tuple[str, str], ...] = (
 # --------------------------------------------------------------------------------------
 
 
-def construir_civil(materiales, equipos, mano_obra) -> list[dict[str, str]]:
+def construir_civil(materiales, equipos, equipos_descartados, mano_obra) -> list[dict[str, str]]:
     filas = [fila_material(ref, materiales, nota) for ref, nota in CIVIL_MATERIALES]
-    filas += [fila_equipo(ref, equipos, nota) for ref, nota in CIVIL_EQUIPOS]
+    filas += [
+        fila_equipo(ref, equipos, nota, equipos_descartados) for ref, nota in CIVIL_EQUIPOS
+    ]
     filas += [fila_mano_obra(ref, mano_obra, nota) for ref, nota in CIVIL_MANO_OBRA]
     return filas
 
 
-def construir_telecom(materiales, equipos) -> list[dict[str, str]]:
+def construir_telecom(materiales, equipos, equipos_descartados) -> list[dict[str, str]]:
     filas = [fila_material(ref, materiales, nota) for ref, nota in TELECOM_MATERIALES]
-    filas += [fila_equipo(ref, equipos, nota) for ref, nota in TELECOM_EQUIPOS]
+    filas += [
+        fila_equipo(ref, equipos, nota, equipos_descartados) for ref, nota in TELECOM_EQUIPOS
+    ]
     return filas
 
 
-def construir_industrial(materiales, equipos, mano_obra) -> list[dict[str, str]]:
+def construir_industrial(
+    materiales, equipos, equipos_descartados, mano_obra
+) -> list[dict[str, str]]:
     filas = [fila_material(ref, materiales, nota) for ref, nota in INDUSTRIAL_MATERIALES]
-    filas += [fila_equipo(ref, equipos, nota) for ref, nota in INDUSTRIAL_EQUIPOS]
+    filas += [
+        fila_equipo(ref, equipos, nota, equipos_descartados) for ref, nota in INDUSTRIAL_EQUIPOS
+    ]
     filas += [fila_mano_obra(ref, mano_obra, nota) for ref, nota in INDUSTRIAL_MANO_OBRA]
     return filas
 
@@ -487,7 +538,7 @@ def main() -> int:
     texto_mano_obra = _texto_pdf(RUTA_MANO_OBRA)
 
     materiales = parsear_materiales(texto_materiales)
-    equipos = parsear_equipos(texto_equipos)
+    equipos, equipos_descartados = parsear_equipos(texto_equipos)
     tab_civ = parsear_tabulador_civ(texto_mano_obra)
     sal_const = parsear_tabulador_construccion(texto_mano_obra)
 
@@ -497,9 +548,9 @@ def main() -> int:
             "El layout de mano_de_obra.pdf pudo haber cambiado; revisar PATRON_TAB_CIV."
         )
 
-    filas_civil = construir_civil(materiales, equipos, sal_const)
-    filas_telecom = construir_telecom(materiales, equipos)
-    filas_industrial = construir_industrial(materiales, equipos, sal_const)
+    filas_civil = construir_civil(materiales, equipos, equipos_descartados, sal_const)
+    filas_telecom = construir_telecom(materiales, equipos, equipos_descartados)
+    filas_industrial = construir_industrial(materiales, equipos, equipos_descartados, sal_const)
     filas_sistemas = construir_sistemas(tab_civ)
 
     escribir_csv(CARPETA / "referencia_civil.csv", filas_civil)
@@ -516,6 +567,14 @@ def main() -> int:
     print(f"  referencia_industrial.csv  -> {len(filas_industrial)} filas")
     print(f"  referencia_sistemas.csv    -> {len(filas_sistemas)} filas (tabulador CIV completo)")
     print(f"  descripciones truncadas en el PDF (sistemas): {truncadas_sistemas} de 43")
+
+    # Diagnostico de auditoria (hallazgo de revision): equipos.pdf trae filas cuyo
+    # Total impreso no coincide con Precio x Factor; se descartan del parseo (no se usan
+    # como candidatas) y quedan registradas aqui, no solo silenciadas.
+    print(f"  filas de equipos.pdf descartadas por el cruce Total=Precio x Factor: "
+          f"{len(equipos_descartados)}")
+    for mensaje in equipos_descartados.values():
+        print(f"    - {mensaje}")
     return 0
 
 
