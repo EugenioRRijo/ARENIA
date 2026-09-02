@@ -54,6 +54,16 @@ Los cuatro mecanismos de los renglones que el PDF no cierra
    unitario impreso (289,00 y 42,99) queda intacto en la primera línea y en la lista de precios: la
    diferencia no se disuelve dentro del precio del insumo, se ve. La contradicción **no se corrige**
    y es material de la Sesión M1.3.
+
+   **Obligación para la Sesión M1.3 (y para cualquier consumidor de la lista de precios):** las
+   líneas cuya descripción empieza por ``MARCA_AJUSTE`` son **artefactos de reproducción**, no
+   insumos de mercado. Deben **excluirse de todo contraste de precios** (con MaPreX o con cualquier
+   otra lista) y de toda **normalización semántica** de descripciones de insumo
+   (``ml/normalization``): sus importes (0,33 y 0,428571… USD) no son precios de nada. Para que no
+   puedan confundirse con un material cotizado por pieza llevan además ``unidad = "sg"`` (suma
+   global), no la unidad del renglón. Son exactamente dos en todo el catálogo telecom y
+   ``tests/integration/test_presupuesto_arenaza.py`` lo fija con una prueba, de modo que ningún
+   ajuste nuevo pueda colarse sin que alguien lo decida.
 3. **P1 renglón 14, "Micelaneos"** (total 100,00, sin cantidad ni unidad ni precio unitario). Se
    representa como **1 suma global x 100,00** (``unidad = "sg"``, el alias canónico de "global" en
    ``core.contracts.unidades``). El fixture sigue declarando ``cantidad = precio_unitario = None``:
@@ -62,7 +72,8 @@ Los cuatro mecanismos de los renglones que el PDF no cierra
    quede instalado sino una **herramienta reutilizable**: entra como ``LineaEquipo`` con
    ``depreciacion = 1,00``, el factor que el PDF aplica de hecho al cargar la herramienta completa a
    un solo presupuesto. Con ``rendimiento = 1`` el importe es el impreso (90,00). Que la herramienta
-   se impute al 100 % es una observación para M1.3 (R6), no un ajuste de esta capa.
+   se impute al 100 % es una observación para M1.3 (regla de verificación **R6**,
+   ``CriterioDepreciacion``, CLAUDE.md §7), no un ajuste de esta capa.
 
 La política de mano de obra "50 % del presupuesto total"
 --------------------------------------------------------
@@ -192,7 +203,10 @@ RENGLONES_HERRAMIENTA: frozenset[tuple[int, int]] = frozenset({(1, 12), (2, 26)}
 #: Factor con el que el PDF imputa esa herramienta: completa, a un solo presupuesto.
 DEPRECIACION_HERRAMIENTA = Decimal("1.00")
 #: Prefijo de la línea que reproduce un total impreso contradictorio (mecanismo 2 del módulo).
-MARCA_AJUSTE = "Ajuste R6"
+#: No contiene "R6" a propósito: en este repositorio "R6" es la regla de verificación
+#: `CriterioDepreciacion` (CLAUDE.md §7) y esta marca se persiste como descripción de insumo, así
+#: que un "R6" aquí se leería como esa regla en el informe de auditoría de la Sesión M1.3.
+MARCA_AJUSTE = "Ajuste total impreso"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -269,6 +283,10 @@ def _linea_ajuste(
     que la composición haría falta una línea negativa, que los contratos prohíben con razón
     (`cantidad` y `precio` no pueden ser negativos): se detiene con un error explícito en vez de
     inventar un mecanismo silencioso. Ningún renglón de los dos PDF está en ese caso.
+
+    La línea lleva `unidad = "sg"` (suma global) y no la del renglón: es un artefacto de
+    reproducción, no un insumo cotizado por pieza, y no debe entrar en ningún contraste de precios
+    (ver el docstring del módulo, mecanismo 2). La unidad no interviene en el cálculo del motor.
     """
     objetivo = renglon.total / _cantidad(renglon)
     calculado = calcular_apu(composicion, PARAMETROS_ARENAZA).precio_unitario
@@ -284,7 +302,7 @@ def _linea_ajuste(
     return LineaMaterial(
         f"{MARCA_AJUSTE}: el PDF imprime {renglon.total} y cantidad x precio unitario da "
         f"{_cantidad(renglon) * _precio(renglon)} ({renglon.origen})",
-        _unidad(renglon),
+        UNIDAD_SUMA_GLOBAL,
         Decimal("1"),
         diferencia,
     )

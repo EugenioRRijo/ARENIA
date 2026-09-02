@@ -6,8 +6,9 @@ las 40 partidas `TC-*` desde la base y el motor puro `core.costing.calcular_apu`
 total de cada presupuesto debe coincidir con el impreso en el PDF (1 109,29 y 5 410,73 USD) dentro
 de ± 0,01, **sin haber tocado `core/`**.
 
-Objetivo de la reproducción: **el PDF tal como está impreso** (regla R6 del sprint, mismo criterio
-con el que la línea base civil conserva sus siete inconsistencias). Cuatro renglones no cumplen
+Objetivo de la reproducción: **el PDF tal como está impreso** (criterio del sprint multidominio, el
+mismo con el que la línea base civil conserva sus siete inconsistencias). Cuatro renglones no
+cumplen
 `cantidad x precio_unitario = total` en la fuente y cada uno se reproduce con un mecanismo
 declarado en `scripts/seed_telecom.py`; esas pruebas están abajo, una por mecanismo:
 
@@ -33,6 +34,7 @@ from core.contracts.dominio import Dominio
 from scripts.seed_telecom import (
     DEPRECIACION_HERRAMIENTA,
     FRACCION_MANO_OBRA,
+    MARCA_AJUSTE,
     METROS_POR_TUBO,
     MONEDA,
     PARAMETROS_ARENAZA,
@@ -167,12 +169,43 @@ def test_los_renglones_contradictorios_conservan_precio_y_total_impresos(sesion_
     insumo, ajuste = partida.apu.materiales
     assert insumo.precio == renglon.precio_unitario
     assert insumo.cantidad == Decimal("1")
+    assert ajuste.descripcion.startswith(MARCA_AJUSTE)
     assert renglon.origen in ajuste.descripcion
+    assert ajuste.unidad == UNIDAD_SUMA_GLOBAL, "el ajuste no se disfraza de material por pieza"
 
     diferencia_impresa = renglon.total - renglon.cantidad * renglon.precio_unitario
     assert abs(ajuste.total * renglon.cantidad - diferencia_impresa) <= TOLERANCIA
     assert abs(partida.total - renglon.total) <= TOLERANCIA
     assert partida.total != renglon.cantidad * renglon.precio_unitario
+
+
+def test_solo_hay_dos_lineas_de_ajuste_en_todo_el_catalogo(sesion_telecom):
+    """Anti-enmascaramiento: los ajustes son exactamente los dos renglones que el PDF no cierra.
+
+    Si algún mecanismo futuro empezara a tapar diferencias con líneas de ajuste, esta prueba lo
+    delata. Fija además la obligación documentada para la Sesión M1.3: estas dos líneas son
+    artefactos de reproducción (`unidad = "sg"`, importes que no son precio de nada) y quedan fuera
+    de todo contraste de precios y de toda normalización de descripciones de insumo.
+    """
+    ajustes = [
+        (codigo, linea)
+        for numero in (1, 2)
+        for codigo, composicion in composiciones_desde_catalogo(sesion_telecom, numero).items()
+        for linea in composicion.materiales
+        if linea.descripcion.startswith(MARCA_AJUSTE)
+    ]
+
+    assert [codigo for codigo, _ in ajustes] == [codigo_partida(2, 14), codigo_partida(2, 18)]
+    assert all(linea.unidad == UNIDAD_SUMA_GLOBAL for _, linea in ajustes)
+
+    insumos = Catalogo(sesion_telecom).insumos()
+    assert sum(insumo.descripcion.startswith(MARCA_AJUSTE) for insumo in insumos) == 2
+
+
+def test_la_marca_de_ajuste_no_colisiona_con_la_regla_de_verificacion_r6():
+    """La marca se persiste como descripción de insumo y aparecerá en el informe de M1.3, donde
+    "R6" significa `CriterioDepreciacion` (CLAUDE.md §7): no puede contener esa cadena."""
+    assert "R6" not in MARCA_AJUSTE
 
 
 def test_micelaneos_se_representa_como_suma_global(sesion_telecom):
