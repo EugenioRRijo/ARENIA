@@ -46,7 +46,10 @@ Los cuatro mecanismos de los renglones que el PDF no cierra
    partida conserva la unidad y la cantidad impresas (90 m) y su APU compra ``1/30`` de tubo por
    metro al precio impreso: ``(1/30) x 99,75 = 3,325 USD/m`` y ``90 x 3,325 = 299,25`` ✓. Así se
    conservan a la vez el precio de mercado real (99,75 por tubo, que es lo que valdrá contrastar
-   con MaPreX en M1.3) y el total impreso.
+   con MaPreX en M1.3) y el total impreso. El renglón del presupuesto 2 (donde "Presupuesto" imprime
+   90 m y "Computos metricos" imprime 80 m del mismo tubo) declara además `regla =
+   REGLA_TUBO_CORRUGADO`, para que la Sesión M1.3 audite la discrepancia con la regla de
+   verificación R1 (ver `item_de`).
 2. **P2 renglones 14 y 18** (1 446,65 vs 5 x 289,00 = 1 445,00; 303,93 vs 7 x 42,99 = 300,93). El
    total impreso contradice la multiplicación **en la fuente**. Se reproduce el total impreso
    añadiendo al APU una segunda línea de material declarada, cuya descripción empieza por
@@ -207,6 +210,12 @@ DEPRECIACION_HERRAMIENTA = Decimal("1.00")
 #: `CriterioDepreciacion` (CLAUDE.md §7) y esta marca se persiste como descripción de insumo, así
 #: que un "R6" aquí se leería como esa regla en el informe de auditoría de la Sesión M1.3.
 MARCA_AJUSTE = "Ajuste total impreso"
+#: Regla trazable del tubo corrugado del presupuesto 2 (Sesión M1.3, ver `item_de`): una referencia
+#: pura al parámetro `cantidad_computos` ya declarado en el ítem. No es una fórmula geométrica (R1
+#: no exige que lo sea: solo compara `regla` evaluada contra `cantidad`), es la forma más directa de
+#: declarar "esta cantidad debe coincidir con la de Computos metricos" sin inventar un mecanismo
+#: nuevo en `core/`.
+REGLA_TUBO_CORRUGADO = "cantidad_computos"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -338,17 +347,26 @@ def item_de(numero: int, renglon: RenglonPresupuesto) -> ItemComputo:
 
     `origen_tipo` es TABULAR: la fuente es la tabla "Presupuesto" del PDF, no una regla ni un
     modelo. El tubo corrugado del presupuesto 2 declara además, en `parametros`, las dos cantidades
-    que el PDF se contradice a sí mismo (80 m en "Computos metricos", 90 m en "Presupuesto"), para
-    que la auditoría de la Sesión M1.3 las compare. No lleva `regla` porque la cantidad no se
-    deriva de nada: se transcribe.
+    que el PDF se contradice a sí mismo (80 m en "Computos metricos", 90 m en "Presupuesto").
+
+    **Excepción declarada para la Sesión M1.3.** Los demás renglones no llevan `regla` porque su
+    cantidad no se deriva de nada: se transcribe. Este renglón sí la lleva
+    (`REGLA_TUBO_CORRUGADO = "cantidad_computos"`) para que la regla de verificación R1
+    (`TrazabilidadGeometrica`) compare la cantidad impresa en "Presupuesto" (90, la que queda en
+    `cantidad`) contra la de "Computos metricos" (80, en `parametros`) y emita el hallazgo con este
+    `origen_id`. No se inventa un mecanismo nuevo en `core/`: R1 ya compara cualquier `regla`
+    declarada contra su evaluación, sin exigir que sea una fórmula geométrica (CLAUDE.md §7, R1);
+    aquí la "regla" es la referencia directa al parámetro que ya viaja con el ítem.
     """
     especificaciones = {CLAVE_UNIDAD_ORIGINAL: renglon.unidad} if renglon.unidad else {}
     parametros: dict[str, Decimal] = {}
+    regla: str | None = None
     if renglon.origen == arenaza.TUBO_CORRUGADO["origen_presupuesto"]:
         parametros = {
             "cantidad_computos": arenaza.TUBO_CORRUGADO["cantidad_computos"],
             "cantidad_presupuesto": arenaza.TUBO_CORRUGADO["cantidad_presupuesto"],
         }
+        regla = REGLA_TUBO_CORRUGADO
     return ItemComputo(
         codigo_partida=codigo_partida(numero, renglon.renglon),
         descripcion=renglon.descripcion,
@@ -357,6 +375,7 @@ def item_de(numero: int, renglon: RenglonPresupuesto) -> ItemComputo:
         origen_id=renglon.origen,
         origen_tipo=OrigenTipo.TABULAR,
         dominio=Dominio.TELECOM,
+        regla=regla,
         parametros=parametros,
         especificaciones=especificaciones,
     )

@@ -17,6 +17,8 @@ transcripción completa de un presupuesto ya existente en el repositorio como ev
 |---|---|---|
 | `presupuesto_1_arenaza.csv` | Los 14 renglones de la tabla "Presupuesto" de `Presupuesto_1_ARENAZA.pdf` (presupuesto 001) | `scripts/extraer_arenaza.py` |
 | `presupuesto_2_arenaza.csv` | Los 26 renglones de la tabla "Presupuesto" de `Presupuesto_2_ARENAZA.pdf` (presupuesto 002) | `scripts/extraer_arenaza.py` |
+| `lista_arenaza.csv` | Lista 1 de UC‑02 (Sesión M1.3): los 27 precios de mercado ARENAZA, vigencia 18/05/2026 | `scripts/derivar_listas_telecom.py` |
+| `lista_maprex_2026-07.csv` | Lista 2 de UC‑02 (Sesión M1.3): la referencia MaPreX de julio 2026 de los 5 insumos con equivalencia defendible, vigencia 09/07/2026 | `scripts/derivar_listas_telecom.py` |
 
 **Cabecera exacta:** `renglon,descripcion,unidad,cantidad,precio_unitario,total,origen`, con
 `origen = <pdf>:<pagina>:<renglon>` (página 1‑indexada: 1 = "Computos métricos", 2 =
@@ -125,3 +127,92 @@ El script relee los dos PDF, vuelve a verificar cada total contra el texto extra
 escribe ambos CSV. Si algún total no aparece en el texto de la página correspondiente (el PDF
 cambió, o hay un error en la transcripción curada del script), se detiene con un error explícito
 en vez de escribir un CSV no verificado.
+
+## Listas de precios canónicas para UC‑02 (Sesión M1.3)
+
+La Sesión M1.3 (auditoría telecom y UC‑02 real, compuerta GM1) añade a esta carpeta las dos
+listas de precios del dominio en el formato canónico de UC‑02 (`tipo,insumo,unidad,precio`,
+`core.catalog.precios.COLUMNAS_ARCHIVO`). Las genera `scripts/derivar_listas_telecom.py` y
+**ninguna de las dos transcribe un precio**: la lista 1 sale de las composiciones de
+`scripts/seed_telecom.py` (es decir, del fixture ARENAZA) y la lista 2 de
+`data/precios/maprex_2026-07/referencia_telecom.csv` (Sesión M0.2).
+`tests/unit/test_listas_telecom.py` comprueba que los CSV en disco son exactamente los derivados.
+
+| Archivo | Lista | Vigencia | Filas | Fuente |
+|---|---|---|---|---|
+| `lista_arenaza.csv` | 1 — precios ARENAZA | **18/05/2026** (fecha impresa en los dos PDF) | 27 | Composiciones `TC-*` armadas desde el fixture |
+| `lista_maprex_2026-07.csv` | 2 — referencia MaPreX jul‑2026 | **09/07/2026** (`fecha_vigencia` de `materiales.pdf` en `referencia_telecom.csv`) | 5 | `referencia_telecom.csv`, convertido desde Bs con la tasa 633,3644 Bs/USD (01/07/2026) |
+
+Cargadas en ese orden por UC‑02 (`crear_lista_desde_archivo` y luego `registrar_cambios`)
+producen el **primer histórico real de `CambioPrecio` fuera del dominio civil**: cinco cambios
+fechados el 09/07/2026 (`tests/integration/test_auditoria_arenaza.py`).
+
+### Lista 1: qué entra y qué queda fuera
+
+Entra todo insumo del catálogo telecom al que la fuente le da **un único precio unitario no
+contradicho**: 27 de los 34 insumos que persiste `scripts/seed_telecom.py`, incluido el tubo
+corrugado a 99,75 USD por tubo de 30 m bajo las dos descripciones con las que lo imprimen los
+PDF. El script decide las exclusiones a partir de los datos (marca de ajuste, unidad, línea de
+ajuste presente, más de un precio por clave), no de una lista de nombres:
+
+| Insumo excluido | Motivo |
+|---|---|
+| Las dos líneas «Ajuste total impreso: …» (P2 renglones 14 y 18) | Artefactos de reproducción del total impreso, no insumos de mercado (obligación de la Sesión M1.2) |
+| Micelaneos (P1 renglón 14) | Suma global sin cantidad ni precio unitario en el PDF |
+| Camara Bullet Ip 4mp Intemperie (P2 renglón 14) y Conector Jack Coupler Ubiquiti Rj45 (P2 renglón 18) | El total impreso contradice cantidad × precio unitario en la fuente (ver «Reconciliación de la suma»): el PDF les da dos precios unitarios incompatibles y una lista canónica no elige uno en silencio |
+| Organizador De Cables Individuales 20cm 100 Und (P1 renglón 6, P2 renglón 9) | Dos precios en la fuente para la misma descripción y unidad (18,00 y 19,00). UC‑02 aplica una fila a todas las variantes de esa descripción (`core.catalog.precios`, «Homónimos»): cualquiera de los dos sobrescribiría al otro y fabricaría un cambio de precio dentro de la misma fuente |
+
+### Lista 2: correspondencia ARENAZA ↔ MaPreX
+
+Solo entran las equivalencias defendibles, con un criterio de dos condiciones (una sola tabla:
+`CORRESPONDENCIA` en `scripts/derivar_listas_telecom.py`): (a) la nota de la Sesión M0.2 declara
+la fila MaPreX equivalente de ese insumo ARENAZA **sin salvedad de atributo** (no «cubre», no
+«referencia de categoría», no «MaPreX no distingue…»); (b) la unidad de venta es la misma, o el
+factor de conversión lo imprime la propia fuente ARENAZA.
+
+| Insumo ARENAZA (lista 1) | Ref MaPreX | Descripción MaPreX | Factor | ARENAZA (USD) | MaPreX (USD) | Variación |
+|---|---|---|---|---|---|---|
+| Anillo E.m.t. 2 | `ELE033` | ANILLO EMT D=2" | 1 | 3,96 | 9,5364 | +140,8 % |
+| Toma Doble Con Tierra 270 20a Con Placa Blanca | `ELA190` | TOMACORRIENTE DOBLE 1 FASE 20/30 A | 1 | 5,05 | 6,7947 | +34,5 % |
+| Cajetin Plástico 4x2 Pvc Con Grapa Metálica. | `ELE654` | CAJETIN RECTANGULAR PVC 2" X 4" X 1/2" ELECT | 1 | 2,00 | 1,9073 | −4,6 % |
+| Tubo Corrugado Flexible 1 Pulgada (tubo de 30 m) — P1 | `ELE906` | TUBO PVC ELECTRICIDAD CORRUGADO FLEXIBLE D= 1" (por metro) | 30 | 99,75 | 78,6751 | −21,1 % |
+| Tubo Corrugado Flexible 1 Pulgada 30 MTS (tubo de 30 m) — P2 | `ELE906` | ídem | 30 | 99,75 | 78,6751 | −21,1 % |
+
+El tubo corrugado es la **única conversión de unidad admitida**: ARENAZA lo cotiza por tubo de
+30 m (el PDF imprime «30 MTS» y la aritmética «3\*99,75») y MaPreX por metro; el factor 30 lo
+declara la fuente, no esta sesión. Es, además, el insumo del hallazgo 80/90 y el que la Sesión
+M1.2 dejó explícitamente para este contraste. El precio se convierte desde bolívares con la tasa
+y el redondeo de M0.2 (1 661,00 Bs/m × 30 = 49 830,00 Bs → 78,6751 USD); multiplicar el
+`precio_usd` ya redondeado de la referencia (2,6225 × 30 = 78,6750) daría una diezmilésima
+menos por el redondeo previo. El catálogo guarda el tubo bajo dos descripciones porque los dos
+PDF lo imprimen distinto; ambas reciben el mismo precio MaPreX, y por eso el histórico registra
+cinco cambios para cuatro correspondencias.
+
+Fuera de la lista 2, y por qué (todas las demás filas de `referencia_telecom.csv` y todos los
+demás insumos de la lista 1):
+
+| Insumo ARENAZA | Fila MaPreX candidata | Por qué no entra |
+|---|---|---|
+| BOBINA CABLE UTP CAT 6 (300 M), Bobina Cable Utp Cat6 305 m Int, BOBINA CABLE UTP CAT 6 (300 M) Ext | `ELA006` (por metro) | M0.2 la anota como «cubre» (misma familia, distinta presentación); MaPreX no distingue interior/exterior. Convertible solo bajo el supuesto de que el precio por metro escala linealmente a la bobina |
+| Conectores Rj45 Cat6 Utp Bolsa (100 unidades) | `ELC069` (por pieza) | M0.2 anota la salvedad «precio por pieza, no por bolsa de 100»; el PDF no imprime la aritmética del empaque como sí lo hace con el tubo. Convertible (×100) si el autor acepta el supuesto de empaque |
+| Bosla Tirrap (100 unidades), Amarre Tiewrap Negro Plástico 20 Cm, Base Para Tirrap Tirraje 10 u | `QUI059` | «Cubre» genéricamente; ARENAZA no declara la medida del tirrap |
+| Teipe Eléctrico Negro Cobra, Teipe Aislante Para Cableado Eléctrico | `ELF215` | «Cubre»; MaPreX no lista la marca ni la presentación |
+| Guaya Guia Pasa Cable De Acero | `ACE894` (por metro) | Equivalente de categoría, pero ARENAZA no declara la longitud de la guaya: no hay factor de conversión |
+| Cajetin Superficial 4x2 Hembra | `ELC066` | Salvedad de M0.2: «MaPreX no distingue '4x2' en cajetines de red» |
+| Canaleta Plastica 40x40x2mts | `ELA553` | Sección distinta (1" / 25 mm) |
+| Rack Fijo Onlink 12u | `ELC051` | Referencia de categoría (rack 4U de pared) |
+| Switch Escritorio Gigabit De 10 Puertos Con Poe De, Switch Tp-link Tl-sg108 8 Puertos, Switch Tp-link 16 Puertos | `ELA633` | Referencia de categoría (único switch de marca en MaPreX: 48P 10/100 para rack) |
+| Conector Jack Coupler Ubiquiti Rj45 | `ELC065` | Su insumo ARENAZA no está en la lista 1 (total impreso contradicho): no hay precio anterior que contrastar |
+| Organizador De Cables Individuales 20cm 100 Und | `ELF449` | Su insumo ARENAZA no está en la lista 1 (dos precios en la fuente); además M0.2 anota «forma distinta» |
+| Conector Rj-45 Ftp Cat6 Blindado 50 U | — | M0.2 no le asignó fila: el conector FTP blindado no es el `ELC069` UTP |
+| Punto De Acceso Rap Ruijie, Mini Ups Spidertec 17600mah, Nvr Hikvision 7600, Cámara Domo Ip Hikvision 4mp, Camara Bullet Ip 4mp Intemperie, Protector De Voltaje Exceline | — | Sin equivalente en MaPreX (M0.2: «omitidos por marca/modelo, no por categoría») |
+| — | `ELC057` patch panel, `EFO001` fibra óptica y fusionadora | Referencias de categoría de M0.2 sin insumo ARENAZA correspondiente |
+
+### Regenerar y verificar las listas
+
+```
+uv run python scripts/derivar_listas_telecom.py              # reescribe los dos CSV e imprime el contraste
+uv run python scripts/derivar_listas_telecom.py --verificar  # compara con los CSV en disco (sale con 1 si difieren)
+```
+
+No requiere PyMuPDF: no relee los PDF, deriva de datos ya estructurados en el repositorio.
