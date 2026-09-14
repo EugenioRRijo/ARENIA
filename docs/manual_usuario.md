@@ -31,6 +31,21 @@ No hay más pasos (RNF‑07). Notas:
    uv run python scripts/seed.py
    ```
 
+   Los otros tres dominios tienen su propio catálogo, con precios reales y fechados, cada uno en
+   su base (opcional; cada comando imprime el presupuesto del dominio y su informe de auditoría):
+
+   ```
+   uv run python scripts/seed_telecom.py      # data/apu_telecom.db    presupuestos ARENAZA
+   uv run python scripts/seed_industrial.py   # data/apu_industrial.db mantenimiento (precios MaPreX)
+   uv run python scripts/seed_sistemas.py     # data/apu_sistemas.db   puntos de función (tabulador CIV)
+   ```
+
+   Para trabajar con uno de esos catálogos en la interfaz, escribir la ruta de su base en el
+   campo **«Archivo SQLite»** de la barra lateral (todas las páginas que consultan la base lo
+   tienen; por defecto dice `data/apu.db`). En la API, arrancar con la variable de entorno
+   `APU_BASE` apuntando a esa base (por ejemplo `sqlite:///data/apu_telecom.db`). De dónde sale
+   cada precio y con qué fecha: [manual técnico, sección 8.1](manual_tecnico.md#81-catálogos-por-dominio).
+
 2. **Abrir la interfaz** (se abre en el navegador, en el equipo local):
 
    ```
