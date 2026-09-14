@@ -203,12 +203,22 @@ def evaluar_m5_fixture_arenaza() -> tuple[Estado, str]:
     return Estado.FALLA, f"no se encontro: {', '.join(faltan)}"
 
 
+#: Codigo de partida industrial: `MNT-<activo>-<variante>` (p. ej. `MNT-BOM-CEN`). Exige los dos
+#: segmentos, asi no confunde partidas del mismo activo ni cuenta `MNT-001` (el presupuesto).
+PATRON_PARTIDA_INDUSTRIAL = re.compile(r"\bMNT-[A-Z]+-[A-Z]+\b")
+
+
+def codigos_partida_industrial(texto: str) -> list[str]:
+    """Los codigos de partida industrial distintos que aparecen en `texto`, ordenados."""
+    return sorted(set(PATRON_PARTIDA_INDUSTRIAL.findall(texto)))
+
+
 def evaluar_m8_fixture_industrial() -> tuple[Estado, str]:
     ruta = RAIZ / "tests" / "fixtures" / "mantenimiento_industrial.py"
     texto = _leer_texto(ruta)
     if texto is None:
         return Estado.PENDIENTE, "falta tests/fixtures/mantenimiento_industrial.py"
-    codigos = sorted(set(re.findall(r"MNT-\w+", texto)))
+    codigos = codigos_partida_industrial(texto)
     if len(codigos) >= 3:
         return Estado.OK, f"fixture: {len(codigos)} partidas MNT-* ({', '.join(codigos)})"
     return Estado.FALLA, f"fixture: solo {len(codigos)} partida(s) MNT-* ({', '.join(codigos)})"
