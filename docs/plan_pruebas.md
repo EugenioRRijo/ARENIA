@@ -160,31 +160,40 @@ Cobertura adicional no exigida por RF: `test_generador_ifc.py` (1), `test_visor3
 | RNF‑03 desempeño | `scripts/medir_rnf03.py` (2026‑08‑31): UC‑02 con **100 partidas y 41 insumos revalorados en 1,17 s** (umbral 5 s) | cumple |
 | RNF‑04 usabilidad | juicio de expertos Likert ≥ 4/5: instrumento por aplicar con el tutor | pendiente |
 | RNF‑05 núcleo cerrado | `git diff --stat core/` vacío tras I5 y tras cada adaptador; `test_arquitectura.py` verde | cumple |
-| RNF‑06 cobertura | `core/` 97,99 % (meta ≥ 80 %); detalle en §10 | cumple |
+| RNF‑06 cobertura | `core/` 98,10 % (meta ≥ 80 %); detalle en §10 | cumple |
 | RNF‑07 portabilidad | `uv sync` sin pasos manuales en Windows 11; Linux pendiente | parcial |
 | RNF‑08 seguridad | inspección: 0 credenciales versionadas, 0 llamadas de red en operación (excepción declarada: descarga inicial del modelo, cacheada) | cumple |
 | RNF‑09 compatibilidad IFC | G1 con salvedad: exacto contra modelo programático; faltan exports de ≥ 2 modeladores | parcial |
 
-## 10. Registro de la ejecución (2026‑08‑31)
+## 10. Registro de la ejecución (2026‑09‑14)
 
 ```
-395 passed in 100.93s          (pytest -W error, plataforma win32, Python 3.13.2)
+479 passed in 109.47s          (pytest -W error, plataforma win32, Python 3.13.2)
 ruff check .                   sin observaciones
+git diff m-base --stat -- core/   vacío
 ```
 
-Tercera corrida del día, tras cablear UC‑08 en la API y la UI (+3 de
-`test_api_escenarios.py`). Las anteriores: 385 en F.2 (`core/` 97,99 %) y 392 tras el cierre de
-UC‑08 en el núcleo (+6 de `test_escenarios.py` +1 caso de arquitectura parametrizado).
+Corrida de la Sesión M4.1 del sprint multidominio (rama `worktree-sprint-multidominio`). Desde el
+registro anterior la suite creció en 84 casos, los de las sesiones M0.1–M4.1: referencia MaPreX
+estructurada, catálogo, presupuesto y auditoría de telecom (ARENAZA), industrial (mantenimiento) y
+sistemas (puntos de función), la meta del sprint y la sección multidominio de
+[resultados_ml.md](resultados_ml.md). Todo ese crecimiento ocurrió sin tocar `core/`. Registros
+anteriores, todos del 2026‑08‑31: 385 en F.2 (`core/` 97,99 %), 392 tras el cierre de UC‑08 en el
+núcleo y 395 tras cablear UC‑08 en la API y la UI.
 
 Cobertura de líneas por paquete (pytest‑cov sobre la corrida completa):
 
 | Paquete | Líneas cubiertas | Cobertura |
 |---|---|---|
-| `core/` | 1 706 / 1 740 | **98,05 %** |
-| `ml/` | 139 / 140 | 99,29 % |
+| `core/` | 1 707 / 1 740 | **98,10 %** |
+| `ml/` | 141 / 142 | 99,30 % |
 | `api/` | 452 / 478 | 94,56 % |
 | `adapters/` | 372 / 419 | 88,78 % |
-| **Total medido** | 2 669 / 2 777 | **96,11 %** |
+| **Total medido** | 2 672 / 2 779 | **96,15 %** |
 
-Distribución de la suite: 308 casos unitarios y 87 de integración, 0 fallos, 0 omitidos.
+`core/` tiene las mismas 1 740 líneas que el 2026‑08‑31; la línea adicional cubierta la ejercen las
+pruebas de integración de los dominios nuevos. Las dos líneas nuevas de `ml/` son la cuantización
+de presentación de `contrastar_aace` (M4.1).
+
+Distribución de la suite: 345 casos unitarios y 134 de integración, 0 fallos, 0 omitidos.
 La evaluación de calidad sobre estos resultados está en [calidad_iso25010.md](calidad_iso25010.md).

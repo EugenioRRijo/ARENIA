@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 
 from core.contracts.verificacion import Hallazgo, Severidad
@@ -165,16 +165,29 @@ def contrastar_aace(
     if inferior <= desviacion <= superior:
         return None
 
+    # La descripcion presenta a dos decimales (CLAUDE.md §2.3: se redondea solo al presentar);
+    # `valor_observado` y `valor_esperado` conservan los Decimal exactos.
     return Hallazgo(
         regla="CONTRASTE-AACE3",
         severidad=Severidad.ADVERTENCIA,
         descripcion=(
-            f"el precio construido de {codigo_partida} ({pu_construido}) se desvia "
-            f"{desviacion * _CIEN:+.2f} % del estimado ({pu_estimado}), fuera del rango de la "
-            f"clase 3 de AACE ({inferior * _CIEN:+.0f} % / {superior * _CIEN:+.0f} %)"
+            f"el precio construido de {codigo_partida} ({_a_dos_decimales(pu_construido):f}) "
+            f"se desvia {_a_dos_decimales(desviacion * _CIEN):+f} % del estimado "
+            f"({_a_dos_decimales(pu_estimado):f}), fuera del rango de la clase 3 de AACE "
+            f"({inferior * _CIEN:+.0f} % / {superior * _CIEN:+.0f} %)"
         ),
         impacto=abs(pu_construido - pu_estimado),
         origen_ids=(codigo_partida,),
         valor_observado=pu_construido,
         valor_esperado=pu_estimado,
     )
+
+
+def _a_dos_decimales(valor: Decimal) -> Decimal:
+    """Cuantiza para presentar con ROUND_HALF_UP, la convencion de los informes del proyecto.
+
+    Replica `core.verification.texto.formatear_decimal(valor, 2)`: `ml/` solo puede importar
+    `core.contracts` (`tests/unit/test_arquitectura.py`) y la convencion de presentacion no vive
+    ahi. El formato `:.2f` de `Decimal` no sirve: redondea al par (2.125 -> 2.12).
+    """
+    return valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

@@ -77,6 +77,7 @@ import csv
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
@@ -100,6 +101,9 @@ CARPETA_FUENTES = RAIZ / "data" / "telecom" / "fuentes"
 RUTA_LISTA_ARENAZA = CARPETA_FUENTES / "lista_arenaza.csv"
 RUTA_LISTA_MAPREX = CARPETA_FUENTES / "lista_maprex_2026-07.csv"
 RUTA_REFERENCIA_MAPREX = RAIZ / "data" / "precios" / "maprex_2026-07" / "referencia_telecom.csv"
+#: Vigencia de la lista 2: la `fecha_vigencia` de las filas de `materiales.pdf` en
+#: `referencia_telecom.csv` (09/07/2026), de donde salen sus cinco filas.
+FECHA_LISTA_MAPREX = date(2026, 7, 9)
 
 #: Tasa declarada en el listado de mano de obra de MaPreX (01/07/2026): la misma de
 #: `scripts/extraer_maprex.py` y del README de `data/precios/maprex_2026-07/`. No se importa de

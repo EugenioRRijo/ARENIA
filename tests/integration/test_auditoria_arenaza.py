@@ -31,15 +31,18 @@ cualquier otro dominio.
 
 from __future__ import annotations
 
-from datetime import date
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 
 from core.catalog.precios import crear_lista_desde_archivo, leer_lista_precios, registrar_cambios
 from core.contracts.verificacion import Severidad
 from core.verification import InformeAuditoria, auditar
+from scripts.derivar_listas_telecom import (
+    FECHA_LISTA_MAPREX,
+    RUTA_LISTA_ARENAZA,
+    RUTA_LISTA_MAPREX,
+)
 from scripts.seed_telecom import (
     FECHA_ARENAZA,
     MARCA_AJUSTE,
@@ -49,16 +52,6 @@ from scripts.seed_telecom import (
     sembrar_telecom,
 )
 from tests.fixtures import presupuestos_arenaza as arenaza
-
-RAIZ = Path(__file__).resolve().parents[2]
-CARPETA_FUENTES = RAIZ / "data" / "telecom" / "fuentes"
-RUTA_LISTA_ARENAZA = CARPETA_FUENTES / "lista_arenaza.csv"
-RUTA_LISTA_MAPREX = CARPETA_FUENTES / "lista_maprex_2026-07.csv"
-
-#: `fecha_vigencia` de las filas de `materiales.pdf` en
-#: `data/precios/maprex_2026-07/referencia_telecom.csv` (09/07/2026), de donde salen las cinco
-#: filas de la lista 2 (`scripts/derivar_listas_telecom.py`).
-FECHA_MAPREX = date(2026, 7, 9)
 
 #: El renglón del hallazgo: presupuesto 2, ítem 5 ("Tubo Corrugado Flexible 1 Pulgada 30 MTS").
 CODIGO_TUBO = codigo_partida(2, 5)
@@ -185,7 +178,7 @@ def test_uc02_carga_arenaza_y_maprex_y_registra_cambios_de_precio(sesion_telecom
         RUTA_LISTA_MAPREX,
         nombre="Precios MaPreX 2026-07",
         moneda=MONEDA,
-        fecha_vigencia=FECHA_MAPREX,
+        fecha_vigencia=FECHA_LISTA_MAPREX,
         origen=RUTA_LISTA_MAPREX.name,
     )
 
@@ -202,8 +195,8 @@ def test_uc02_carga_arenaza_y_maprex_y_registra_cambios_de_precio(sesion_telecom
     assert len(cambios) == 5
     for cambio in cambios:
         assert cambio.lista_anterior.fecha_vigencia == FECHA_ARENAZA
-        assert cambio.lista_nueva.fecha_vigencia == FECHA_MAPREX
-        assert cambio.fecha == FECHA_MAPREX
+        assert cambio.lista_nueva.fecha_vigencia == FECHA_LISTA_MAPREX
+        assert cambio.fecha == FECHA_LISTA_MAPREX
         assert cambio.precio_nuevo != cambio.precio_anterior
         # La obligacion de M1.2 tambien se cumple en los efectos: ningun ajuste cambia de precio.
         assert not cambio.insumo.descripcion.startswith(MARCA_AJUSTE)
