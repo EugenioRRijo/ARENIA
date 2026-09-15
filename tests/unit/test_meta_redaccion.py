@@ -250,6 +250,22 @@ def test_autores_con_guion_encuentran_su_referencia():
     assert estado is Estado.OK, evidencia
 
 
+def test_autor_corporativo_con_abreviatura_encuentra_su_referencia():
+    """APA 7: la primera cita de un autor corporativo introduce la abreviatura entre corchetes.
+    Sobre las referencias reales, R5 rechazaba "(Comisión Venezolana de Normas Industriales
+    [COVENIN], 1999)" porque el corchete quedaba pegado a la palabra.
+    """
+    referencias = REFERENCIAS + "\n### COVENIN (1999)\n\n- **Estado:** verificada\n"
+    texto = (
+        "La norma (Comisión Venezolana de Normas Industriales [COVENIN], 1999) fija la unidad; "
+        "la misma norma (COVENIN, 1999) la codifica."
+    )
+
+    estado, evidencia = meta.evaluar_citas({"cap": texto}, referencias)
+
+    assert estado is Estado.OK, evidencia
+
+
 def test_la_cita_no_arrastra_texto_de_la_linea_anterior():
     """Sobre el capitulo II real, la evidencia salio como 'BIM\\n\\nMa et al. (2011)': la
     secuencia de nombres cruzaba saltos de linea y tomaba la ultima palabra del subtitulo.

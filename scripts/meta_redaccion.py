@@ -261,7 +261,9 @@ def _anio_normalizado(anio: str) -> str:
 
 
 def _palabras(autores: str) -> set[str]:
-    return set(re.split(r"[\s\-]+", _normalizar(autores)))
+    # Los corchetes separan como los espacios: APA 7 introduce la abreviatura de un autor
+    # corporativo en su primera cita ("Comision Venezolana de Normas Industriales [COVENIN]").
+    return set(re.split(r"[\s\-\[\]]+", _normalizar(autores)))
 
 
 def referencias_de(texto: str) -> dict[tuple[str, str], tuple[str, str]]:
