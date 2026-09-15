@@ -97,12 +97,14 @@ PRUEBAS: dict[str, str] = {
 _GUION = "[-‑]"
 
 FASES_DEL_PLAN: tuple[str, ...] = ("A0", "A1", "A2", "A3", "A4")
+#: Cada compuerta debe estar DEFINIDA como fila de la tabla de compuertas (`| **GA0** ...`):
+#: nombrarla en un prompt o en un parrafo no la declara.
 COMPUERTAS: dict[str, str] = {
-    "GA0": r"\bGA0\b",
-    "GA1": r"\bGA1\b",
-    "GA2": r"\bGA2\b",
-    "GA3": r"\bGA3\b",
-    "GA-datos": rf"\bGA{_GUION}datos\b",
+    "GA0": r"^\|\s*\*\*GA0\*\*",
+    "GA1": r"^\|\s*\*\*GA1\*\*",
+    "GA2": r"^\|\s*\*\*GA2\*\*",
+    "GA3": r"^\|\s*\*\*GA3\*\*",
+    "GA-datos": rf"^\|\s*\*\*GA{_GUION}datos\*\*",
 }
 #: La plantilla de sesion: DoD (Scrum), fuente unica (DRY) y commit convencional.
 ELEMENTOS_DE_SESION: dict[str, str] = {
@@ -142,9 +144,9 @@ def evaluar_plan(texto: str | None) -> tuple[Estado, str]:
         if not re.search(rf"^## Fase {fase}\b", texto, re.MULTILINE)
     ]
     problemas += [
-        f"falta la compuerta {nombre}"
+        f"falta la compuerta {nombre} en la tabla de compuertas"
         for nombre, patron in COMPUERTAS.items()
-        if not re.search(patron, texto)
+        if not re.search(patron, texto, re.MULTILINE)
     ]
 
     sesiones = re.split(r"^### Sesi[oó]n ", texto, flags=re.MULTILINE)[1:]

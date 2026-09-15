@@ -14,7 +14,13 @@ PLAN_COMPLETO = """# PLAN_ASISTENTE.md
 
 ## 2. Compuertas
 
-| GA0 | GA1 | GA2 | GA3 | GA‑datos |
+| Compuerta | Criterio |
+|---|---|
+| **GA0** documentacion | x |
+| **GA1** herramientas | x |
+| **GA2** orquestacion | x |
+| **GA3** evaluacion | x |
+| **GA‑datos** hibrido | x |
 
 ## Fase A0 — Documentacion
 
@@ -86,6 +92,16 @@ def test_plan_sin_compuerta_ga_datos_falla():
 
     assert estado is Estado.FALLA
     assert "GA-datos" in evidencia
+
+
+def test_compuerta_mencionada_solo_en_un_prompt_no_cuenta():
+    """La compuerta debe estar definida en la tabla de compuertas, no solo nombrada en un prompt."""
+    solo_mencion = PLAN_COMPLETO.replace("| **GA3** evaluacion | x |", "") + "\nveredicto GA3\n"
+
+    estado, evidencia = meta.evaluar_plan(solo_mencion)
+
+    assert estado is Estado.FALLA
+    assert "GA3" in evidencia
 
 
 def test_plan_ausente_pendiente():
