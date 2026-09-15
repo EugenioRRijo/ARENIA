@@ -207,7 +207,7 @@ git commit -m "feat(scripts): guardia del nucleo para ci con base configurable"
 
 **Interfaces:**
 - Consumes: de `scripts/meta_alpha.py`, `_testcases(raiz) -> Iterator[ET.Element]` y `_resultado_de(testcase) -> str` (`"omitidas"` cuando hay `<skipped>`).
-- Produces: `omitidas(xml_texto: str) -> list[str]`, la excepción `SinEvidencia(ValueError)` y la CLI `python scripts/verificar_omitidas.py <junit.xml>`, con salida 0 sin omitidas, 1 con alguna omitida y 2 sin evidencia. La usa la Task 3.
+- Produces: `omitidas(xml_texto: str) -> list[str]`, la excepción `SinEvidenciaError(ValueError)` y la CLI `python scripts/verificar_omitidas.py <junit.xml>`, con salida 0 sin omitidas, 1 con alguna omitida y 2 sin evidencia. La usa la Task 3.
 
 - [ ] **Step 1: Write the failing test** — `tests/unit/test_verificar_omitidas.py`:
 
@@ -260,12 +260,12 @@ def test_una_fallida_no_cuenta_como_omitida():
 
 
 def test_junit_sin_pruebas_es_ausencia_de_evidencia():
-    with pytest.raises(verificar_omitidas.SinEvidencia, match="ninguna prueba"):
+    with pytest.raises(verificar_omitidas.SinEvidenciaError, match="ninguna prueba"):
         verificar_omitidas.omitidas(JUNIT_SIN_PRUEBAS)
 
 
 def test_xml_ilegible_es_ausencia_de_evidencia():
-    with pytest.raises(verificar_omitidas.SinEvidencia, match="ilegible"):
+    with pytest.raises(verificar_omitidas.SinEvidenciaError, match="ilegible"):
         verificar_omitidas.omitidas("<testsuites><testsuite>")
 
 
@@ -320,22 +320,22 @@ SALIDA_CON_OMITIDAS = 1
 SALIDA_SIN_EVIDENCIA = 2
 
 
-class SinEvidencia(ValueError):
+class SinEvidenciaError(ValueError):
     """El JUnit no permite afirmar nada: es ilegible o no registra pruebas."""
 
 
 def omitidas(xml_texto: str) -> list[str]:
     """Cada prueba omitida como `classname::name - motivo`, en el orden del reporte.
 
-    `SinEvidencia` si el XML no se puede leer o no registra ninguna prueba.
+    `SinEvidenciaError` si el XML no se puede leer o no registra ninguna prueba.
     """
     try:
         raiz = ET.fromstring(xml_texto)
     except ET.ParseError as error:
-        raise SinEvidencia(f"JUnit ilegible: {error}") from error
+        raise SinEvidenciaError(f"JUnit ilegible: {error}") from error
     casos = list(_testcases(raiz))
     if not casos:
-        raise SinEvidencia("el JUnit no registra ninguna prueba")
+        raise SinEvidenciaError("el JUnit no registra ninguna prueba")
     return [_describir(caso) for caso in casos if _resultado_de(caso) == "omitidas"]
 
 
@@ -355,7 +355,7 @@ def main(argv: list[str] | None = None) -> int:
         return SALIDA_SIN_EVIDENCIA
     try:
         lista = omitidas(reporte.read_text(encoding="utf-8"))
-    except SinEvidencia as error:
+    except SinEvidenciaError as error:
         print(f"verificar omitidas: {error}")
         return SALIDA_SIN_EVIDENCIA
     if lista:
