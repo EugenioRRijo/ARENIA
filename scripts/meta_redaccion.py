@@ -99,8 +99,13 @@ _TABLA_ESTADO = re.compile(
 
 _ANIO = r"(\d{4}[a-z]?|s\.\s?f\.)"
 _NOMBRE = r"[A-ZÁÉÍÓÚÑ][\w'\-]*"
+#: Solo espacios y tabuladores entre nombres: con `\s` la secuencia cruzaba saltos de linea y tomaba
+#: la ultima palabra del subtitulo anterior ("BIM\n\nMa et al. (2011)").
+_ESPACIO = r"[ \t]+"
 _CITA_NARRATIVA = re.compile(
-    rf"((?:{_NOMBRE}\s+)*{_NOMBRE}(?:\s+et al\.|\s+y\s+{_NOMBRE}(?:\s+{_NOMBRE})*)?)\s+\({_ANIO}\)"
+    rf"((?:{_NOMBRE}{_ESPACIO})*{_NOMBRE}"
+    rf"(?:{_ESPACIO}et al\.|{_ESPACIO}y{_ESPACIO}{_NOMBRE}(?:{_ESPACIO}{_NOMBRE})*)?)"
+    rf"{_ESPACIO}\({_ANIO}\)"
 )
 _PARENTESIS = re.compile(r"\(([^()]+)\)")
 _PARTE_PARENTETICA = re.compile(rf"^\s*(.+?),\s*{_ANIO}\s*(?:,.*)?$")

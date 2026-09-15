@@ -250,6 +250,17 @@ def test_autores_con_guion_encuentran_su_referencia():
     assert estado is Estado.OK, evidencia
 
 
+def test_la_cita_no_arrastra_texto_de_la_linea_anterior():
+    """Sobre el capitulo II real, la evidencia salio como 'BIM\\n\\nMa et al. (2011)': la
+    secuencia de nombres cruzaba saltos de linea y tomaba la ultima palabra del subtitulo.
+    """
+    texto = "#### Costos desde modelos BIM\n\nSacks et al. (2020) formularon el concepto."
+
+    (cita,) = meta.citas_de(texto)
+
+    assert cita.texto == "Sacks et al. (2020)"
+
+
 def test_referencia_pendiente_sin_marca_falla():
     textos = {"cap": "Según Sacks et al. (2020) hay lazo."}
 
