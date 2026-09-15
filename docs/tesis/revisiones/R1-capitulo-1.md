@@ -58,3 +58,11 @@ Siguen marcadas como pendientes en el capítulo: Miranda Miranda (año de la edi
 et al. (afirmación sin contrastar con el texto), Lulo Software, Colegio de Ingenieros de Venezuela
 (fecha), COVENIN (título exacto de la edición de 1999) y la convención colectiva. T4 y T8 quedan
 **resueltas en lo verificable**. El resto está declarado y no se cita sin marca.
+
+## Anexo — Corrección derivada de la revisión del capítulo II (Sesión R1.7, 2026-09-15)
+
+- **COVENIN (T8).** APA 7 exige que la primera cita de un autor corporativo introduzca su
+  abreviatura. La primera cita del trabajo está en la Tabla 1.3, que pasó a «la Comisión Venezolana
+  de Normas Industriales (COVENIN, 1999)»; las siguientes, en el capítulo II, usan «COVENIN (1999)».
+  La revisión mostró además que la meta R5 rechazaba la forma parentética con corchetes, y se
+  corrigió con una prueba nueva ([acta del capítulo II](R1-capitulo-2.md), T8).

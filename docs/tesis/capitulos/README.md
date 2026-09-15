@@ -48,8 +48,8 @@ Estados: `pendiente` → `en redacción` → `borrador completo` → `revisado p
 | 1.º | IV. Desarrollo de la propuesta | `04-desarrollo.md` | requerimientos, modelo de datos, arquitectura, motor, verificación R1–R7, adaptadores, ML, UI/API | pendiente | — | — |
 | 2.º | V. Resultados y evaluación | `05-resultados.md` | los cinco indicadores con cifra y procedencia; ISO/IEC 25010; IEEE 829 | pendiente | — | juicio de expertos (parcial, declarable) |
 | 3.º | III. Marco metodológico | `03-marco-metodologico.md` | tipo y diseño, fases, instrumentos, compuertas como decisión metodológica | pendiente | — | — |
-| 4.º | II. Marco teórico | `02-marco-teorico.md` | antecedentes, BIM‑5D, sombra digital, estructura del APU, ML, bases normativas | pendiente | — | D4 (como nota) |
-| 5.º | I. El problema | `01-el-problema.md` | planteamiento con los casos didácticos, formulación, objetivos, justificación, delimitación | borrador completo (revisado con la lista de cotejo, [acta R1](../revisiones/R1-capitulo-1.md)) | 2026-09-15 | D3 (objetivos en dos variantes); verificación de citas (R1.4) |
+| 4.º | II. Marco teórico | `02-marco-teorico.md` | antecedentes, BIM‑5D, sombra digital, estructura del APU, ML, NLP, verificación por reglas, bases normativas, términos | borrador completo (revisado con la lista de cotejo, [acta R1](../revisiones/R1-capitulo-2.md)) | 2026-09-15 | D4 (como nota); práctica AACE 18R‑97 o 56R‑08; referencias pendientes marcadas |
+| 5.º | I. El problema | `01-el-problema.md` | planteamiento con los casos didácticos, formulación, objetivos, justificación, delimitación | borrador completo (revisado con la lista de cotejo, [acta R1](../revisiones/R1-capitulo-1.md)) | 2026-09-15 | D3 (objetivos en dos variantes); referencias pendientes marcadas |
 | 6.º | Conclusiones y recomendaciones | `06-conclusiones.md` | respuesta a cada pregunta, limitaciones con nombre, recomendaciones con semilla en el repo | pendiente | — | capítulos IV y V |
 | 7.º | Introducción | `00-introduccion.md` | contexto, problema, aporte y estructura del documento | pendiente | — | todo lo demás |
 

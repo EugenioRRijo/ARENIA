@@ -99,16 +99,6 @@ planning. *Applied Sciences, 12*(19), 9553. https://doi.org/10.3390/app12199553
 - **Verificación:** Crossref, 2026‑09‑15.
 - **Corrección:** el título completo es más largo que el de la lista inicial.
 
-### Franco et al. (2015)
-
-Franco, et al. (2015). [Estudio sobre el tiempo del cómputo métrico basado en BIM].
-
-- **Estado:** pendiente
-- **Falta:** referencia completa. El estado del arte le atribuye la cifra de 50 % a 80 % del tiempo
-  del estimador y la reducción del 80 %; la búsqueda del 2026‑09‑15 solo encontró la cifra citada
-  por otros trabajos (fuente secundaria), no el trabajo de Franco et al. Sin la fuente primaria, esas
-  cifras no se citan.
-
 ### BIMForum (2024)
 
 BIMForum. (2024). *Level of Development (LOD) specification* [Versión en inglés y en español].
@@ -277,6 +267,36 @@ Language Processing (EMNLP)* (pp. 4512–4525). https://doi.org/10.18653/v1/2020
   el método que extiende las representaciones de oraciones a varios idiomas mediante destilación
   de conocimiento.
 
+## Verificación automática basada en reglas
+
+### Eastman et al. (2009)
+
+Eastman, C., Lee, J.-M., Jeong, Y.-S., & Lee, J.-K. (2009). Automatic rule-based checking of
+building designs. *Automation in Construction, 18*(8), 1011–1033.
+https://doi.org/10.1016/j.autcon.2009.07.002
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos; sin resumen), y búsqueda web con el resumen
+  (ScienceDirect y Semantic Scholar).
+- **Afirmación contrastada:** el artículo revisa los sistemas de comprobación de reglas que evalúan
+  diseños de edificaciones según diversos criterios, examina en detalle cinco desarrollos
+  industriales que emplean modelos IFC como entrada y organiza las capacidades funcionales de esos
+  sistemas en cuatro etapas, que sirven de marco de comparación.
+
+### Solihin y Eastman (2015)
+
+Solihin, W., & Eastman, C. (2015). Classification of rules for automated BIM rule checking
+development. *Automation in Construction, 53*, 69–82. https://doi.org/10.1016/j.autcon.2015.03.003
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos; sin resumen), y búsqueda web con el resumen
+  (ScienceDirect y Semantic Scholar).
+- **Afirmación contrastada:** las reglas se clasifican en cuatro clases según su complejidad
+  computacional y los requisitos que imponen al entorno de ejecución; las dos primeras comprueban
+  entidades y valores explícitos del diseño y atributos derivados simples, la tercera requiere
+  estructuras de datos extendidas y la cuarta, demostrar una solución cuando hay varias respuestas
+  aceptables.
+
 ## Antecedentes latinoamericanos y nacionales
 
 ### Quiñones y Uzcátegui (2023)
@@ -347,18 +367,6 @@ http://mriuc.bc.uc.edu.ve/bitstream/handle/123456789/6952/dchacon.pdf
   Daniel Chacón y Génesis Cuervo, tutor José P. Olival. El trabajo compara la metodología BIM con la
   CAD tradicional; sus palabras clave son BIM, Revit, interoperabilidad y parametrización.
 - **Falta:** año de aprobación.
-
-### Implementación de la metodología BIM en la elaboración de presupuestos para proyectos educativos (s.f.)
-
-*Implementación de la metodología BIM en la elaboración de presupuestos para proyectos educativos*
-[Tesis]. (s.f.). Pontificia Universidad Católica del Perú.
-https://tesis.pucp.edu.pe/items/cbbfee11-31ac-4cae-baab-2fe9d8540edd
-
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: la tesis está en el repositorio de la PUCP. Estudia
-  el uso de BIM en la estimación de costos, con el caso de una Escuela Bicentenario modelada con
-  Revit, Presto y Cost-It.
-- **Falta:** autor y año. **No se cita** en los capítulos hasta completarla.
 
 ## Programas de presupuesto de uso regional
 
@@ -442,6 +450,8 @@ codificación y mediciones. Parte II: Edificaciones* (Norma COVENIN 2000-2:1999)
   COVENIN 2000-2:1999, y el catálogo del Centro de Documentación de SENCAMER registra la parte 2
   de la serie, con un suplemento de 1992.
 - **Corrección:** el año de la parte II es 1999 (el número 2000 es el de la norma, no su año).
+- **Forma de cita:** la primera, en el capítulo I, introduce la abreviatura, «Comisión Venezolana
+  de Normas Industriales (COVENIN, 1999)»; las siguientes usan «COVENIN (1999)».
 - **Falta:** título exacto de la edición de 1999 en el catálogo de SENCAMER o de Fondonorma, y
   confirmar en el texto de la norma que asigna a cada partida su unidad y su criterio de medición.
 
@@ -493,3 +503,34 @@ Venezuela. (s.f.).
   Oficial y confirmar si define o permite calcular el FCAS. Es la fuente citable del FCAS (decisión
   D4 del dossier G0); mientras no se confirme, el FCAS se presenta como «parámetro del caso de
   estudio».
+
+---
+
+## Consultadas y no citadas
+
+Fuera de la lista APA 7, que solo admite obras citadas (criterio T9 de la
+[lista de cotejo](rubrica_tutor.md)). Una entrada pasa a su sección temática cuando un capítulo la
+cita; hasta entonces no se traslada al documento final. Se separaron en la revisión del capítulo II
+(Sesión R1.7).
+
+### Franco et al. (2015)
+
+Franco, et al. (2015). [Estudio sobre el tiempo del cómputo métrico basado en BIM].
+
+- **Estado:** pendiente
+- **Falta:** referencia completa. El estado del arte le atribuye la cifra de 50 % a 80 % del tiempo
+  del estimador y la reducción del 80 %; la búsqueda del 2026‑09‑15 solo encontró la cifra citada
+  por otros trabajos (fuente secundaria), no el trabajo de Franco et al. Sin la fuente primaria, esas
+  cifras no se citan.
+
+### Implementación de la metodología BIM en la elaboración de presupuestos para proyectos educativos (s.f.)
+
+*Implementación de la metodología BIM en la elaboración de presupuestos para proyectos educativos*
+[Tesis]. (s.f.). Pontificia Universidad Católica del Perú.
+https://tesis.pucp.edu.pe/items/cbbfee11-31ac-4cae-baab-2fe9d8540edd
+
+- **Estado:** pendiente
+- **Verificación:** búsqueda web, 2026‑09‑15: la tesis está en el repositorio de la PUCP. Estudia
+  el uso de BIM en la estimación de costos, con el caso de una Escuela Bicentenario modelada con
+  Revit, Presto y Cost-It.
+- **Falta:** autor y año. **No se cita** en los capítulos hasta completarla.

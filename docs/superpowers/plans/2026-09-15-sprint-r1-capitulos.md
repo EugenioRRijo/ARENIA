@@ -46,10 +46,10 @@ criterios T1–T14 y sesiones).
 - `evaluar_naturaleza_datos(texto_claude)`: `CLAUDE.md` tiene «Naturaleza de los datos», menciona ARENAZA y declara los datos ficticios.
 - CLI: `--json`. Un documento ausente da PENDIENTE; un documento presente que no cumple da FALLA.
 
-- [ ] **Step 1:** Corregir la naturaleza de los datos en los seis documentos (spec §3).
-- [ ] **Step 2 (RED):** `tests/unit/test_meta_redaccion.py`, con casos positivos y negativos sintéticos por función. Correr: `ImportError`.
-- [ ] **Step 3 (GREEN):** `scripts/meta_redaccion.py`; pruebas en verde; ruff limpio.
-- [ ] **Step 4:** Pruebas negativas sobre documentos reales: `evaluar_naturaleza_datos` sobre el `CLAUDE.md` anterior a la corrección (`git show r-base:CLAUDE.md`) debe dar FALLA, y `evaluar_rubrica` sobre la rúbrica sin T14 también.
+- [x] **Step 1:** Corregir la naturaleza de los datos en los seis documentos (spec §3).
+- [x] **Step 2 (RED):** `tests/unit/test_meta_redaccion.py`, con casos positivos y negativos sintéticos por función. Correr: `ImportError`.
+- [x] **Step 3 (GREEN):** `scripts/meta_redaccion.py`; pruebas en verde; ruff limpio.
+- [x] **Step 4:** Pruebas negativas sobre documentos reales: `evaluar_naturaleza_datos` sobre el `CLAUDE.md` anterior a la corrección (`git show r-base:CLAUDE.md`) debe dar FALLA, y `evaluar_rubrica` sobre la rúbrica sin T14 también.
 - [ ] **Step 5:** Meta → R9 y R12 en OK, las demás en PENDIENTE. Commit `docs(tesis): preparacion del sprint r1 y naturaleza de los datos`.
 
 ### Tasks 2–8 (R1.1–R1.7)

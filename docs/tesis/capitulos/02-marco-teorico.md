@@ -2,7 +2,7 @@
 
 | Capítulo | Estado | Última revisión |
 |---|---|---|
-| II. Marco teórico | en redacción (Sesión R1.6: bases normativas y términos) | 2026-09-15 |
+| II. Marco teórico | borrador completo, revisado con la lista de cotejo (Sesión R1.7) | 2026-09-15 |
 
 ## 2.1 Antecedentes de la investigación
 
@@ -60,11 +60,13 @@ Chacón y Cuervo (s.f.) [verificación pendiente] elaboraron, en la Universidad 
 
 Garnica (s.f.) [verificación pendiente] propuso una metodología integral de gestión de construcción eficiente coordinada mediante BIM. Aporta el antecedente de concebir BIM como eje de coordinación de la gestión de la construcción, y no solo como herramienta de modelado.
 
-En el plano institucional, el Colegio de Ingenieros de Venezuela presentó una propuesta de ley marco para un plan nacional de adopción de BIM (Colegio de Ingenieros de Venezuela, s.f.) [verificación pendiente], lo que sitúa la incorporación de BIM como un asunto de interés gremial en el país.
+En el plano institucional, el Colegio de Ingenieros de Venezuela presentó una propuesta de ley marco para un plan nacional de adopción de BIM (Colegio de Ingenieros de Venezuela, s.f.) [verificación pendiente], lo que sitúa la incorporación de BIM como un asunto de interés gremial en el país. Para esta investigación, ese interés respalda la pertinencia institucional de adaptar BIM‑5D a la estructura de costos venezolana, expuesta en la justificación institucional (sección 1.4.4).
 
 **Síntesis y conclusión de la revisión.** En los trabajos revisados en los tres ámbitos no se localizó ninguno que aplique BIM‑5D a la generación y validación de análisis de precios unitarios con la estructura de costos venezolana, ni que integre el modelo geométrico, el aprendizaje automático, la codificación de partidas y la verificación automática de consistencia. Este vacío, acotado al conjunto revisado, es el que ocupa la investigación. La revisión se ampliará con los trabajos cuya referencia no pudo completarse, registrados como pendientes en la lista de referencias.
 
 ## 2.2 Bases teóricas
+
+Las bases teóricas siguen la cadena del presupuesto que la investigación automatiza: el lugar de la estimación en el ciclo del proyecto, el modelo del que se derivan las cantidades y su nivel de integración con el activo, la estructura del análisis de precios unitarios, las técnicas de aprendizaje automático y de lenguaje natural que lo asisten y la verificación basada en reglas que lo audita.
 
 ### 2.2.1 El ciclo del proyecto y la estimación de costos
 
@@ -129,7 +131,17 @@ Sentence-BERT modifica una red preentrenada para obtener representaciones vector
 
 Para esta investigación, el enfoque tiene una ventaja de diseño decisiva: la asociación entre una descripción y las partidas del catálogo se obtiene comparando representaciones de un modelo ya entrenado, sin necesidad de un conjunto de datos etiquetado por el proyecto, lo que reduce la dependencia de datos del módulo en un contexto donde esos datos escasean.
 
+### 2.2.7 Verificación automática basada en reglas
+
+La comprobación automática de un modelo de construcción contra un conjunto de reglas tiene una tradición propia. Eastman et al. (2009) revisaron los sistemas de comprobación de reglas que evalúan diseños de edificaciones según diversos criterios, examinaron en detalle cinco desarrollos industriales que emplean modelos IFC como entrada y organizaron las capacidades funcionales de esos sistemas en cuatro etapas, que usaron como marco de comparación. Solihin y Eastman (2015) clasificaron las reglas en cuatro clases según su complejidad computacional y lo que exigen del entorno de ejecución: las dos primeras comprueban entidades y valores explícitos del diseño y atributos derivados simples; la tercera requiere estructuras de datos extendidas; y la cuarta, demostrar una solución cuando existen varias respuestas aceptables.
+
+Esa clasificación permite ubicar las verificaciones de esta investigación. Cada una compara magnitudes que están explícitas en el presupuesto o que se derivan de él con operaciones simples: la unidad del cómputo frente a la del análisis de precios unitarios, el acumulado de la curva de inversión frente al total del presupuesto, el factor de depreciación de un mismo equipo en distintas partidas o el balance entre excavación, concreto, tubería y relleno. Se ubican, por tanto, en las dos primeras clases, lo que permite implementarlas como funciones deterministas sobre el presupuesto, sin un motor general de comprobación de reglas.
+
+La diferencia con los sistemas revisados está en el objeto de la comprobación. Aquellos evalúan el diseño de la edificación según criterios de diversa índole; aquí se comprueba la consistencia entre el modelo, el cómputo métrico, el análisis de precios unitarios, el presupuesto y el plan de trabajo, de modo que cada hallazgo señala la cantidad o el monto que la produce.
+
 ## 2.3 Bases normativas
+
+Las bases normativas reúnen las tres referencias que fijan, respectivamente, cómo se codifican y miden las partidas, de dónde procede el costo laboral que entra en cada análisis de precios unitarios y contra qué marco se juzga la exactitud de una estimación.
 
 ### 2.3.1 Norma COVENIN 2000‑2: especificaciones, codificación y mediciones
 
@@ -177,4 +189,4 @@ Los términos se definen en el sentido en que se emplean en esta investigación;
 - **Trazabilidad.** Propiedad por la cual cada cantidad del presupuesto conserva su procedencia, de modo que puede reevaluarse desde su origen.
 - **Utilidad.** Porcentaje que se aplica sobre el costo que ya incluye la administración para obtener el precio unitario (sección 2.2.4).
 - **Valor atípico.** Observación que se aparta del comportamiento del resto de los datos; en esta investigación, un precio o un rendimiento que se aleja de su histórico (sección 2.2.5).
-- **Verificación de consistencia.** Comprobación automática de que magnitudes relacionadas entre sí, como la geometría, el cómputo, el análisis de precios unitarios, el presupuesto y la curva de inversión, concuerdan según reglas declaradas.
+- **Verificación de consistencia.** Comprobación automática de que magnitudes relacionadas entre sí, como la geometría, el cómputo, el análisis de precios unitarios, el presupuesto y la curva de inversión, concuerdan según reglas declaradas (sección 2.2.7).

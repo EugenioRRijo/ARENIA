@@ -143,7 +143,7 @@ La Tabla 1.3 resume las dimensiones que delimitan la investigación.
 | Temática | Estimación de costos de obra civil asociada a instalaciones sanitarias. En la variante A de los objetivos se incluyen, además, los dominios de telecomunicaciones, mantenimiento industrial y sistemas de información como prueba de extensibilidad. |
 | Caso de estudio | Caso didáctico del sistema de drenaje de una clínica: 24 m de tubería de PVC de 4" y cuatro tanquillas de inspección de 0,80 × 0,80 × 0,80 m con paredes de 0,10 m. |
 | Partidas | Cinco: excavación, suministro e instalación de tubería, encofrado, vaciado de concreto y relleno compactado. |
-| Normativa | Codificación de partidas según COVENIN (1999) [verificación pendiente]; FCAS según la convención colectiva de la industria de la construcción (Convención Colectiva de la Industria de la Construcción, s.f.) [verificación pendiente], tratado como parámetro del caso de estudio mientras no se confirme su fuente. |
+| Normativa | Codificación de partidas según la Comisión Venezolana de Normas Industriales (COVENIN, 1999) [verificación pendiente]; FCAS según la convención colectiva de la industria de la construcción (Convención Colectiva de la Industria de la Construcción, s.f.) [verificación pendiente], tratado como parámetro del caso de estudio mientras no se confirme su fuente. |
 | Temporal | Precios del caso didáctico con la fecha declarada en el ejercicio y referencia de precios MaPreX de julio de 2026 (DataLaing, s.f.) [verificación pendiente], expresados en dólares. |
 | Tecnológica | El formato abierto IFC es la frontera entre el modelado y el procesamiento; el cómputo, el costeo y la verificación no dependen del programa con el que se modela. |
 
