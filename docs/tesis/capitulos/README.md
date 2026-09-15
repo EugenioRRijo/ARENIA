@@ -19,9 +19,10 @@ multidominio**, asistido por modelo BIM‑5D y aprendizaje automático.
   inconsistentes entre partidas.
 - **La evidencia.** Un presupuesto de drenaje de una clínica (5 partidas, 1 586,61 USD) con
   **siete inconsistencias** documentadas una a una en [linea_base.md](../../linea_base.md).
-  Es un **caso de ejemplo** con contenido y formato reales de APU, no una obra ejecutada; los
-  APU de casos reales se incorporarán cuando el usuario los suministre
-  ([CLAUDE.md §1](../../../CLAUDE.md#1-qué-es-este-proyecto)).
+  Es un **ejercicio académico ficticio**, igual que los presupuestos ARENAZA: casos
+  **didácticos** con el contenido y el formato de la práctica, no obras ejecutadas ni valores
+  reales ([CLAUDE.md §1](../../../CLAUDE.md#1-qué-es-este-proyecto)). La validación con
+  presupuestos reales es una limitación declarada hasta que el usuario los suministre.
 - **La solución.** El sistema deriva las cantidades de una fuente trazable (IFC, reglas
   paramétricas, tablas), las costea con la estructura venezolana (FCAS, bono, administración y
   utilidad en cascada, todo en `Decimal`), produce presupuesto y curva de inversión, **verifica
