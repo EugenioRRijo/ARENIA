@@ -200,6 +200,17 @@ Lulo Software. (s.f.). *LuloWin* [Software].
 - **Falta:** URL oficial, año de la versión y confirmar las funciones citadas (recálculo ante
   cambios de prestaciones, salarios, administración y utilidad).
 
+## Contexto institucional
+
+### Colegio de Ingenieros de Venezuela (s.f.)
+
+Colegio de Ingenieros de Venezuela. (s.f.). *Segunda propuesta de ley marco para el Plan Nacional
+BIM Venezuela*.
+
+- **Estado:** pendiente
+- **Falta:** título exacto, año, URL y confirmar que el documento existe y propone un plan
+  nacional de incorporación de BIM (lo menciona el estado del arte, sin referencia completa).
+
 ## Normativa y referencias técnicas
 
 ### COVENIN (2000)

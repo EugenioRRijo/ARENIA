@@ -2,7 +2,7 @@
 
 | Capítulo | Estado | Última revisión |
 |---|---|---|
-| I. El problema | en redacción (Sesión R1.1: planteamiento y formulación) | 2026-09-15 |
+| I. El problema | en redacción (Sesión R1.2: objetivos, justificación y delimitación) | 2026-09-15 |
 
 ## 1.1 Planteamiento del problema
 
@@ -61,3 +61,98 @@ De ella se derivan las siguientes preguntas secundarias:
 4. ¿Qué verificaciones automáticas de consistencia pueden implementarse a partir del conocimiento geométrico que un programa de presupuesto convencional no posee?
 5. ¿Qué grado de exactitud alcanza el presupuesto generado automáticamente frente al elaborado por el procedimiento tradicional, medido según las clases de estimación de AACE International?
 6. ¿Puede extenderse el modelo a otros dominios de la ingeniería, como las telecomunicaciones, el mantenimiento industrial y los sistemas de información, sin modificar su núcleo de cálculo y de verificación? *(Esta pregunta corresponde a la variante A de los objetivos; en la variante B, la extensibilidad se examina como resultado complementario y no como pregunta de investigación.)*
+
+## 1.3 Objetivos de la investigación
+
+Los objetivos se presentan en dos variantes porque el alcance de la investigación depende de una decisión pendiente con la tutoría: si la extensibilidad del modelo a otros dominios de la ingeniería constituye un objetivo específico (variante A, con un OE7) o un resultado complementario del diseño (variante B). Ambas variantes comparten los seis objetivos específicos que se listan a continuación de ellas; la elección entre una y otra no altera su redacción.
+
+### Variante A — la extensibilidad multidominio como objetivo
+
+**Objetivo general.** Desarrollar un modelo BIM‑5D asistido por aprendizaje automático para la generación y validación de análisis de precios unitarios, extensible a otros dominios de la ingeniería sin modificar su núcleo, aplicado al caso didáctico de la obra civil del sistema de drenaje de una clínica.
+
+**Objetivos específicos.** Los seis objetivos comunes (OE1 a OE6) y, además:
+
+- **OE7.** Validar la extensibilidad del modelo a otros dominios de la ingeniería mediante adaptadores que no modifiquen su núcleo de cálculo y de verificación.
+
+### Variante B — la extensibilidad como resultado complementario
+
+**Objetivo general.** Desarrollar un modelo BIM‑5D asistido por aprendizaje automático para la generación y validación de análisis de precios unitarios en proyectos de instalaciones sanitarias, aplicado al caso didáctico de la obra civil del sistema de drenaje de una clínica.
+
+**Objetivos específicos.** Los seis objetivos comunes (OE1 a OE6). En esta variante, la extensibilidad a otros dominios se presenta en el capítulo V como resultado complementario del diseño del núcleo de cálculo (OE3), sin constituir un objetivo de la investigación.
+
+### Objetivos específicos comunes a ambas variantes
+
+- **OE1.** Diagnosticar las inconsistencias del procedimiento tradicional de cómputo métrico, análisis de precios unitarios y presupuesto a partir de casos didácticos, estableciendo una línea base cuantificada de inconsistencias y de tiempos de elaboración.
+- **OE2.** Estructurar el modelo tridimensional paramétrico del sistema de instalaciones sanitarias y su procedimiento de extracción automática de cantidades de obra en formato abierto IFC.
+- **OE3.** Diseñar la base de datos de partidas, rendimientos e insumos bajo codificación COVENIN, incorporando de forma explícita las reglas de cálculo del factor de costos asociados al salario, el bono de alimentación y la depreciación de equipos.
+- **OE4.** Implementar los módulos de aprendizaje automático para la normalización semántica de descripciones de partidas, la detección de valores atípicos y la estimación de precios unitarios con la técnica que permita la disponibilidad de datos.
+- **OE5.** Desarrollar el sistema de verificación automática de consistencia entre geometría, cómputo métrico, análisis de precios unitarios, presupuesto y curva de inversión.
+- **OE6.** Evaluar la exactitud y el desempeño del modelo frente al presupuesto de referencia corregido del caso didáctico y frente a precios de referencia publicados, empleando las clases de estimación de AACE International como marco de contraste.
+
+### Correspondencia entre preguntas, objetivos y fases
+
+Cada objetivo específico atiende una pregunta de investigación y se materializa en una fase con un producto verificable, como se resume en la Tabla 1.2.
+
+**Tabla 1.2**
+*Correspondencia entre preguntas de investigación, objetivos específicos y fases*
+
+| Pregunta | Objetivo | Fase | Producto verificable |
+|---|---|---|---|
+| Principal: establecer el punto de partida contra el que se mide la respuesta | OE1 | I. Diagnóstico | línea base cuantificada de inconsistencias del caso didáctico y registro de tiempos de elaboración |
+| Secundaria 1: nivel de desarrollo del modelo | OE2 | II. Modelado y extracción | modelo IFC paramétrico y rutina de extracción de cantidades |
+| Secundaria 2: reglas paramétricas que derivan las cantidades | OE2 | II. Modelado y extracción | reglas paramétricas trazables asociadas a cada cantidad |
+| Principal: análisis de precios unitarios verificables | OE3 | III. Base de datos y motor de costos | base de datos de partidas y motor de costos con FCAS, bono y depreciación explícitos |
+| Secundaria 3: técnica de aprendizaje automático con datos limitados | OE4 | IV. Aprendizaje automático | módulos de normalización, detección de atípicos y estimación de precios |
+| Secundaria 4: verificaciones que aporta el conocimiento geométrico | OE5 | V. Verificación | sistema de auditoría automática y su informe |
+| Secundaria 5: exactitud según AACE International | OE6 | VI. Evaluación | informe de resultados frente a la referencia corregida y a precios de referencia publicados |
+| Secundaria 6 (solo variante A): extensibilidad a otros dominios | OE7 | transversal a las fases III y VI | adaptadores de telecomunicaciones, mantenimiento industrial y sistemas con el núcleo sin modificar |
+
+*Nota.* Elaboración propia. OE1 y OE3 atienden la pregunta principal y no una secundaria: el diagnóstico fija la línea base contra la que se evalúa la respuesta, y la base de datos con su motor de costos es la condición para que los análisis de precios unitarios sean verificables.
+
+## 1.4 Justificación
+
+### 1.4.1 Justificación técnica
+
+Las inconsistencias del caso didáctico son la consecuencia previsible de transcribir información de forma manual entre soportes desconectados. Un procedimiento que derive las cantidades de las reglas paramétricas del modelo haría imposibles por construcción seis de las siete: el encofrado, el concreto y el relleno no podrían adoptar valores ajenos a la geometría; la unidad y el diámetro se heredarían del objeto modelado; y la curva de inversión, generada a partir del propio presupuesto, cerraría por definición. La séptima, el criterio de depreciación de los equipos, no depende de la geometría y exige una regla de verificación que compare el mismo equipo entre partidas. El aporte técnico consiste, por tanto, en que la mayor parte de los errores deje de ser posible, en lugar de detectarse después de cometidos, y en que los restantes se detecten de forma automática.
+
+### 1.4.2 Justificación metodológica
+
+La investigación articula tres campos que la literatura ha desarrollado de manera predominantemente separada: la automatización del cómputo métrico a partir de modelos BIM, la aplicación del aprendizaje automático a la estimación de costos y la particularidad normativa y económica del análisis de precios unitarios en Venezuela. La revisión de antecedentes del capítulo II no identificó trabajos que integren los tres. A ello se suma una decisión de método: dado que la literatura advierte que las redes neuronales dependen fuertemente del volumen de datos y rinden mal con conjuntos pequeños (Tayefeh Hashemi et al., 2020) [verificación pendiente], la investigación declara de antemano los criterios con los que la técnica predictiva se degrada según los datos disponibles, en lugar de ajustarlos después de conocer los resultados.
+
+### 1.4.3 Justificación práctica
+
+El producto está orientado a oficinas de proyecto y a unidades de control de obra. La capa de verificación automática es independiente del resto del sistema, de modo que puede aplicarse a presupuestos elaborados por el procedimiento tradicional, lo que amplía su utilidad más allá del caso de estudio. Además, cada cantidad conserva su procedencia y cada hallazgo de la auditoría señala los elementos involucrados, lo que convierte la revisión de un presupuesto en una tarea reproducible y no dependiente del criterio de quien la ejecuta.
+
+### 1.4.4 Justificación institucional
+
+La incorporación de BIM en la práctica venezolana es incipiente, y el Colegio de Ingenieros de Venezuela ha impulsado una propuesta orientada a un plan nacional para su adopción (Colegio de Ingenieros de Venezuela, s.f.) [verificación pendiente]. La investigación se inscribe en esa dirección con un componente que los flujos BIM‑5D de uso internacional no resuelven de forma nativa: la articulación entre el modelo de información y la estructura de costos derivada de la normativa laboral venezolana.
+
+## 1.5 Alcance y delimitación
+
+### 1.5.1 Delimitación del objeto de estudio
+
+La Tabla 1.3 resume las dimensiones que delimitan la investigación.
+
+**Tabla 1.3**
+*Delimitación de la investigación*
+
+| Dimensión | Delimitación |
+|---|---|
+| Temática | Estimación de costos de obra civil asociada a instalaciones sanitarias. En la variante A de los objetivos se incluyen, además, los dominios de telecomunicaciones, mantenimiento industrial y sistemas de información como prueba de extensibilidad. |
+| Caso de estudio | Caso didáctico del sistema de drenaje de una clínica: 24 m de tubería de PVC de 4" y cuatro tanquillas de inspección de 0,80 × 0,80 × 0,80 m con paredes de 0,10 m. |
+| Partidas | Cinco: excavación, suministro e instalación de tubería, encofrado, vaciado de concreto y relleno compactado. |
+| Normativa | Codificación de partidas según COVENIN (2000) [verificación pendiente]; FCAS según la convención colectiva de la industria de la construcción (Convención Colectiva de la Industria de la Construcción, s.f.) [verificación pendiente], tratado como parámetro del caso de estudio mientras no se confirme su fuente. |
+| Temporal | Precios del caso didáctico con la fecha declarada en el ejercicio y referencia de precios MaPreX de julio de 2026 (DataLaing, s.f.) [verificación pendiente], expresados en dólares. |
+| Tecnológica | El formato abierto IFC es la frontera entre el modelado y el procesamiento; el cómputo, el costeo y la verificación no dependen del programa con el que se modela. |
+
+*Nota.* Elaboración propia.
+
+### 1.5.2 Lo que la investigación no comprende
+
+La delimitación de lo excluido es tan relevante como la de lo incluido, porque previene observaciones sobre alcance no cumplido:
+
+- **Gemelo digital en sentido estricto.** No se instrumenta el activo con sensores ni se implementa una realimentación bidireccional automática. La distinción entre BIM‑5D, sombra digital y gemelo digital se desarrolla en el capítulo II.
+- **Digitalización automática de planos.** El reconocimiento de símbolos en planos escaneados constituye un problema de investigación en sí mismo; el modelo se construye a partir de las dimensiones declaradas en la memoria de cálculo.
+- **Evaluación financiera del proyecto de inversión.** El análisis de rentabilidad asociado al caso no forma parte del objeto de estudio.
+- **Generalización estadística.** Con un diseño de caso único, los resultados no se extrapolan por inferencia estadística; su transferibilidad se apoya en la replicabilidad documentada del procedimiento.
+- **Validación con presupuestos reales.** Los casos disponibles son didácticos: la exactitud se mide frente a la referencia corregida del caso y frente a precios de referencia publicados, no frente a obras ejecutadas. La validación con presupuestos reales queda como limitación hasta disponer de ellos.
