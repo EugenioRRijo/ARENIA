@@ -238,6 +238,46 @@ eficiente (GCE) usando BIM* [Trabajo de grado]. Universidad Católica Andrés Be
 - **Falta:** año, confirmación en el repositorio de la UCAB y su vínculo con la Cámara Venezolana
   de la Construcción (las Bases lo marcan VERIFICAR).
 
+### Carbonell Charchabal et al. (2026)
+
+Carbonell Charchabal, E. D., Reyes Ramírez, A., & Acosta González, L. (2026). Integración de la
+metodología BIM en el sistema presupuestario cubano para el sector de la construcción. *Desarrollo
+Sustentable, Negocios, Emprendimiento y Educación, 8*(76), 37–52.
+https://doi.org/10.51896/rilcods.v8i76.1148
+
+- **Estado:** verificada
+- **Verificación:** búsqueda web, 2026‑09‑15: página del artículo en la revista (Eumed, sistema
+  OJS) con su DOI; autores de la Universidad de Holguín.
+- **Afirmación contrastada:** la implementación de BIM en Cuba está en una fase inicial, limitada
+  principalmente al modelado tridimensional por la complejidad del sistema presupuestario nacional.
+  Asociar cada componente del modelo con su valor económico favorece la automatización del proceso
+  presupuestario, la trazabilidad de los costos y la coherencia entre el diseño técnico y la
+  estimación financiera.
+
+### Chacón y Cuervo (s.f.)
+
+Chacón, D., & Cuervo, G. (s.f.). *Guía multimedia para el modelado paramétrico de edificaciones
+utilizando Revit* [Trabajo especial de grado]. Universidad de Carabobo.
+http://mriuc.bc.uc.edu.ve/bitstream/handle/123456789/6952/dchacon.pdf
+
+- **Estado:** pendiente
+- **Verificación:** repositorio institucional de la Universidad de Carabobo, 2026‑09‑15: autores
+  Daniel Chacón y Génesis Cuervo, tutor José P. Olival. El trabajo compara la metodología BIM con la
+  CAD tradicional; sus palabras clave son BIM, Revit, interoperabilidad y parametrización.
+- **Falta:** año de aprobación.
+
+### Implementación de la metodología BIM en la elaboración de presupuestos para proyectos educativos (s.f.)
+
+*Implementación de la metodología BIM en la elaboración de presupuestos para proyectos educativos*
+[Tesis]. (s.f.). Pontificia Universidad Católica del Perú.
+https://tesis.pucp.edu.pe/items/cbbfee11-31ac-4cae-baab-2fe9d8540edd
+
+- **Estado:** pendiente
+- **Verificación:** búsqueda web, 2026‑09‑15: la tesis está en el repositorio de la PUCP. Estudia
+  el uso de BIM en la estimación de costos, con el caso de una Escuela Bicentenario modelada con
+  Revit, Presto y Cost-It.
+- **Falta:** autor y año. **No se cita** en los capítulos hasta completarla.
+
 ## Programas de presupuesto de uso regional
 
 ### DataLaing (s.f.)
