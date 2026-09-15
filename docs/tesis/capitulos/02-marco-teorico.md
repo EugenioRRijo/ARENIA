@@ -2,7 +2,7 @@
 
 | Capítulo | Estado | Última revisión |
 |---|---|---|
-| II. Marco teórico | en redacción (Sesión R1.5: bases teóricas) | 2026-09-15 |
+| II. Marco teórico | en redacción (Sesión R1.6: bases normativas y términos) | 2026-09-15 |
 
 ## 2.1 Antecedentes de la investigación
 
@@ -128,3 +128,53 @@ Las descripciones de partidas se redactan libremente y varían entre proyectista
 Sentence-BERT modifica una red preentrenada para obtener representaciones vectoriales de oraciones con significado semántico, comparables mediante la similitud del coseno, y reduce drásticamente el tiempo necesario para encontrar las oraciones más parecidas en una colección (Reimers y Gurevych, 2019). Estas representaciones pueden extenderse a varios idiomas mediante destilación de conocimiento (Reimers y Gurevych, 2020), lo que permite trabajar con descripciones en español. La similitud del coseno entre dos vectores es el cociente entre su producto escalar y el producto de sus normas: vale 1 cuando apuntan en la misma dirección y disminuye a medida que se separan.
 
 Para esta investigación, el enfoque tiene una ventaja de diseño decisiva: la asociación entre una descripción y las partidas del catálogo se obtiene comparando representaciones de un modelo ya entrenado, sin necesidad de un conjunto de datos etiquetado por el proyecto, lo que reduce la dependencia de datos del módulo en un contexto donde esos datos escasean.
+
+## 2.3 Bases normativas
+
+### 2.3.1 Norma COVENIN 2000‑2: especificaciones, codificación y mediciones
+
+La norma venezolana COVENIN 2000, en su parte II dedicada a las edificaciones, establece las especificaciones, la codificación y los criterios de medición de las partidas de construcción (COVENIN, 1999) [verificación pendiente]. Para esta investigación cumple dos funciones. En primer lugar, ofrece la codificación normalizada contra la que se asocian las descripciones de partidas redactadas libremente. En segundo lugar, fija la unidad de medida de cada partida, de modo que una discrepancia entre la unidad del cómputo métrico y la unidad del análisis de precios unitarios constituye una inconsistencia verificable, como la que presenta el caso didáctico con la tubería medida en metros y analizada por pieza.
+
+### 2.3.2 Convención colectiva de la industria de la construcción
+
+La convención colectiva de trabajo de la industria de la construcción establece las cláusulas económicas de la relación laboral en el sector y es la base sobre la que se calcula el FCAS (Colegio de Ingenieros de Venezuela, 2018) [verificación pendiente]. La más reciente localizada corresponde a 2023, publicada en Gaceta Oficial Extraordinaria, y se aplica a las empresas afiliadas a las cámaras de la construcción (Convención Colectiva de la Industria de la Construcción, s.f.) [verificación pendiente].
+
+Mientras no se confirme su período de vigencia en la fuente oficial, esta investigación no deriva el valor del FCAS de la convención: lo trata como un parámetro del caso de estudio, explícito y modificable, en coherencia con la advertencia, recogida en la sección 2.2.4, de que el FCAS no es un valor único ni permanente. Esa decisión mantiene el modelo de cálculo válido para cualquier convención vigente, porque el factor entra como dato y no como constante del cálculo.
+
+### 2.3.3 Clasificación de estimaciones de costos de AACE International
+
+La práctica recomendada 18R‑97 de AACE International clasifica las estimaciones de costos en cinco clases. Lo que determina la clase es la madurez de la definición del proyecto, que se juzga por el estado de sus entregables clave de planificación y diseño y no por un porcentaje de avance; cada clase asocia, además, un uso típico, una metodología y un rango de exactitud (AACE International, 2020b). La clase 3 corresponde a una definición de entre el 10 % y el 40 % y a la autorización o el control del presupuesto. Su rango típico de exactitud va de −10 % a −20 % en el extremo inferior y de +10 % a +30 % en el superior; la misma práctica advierte que el rango debe determinarse mediante el análisis de riesgo del proyecto específico y que, con una contingencia adecuadamente tratada, cerca del 80 % de los proyectos cae dentro de los rangos indicados (AACE International, 2020b).
+
+La investigación adopta la clase 3 como marco de contraste externo, declarado de antemano: sin una clase declarada, una desviación no podría calificarse como aceptable o inaceptable. El sistema emplea los extremos de su rango, −20 % y +30 %. Como la clase la determina la madurez de los entregables, que el cómputo se derive de un modelo tridimensional no basta para asignarla; la asignación debe justificarse con la madurez de los entregables del caso de estudio, justificación que corresponde al marco metodológico.
+
+La 18R‑97 se formula para las industrias de proceso. AACE International mantiene una práctica específica para la edificación y la construcción general, la 56R‑08 (AACE International, 2020a) [verificación pendiente], cuyo ámbito corresponde al del caso de estudio. Mientras no se contraste el rango que esa práctica asigna a la clase 3, el contraste se realiza con el de la 18R‑97, que es el declarado en la especificación de requisitos del sistema.
+
+## 2.4 Definición de términos
+
+Los términos se definen en el sentido en que se emplean en esta investigación; cuando un concepto se desarrolla en las secciones anteriores, se indica dónde.
+
+- **Administración.** Porcentaje que se aplica sobre el costo directo para cubrir los gastos generales de la empresa. En el modelo de cálculo precede a la utilidad, que se calcula sobre el costo que ya la incluye (sección 2.2.4).
+- **Análisis de precios unitarios (APU).** Descomposición del precio de una unidad de partida en materiales, equipos y mano de obra, más administración y utilidad; construye un precio por estructura de costos (secciones 2.2.1 y 2.2.4).
+- **Aprendizaje automático.** Conjunto de técnicas que ajustan un modelo a partir de datos para estimar, clasificar o detectar patrones sin programar cada regla de forma explícita (sección 2.2.5).
+- **BIM (modelado de información de construcción).** Representación de un proyecto como un conjunto de objetos con geometría y atributos, en lugar de un conjunto de dibujos (sección 2.2.2).
+- **BIM‑5D.** Dimensión de costos de BIM, que asocia los objetos del modelo con la estimación, el control de costos y los pagos; nivel en el que se ubica el sistema desarrollado (secciones 2.2.2 y 2.2.3).
+- **Bono de alimentación.** Monto que se paga por trabajador y por día, y que en el modelo de cálculo se suma al costo diario de la mano de obra antes de dividir entre el rendimiento (sección 2.2.4).
+- **Clase de estimación.** Categoría de la clasificación de AACE International que se determina por la madurez de la definición del proyecto y a la que se asocia un rango típico de exactitud (sección 2.3.3).
+- **Cómputo métrico.** Medición de las cantidades de obra de cada partida, en la unidad que establece su codificación.
+- **Costo directo.** Suma de los costos de materiales, equipos y mano de obra de una unidad de partida.
+- **Curva de inversión.** Representación del gasto acumulado del presupuesto a lo largo del plan de trabajo; cierra en el total del presupuesto cuando el plan es consistente con él.
+- **Depreciación de equipos.** Factor mayor que cero y no mayor que uno con el que se imputa a una partida la fracción del costo de un equipo que le corresponde; un mismo equipo debe llevar el mismo factor en todas las partidas.
+- **Factor de costos asociados al salario (FCAS).** Porcentaje que expresa los costos que la contratación laboral añade al salario básico y que afecta el costo de la mano de obra; no es un valor único ni permanente (secciones 2.2.4 y 2.3.2).
+- **Gemelo digital.** Modelo de un activo conectado con él mediante instrumentación y con realimentación bidireccional automática, que cierra un lazo de control; queda fuera del alcance de esta investigación (sección 2.2.3).
+- **IFC.** Formato abierto de intercambio de modelos de información de construcción, que en esta investigación separa el modelado del cálculo del presupuesto (sección 2.2.2).
+- **Métricas de desempeño.** El error porcentual absoluto medio (MAPE), la raíz del error cuadrático medio (RMSE) y el coeficiente de determinación (R²), con los que se evalúa la estimación de precios (sección 2.2.5).
+- **Nivel de desarrollo (LOD).** Grado de desarrollo con el que se modela la geometría y la información de un elemento del modelo (sección 2.2.2).
+- **Normalización semántica de partidas.** Asociación de una descripción de partida redactada libremente con las partidas del catálogo mediante la similitud entre sus representaciones vectoriales (sección 2.2.6).
+- **Partida.** Unidad de obra con código, descripción y unidad de medida, sobre la que se construye un análisis de precios unitarios.
+- **Rendimiento.** Cantidad de unidades de partida que se producen por día; divide el costo diario de equipos y mano de obra, pero no el de los materiales (sección 2.2.4).
+- **Similitud del coseno.** Cociente entre el producto escalar de dos vectores y el producto de sus normas; vale 1 cuando los vectores apuntan en la misma dirección (sección 2.2.6).
+- **Sombra digital.** Modelo que incorpora el avance medido en obra con un flujo de información unidireccional del activo hacia el modelo; alcance deseable de esta investigación (sección 2.2.3).
+- **Trazabilidad.** Propiedad por la cual cada cantidad del presupuesto conserva su procedencia, de modo que puede reevaluarse desde su origen.
+- **Utilidad.** Porcentaje que se aplica sobre el costo que ya incluye la administración para obtener el precio unitario (sección 2.2.4).
+- **Valor atípico.** Observación que se aparta del comportamiento del resto de los datos; en esta investigación, un precio o un rendimiento que se aleja de su histórico (sección 2.2.5).
+- **Verificación de consistencia.** Comprobación automática de que magnitudes relacionadas entre sí, como la geometría, el cómputo, el análisis de precios unitarios, el presupuesto y la curva de inversión, concuerdan según reglas declaradas.

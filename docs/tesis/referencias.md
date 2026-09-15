@@ -442,21 +442,42 @@ codificación y mediciones. Parte II: Edificaciones* (Norma COVENIN 2000-2:1999)
   COVENIN 2000-2:1999, y el catálogo del Centro de Documentación de SENCAMER registra la parte 2
   de la serie, con un suplemento de 1992.
 - **Corrección:** el año de la parte II es 1999 (el número 2000 es el de la norma, no su año).
-- **Falta:** título exacto de la edición de 1999 en el catálogo de SENCAMER o de Fondonorma.
+- **Falta:** título exacto de la edición de 1999 en el catálogo de SENCAMER o de Fondonorma, y
+  confirmar en el texto de la norma que asigna a cada partida su unidad y su criterio de medición.
 
-### AACE International (2020)
+### AACE International (2020a)
 
-AACE International. (2020). *Cost estimate classification system: As applied in engineering,
+AACE International. (2020a). *Cost estimate classification system: As applied in engineering,
+procurement, and construction for the building and general construction industries* (Recommended
+Practice No. 56R-08). https://www.pathlms.com/aace/courses/2928/documents/3839
+
+- **Estado:** pendiente
+- **Verificación:** búsqueda web, 2026‑09‑15: la revisión del 7 de agosto de 2020 figura en el sitio
+  de AACE International, y la tabla de contenido de la práctica, en web.aacei.org.
+- **Afirmación contrastada:** su ámbito es la edificación y la construcción general (título de la
+  práctica).
+- **Falta:** rango de exactitud y características que la práctica asigna a la clase 3, consultados en
+  su texto; decidir si sustituye a la 18R‑97 como marco de contraste del sistema.
+
+### AACE International (2020b)
+
+AACE International. (2020b). *Cost estimate classification system: As applied in engineering,
 procurement, and construction for the process industries* (Recommended Practice No. 18R-97).
 https://www.pathlms.com/aace/courses/2928/documents/3803
 
 - **Estado:** verificada
 - **Verificación:** búsqueda web, 2026‑09‑15: la revisión vigente es del 7 de agosto de 2020 (sitio
-  de AACE International y tabla de contenido de la práctica en web.aacei.org).
+  de AACE International y tabla de contenido de la práctica en web.aacei.org). Una segunda búsqueda
+  del mismo día contrastó la característica que determina la clase y la definición de la clase 3 en
+  los extractos de copias y resúmenes de la práctica; no se consultó el texto completo.
+- **Corrección:** año con sufijo «b», porque coexiste con la 56R‑08 del mismo autor y año (APA 7.ª
+  ed., orden alfabético del título).
 - **Afirmación contrastada:** la clase 3 tiene un rango típico de exactitud de −10 % a −20 % en el
   extremo inferior y de +10 % a +30 % en el superior. El rango debe determinarse con análisis de
   riesgo del proyecto, y con una contingencia bien tratada cerca del 80 % de los proyectos cae dentro
-  de los rangos.
+  de los rangos. La madurez de la definición del proyecto determina la clase y se juzga por el estado
+  de los entregables clave, no por el porcentaje; la clase 3 corresponde a una definición del 10 % al
+  40 % y a la autorización o el control del presupuesto.
 
 ### Convención Colectiva de la Industria de la Construcción (s.f.)
 
