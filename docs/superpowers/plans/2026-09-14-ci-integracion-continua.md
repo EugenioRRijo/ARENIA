@@ -11,7 +11,7 @@ guardia, sin extras pesados) y `pruebas` (matriz Linux + Windows con todos los e
 nueva vive en dos scripts pequeños con funciones puras probadas en unidad, que reutilizan los
 auxiliares de `scripts/meta_alpha.py` en vez de duplicarlos.
 
-**Tech Stack:** GitHub Actions (`actions/checkout@v7`, `astral-sh/setup-uv@v10`,
+**Tech Stack:** GitHub Actions (`actions/checkout@v7`, `astral-sh/setup-uv@v10.1.0`,
 `actions/cache@v6`), uv 0.11.9, Python 3.13, pytest + pytest-cov, ruff.
 
 **Spec:** `docs/superpowers/specs/2026-09-14-ci-integracion-continua-design.md`
@@ -434,7 +434,7 @@ jobs:
           fetch-depth: 0
 
       - name: Instalar uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           version: "0.11.9"
           enable-cache: true
@@ -480,7 +480,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Instalar uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           version: "0.11.9"
           enable-cache: true

@@ -55,8 +55,10 @@ equipo) que en cada PR y en cada push a `main` garantice:
 las pruebas). **Shell por defecto:** `bash` en los dos sistemas (Git Bash viene en los runners
 Windows), para que cada comando se escriba una sola vez.
 
-Acciones con versión mayor fijada: `actions/checkout@v7`, `astral-sh/setup-uv@v10` (con
-`version: "0.11.9"`, la de desarrollo, y `enable-cache: true`) y `actions/cache@v6`.
+Acciones fijadas: `actions/checkout@v7` y `actions/cache@v6` por versión mayor, y
+`astral-sh/setup-uv@v10.1.0` por versión exacta, porque ese repositorio no publica la etiqueta
+flotante `v10` (la primera corrida falló al resolverla). `setup-uv` va con `version: "0.11.9"`, la
+de desarrollo, y `enable-cache: true`.
 
 ### 3.1 Job `calidad` (ubuntu-latest, sin extras pesados)
 
