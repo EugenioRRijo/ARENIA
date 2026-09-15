@@ -29,3 +29,32 @@ Los criterios verificables en forma automática (T1, T5, T9–T12) se contrastar
 **Resultado:** aprobado en revisión, con dos correcciones aplicadas (T6, T13) y cuatro observaciones
 respondidas: dos llevadas al tutor académico (T2, T3) y dos que se resuelven en la Sesión R1.4
 (T4, T8). Ningún criterio quedó en «no cumple».
+
+## Anexo — Resolución de T4 y T8 en la Sesión R1.4 (2026-09-15)
+
+Se verificaron las referencias del capítulo con la API de Crossref y con búsquedas web; el detalle
+por entrada está en `docs/tesis/referencias.md`. Cambios en el capítulo I:
+
+- **Wahab y Wang.** El año registrado es 2021 y el título completo termina en «in construction cost
+  estimation». Su resumen no afirma haber documentado diferencias de tiempo y exactitud: indica que
+  la cuantificación se hace mayormente de forma manual o en 2D y que el artículo compara ambos
+  procedimientos elemento por elemento. **La oración exageraba la fuente y se reescribió.**
+- **Pishdad y Onungwa (2024).** Son dos autores, no «et al.». La cita se corrigió y la oración se
+  ajustó al resumen: falta de integración entre los modelos BIM‑5D, el seguimiento del avance y los
+  sistemas de pago, y falta de estandarización en el uso de los elementos del modelo. Se retiró la
+  calificación de «obstáculo principal».
+- **Programas de presupuesto.** La documentación de MaPreX e IP‑3 confirma las funciones citadas.
+  Ninguna documentación consultada afirma ni niega una comprobación de cantidades contra la
+  geometría, así que «no pueden comprobar» y «ninguno de ellos puede» **afirmaban más de lo
+  verificable**. Ambas oraciones se reescribieron como «su documentación no describe». El autor pasó
+  a ser IP-3 Software. La cita conserva la marca de pendiente porque la función de LuloWin solo se
+  confirmó en páginas de terceros.
+- **COVENIN.** La parte II corresponde a la norma 2000-2:1999, y la cita pasó a COVENIN (1999).
+- **Convención colectiva (T8).** Se localizó la de 2023 (Gaceta Oficial Extraordinaria N.° 6.752),
+  pero no su vigencia en fuente oficial. La cita y el formato de documento legal siguen pendientes, y
+  el FCAS se mantiene como parámetro del caso de estudio.
+
+Siguen marcadas como pendientes en el capítulo: Miranda Miranda (año de la edición), Tayefeh Hashemi
+et al. (afirmación sin contrastar con el texto), Lulo Software, Colegio de Ingenieros de Venezuela
+(fecha), COVENIN (título exacto de la edición de 1999) y la convención colectiva. T4 y T8 quedan
+**resueltas en lo verificable**. El resto está declarado y no se cita sin marca.
