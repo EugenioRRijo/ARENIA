@@ -195,6 +195,7 @@ y se buscan sus usos en los capítulos.
 | Suite y cobertura | 395 pruebas · núcleo 98,05 % | `uv run pytest -W error --cov=core` → [plan_pruebas.md §10](../plan_pruebas.md) |
 | Total del caso | 1 586,61 USD · curva 99,30 % | [linea_base.md](../linea_base.md) · `data/linea_base/APUS_CLINICA.pdf` |
 | Siete inconsistencias del caso didáctico (magnitudes) | encofrado 5,92 vs 4,48 m² (+32 %) · concreto 0,415 vs 0,224 m³ (+85 %) · curva 1 575,50 USD, 11,11 USD sin conciliar · relleno 1,30 vs ≈ 8,6 m³ · depreciación 0,03 vs 1,00 | [linea_base.md §5](../linea_base.md) · `tests/fixtures/apu_linea_base.py` |
+| Dimensiones del caso didáctico | 24 m de PVC de 4" · cuatro tanquillas de 0,80 × 0,80 × 0,80 m con paredes de 0,10 m · cinco partidas | [linea_base.md §1](../linea_base.md) · `tests/fixtures/apu_linea_base.py` |
 | Inconsistencia del ejercicio ARENAZA | tubo corrugado 80 m (cómputo) vs 90 m (presupuesto) | [data/telecom/fuentes/README.md](../../data/telecom/fuentes/README.md) · `uv run pytest tests/integration/test_auditoria_arenaza.py` |
 | Metas de sprint | 12/12 | `uv run python scripts/meta_i6.py` |
 | Conteo G2 | civil 5 · resto 0 (< 50) | [resultados_ml.md](../resultados_ml.md) |

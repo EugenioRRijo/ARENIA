@@ -2,7 +2,7 @@
 
 | Capítulo | Estado | Última revisión |
 |---|---|---|
-| I. El problema | en redacción (Sesión R1.2: objetivos, justificación y delimitación) | 2026-09-15 |
+| I. El problema | borrador completo, revisado en la Sesión R1.3 ([acta](../revisiones/R1-capitulo-1.md)); pendiente la revisión del tutor académico | 2026-09-15 |
 
 ## 1.1 Planteamiento del problema
 
@@ -45,7 +45,9 @@ Las inconsistencias del caso didáctico no se atribuyen a la impericia de quien 
 
 El problema, en consecuencia, no es de cálculo sino de trazabilidad. La cadena que va del plano al presupuesto está interrumpida en varios puntos, y esa interrupción hace que los errores sean indetectables por los medios de revisión habituales, que examinan el documento final y no su procedencia. Los programas de presupuesto disponibles resuelven con solvencia la aritmética del APU; lo que ninguno de ellos puede hacer, al no conocer la geometría, es comprobar que las cantidades que reciben sean las del proyecto.
 
-Resolver este problema requiere un procedimiento en el que cada cantidad del presupuesto conserve su procedencia, de modo que pueda reevaluarse desde su origen; en el que las verificaciones de consistencia entre geometría, cómputo, APU, presupuesto y plan de trabajo se ejecuten de forma automática; y en el que el precio construido por estructura de costos pueda contrastarse con precios de referencia del mercado. La prevalencia de estos errores en obras reales no puede establecerse con casos didácticos y queda declarada como limitación de la investigación: los casos muestran el mecanismo, no su frecuencia.
+Resolver este problema requiere un procedimiento en el que cada cantidad del presupuesto conserve su procedencia, de modo que pueda reevaluarse desde su origen; en el que las verificaciones de consistencia entre geometría, cómputo, APU, presupuesto y plan de trabajo se ejecuten de forma automática; y en el que el precio construido por estructura de costos pueda contrastarse con precios de referencia del mercado.
+
+El alcance de esta evidencia debe precisarse. La prevalencia de estos errores en obras reales no puede establecerse con casos didácticos y queda declarada como limitación de la investigación: los casos muestran el mecanismo, no su frecuencia.
 
 ## 1.2 Formulación del problema
 
