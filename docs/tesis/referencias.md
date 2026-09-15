@@ -109,6 +109,18 @@ Franco, et al. (2015). [Estudio sobre el tiempo del cómputo métrico basado en 
   por otros trabajos (fuente secundaria), no el trabajo de Franco et al. Sin la fuente primaria, esas
   cifras no se citan.
 
+### BIMForum (2024)
+
+BIMForum. (2024). *Level of Development (LOD) specification* [Versión en inglés y en español].
+https://bimforum.org/bimforum-level-of-development-lod-specification-2024-in-english-and-spanish-language-version/
+
+- **Estado:** pendiente
+- **Verificación:** búsqueda web, 2026‑09‑15: la especificación 2024 existe en versión inglés y
+  español en el sitio de BIMForum; la edición oficial más reciente es la de 2025.
+- **Falta:** contrastar con el texto de la especificación la definición de los niveles de
+  desarrollo (en particular LOD 300, 350 y 400) y decidir si se cita la edición 2024 en español o
+  la 2025.
+
 ## Aprendizaje automático aplicado a costos
 
 ### Elmousalami (2020)
@@ -155,6 +167,51 @@ https://doi.org/10.1016/j.autcon.2020.103280
 - **Verificación:** Crossref, 2026‑09‑15.
 - **Corrección:** volumen 118 y artículo 103280, no volumen 120 y artículo 103276.
 
+### Breiman (2001)
+
+Breiman, L. (2001). Random forests. *Machine Learning, 45*(1), 5–32.
+https://doi.org/10.1023/A:1010933404324
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos). Se cita como origen del método de bosques
+  aleatorios, sin atribuirle resultados numéricos.
+
+### Chen y Guestrin (2016)
+
+Chen, T., & Guestrin, C. (2016). XGBoost: A scalable tree boosting system. En *Proceedings of the
+22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining* (pp. 785–794).
+https://doi.org/10.1145/2939672.2939785
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos; Crossref registra el título principal
+  «XGBoost»), y búsqueda web con el título completo y el resumen.
+- **Afirmación contrastada:** describe XGBoost como un sistema escalable de potenciación de árboles,
+  de extremo a extremo, con un algoritmo que tiene en cuenta la dispersión de los datos y un esquema
+  de cuantiles ponderados para el aprendizaje aproximado de árboles.
+
+### Aamodt y Plaza (1994)
+
+Aamodt, A., & Plaza, E. (1994). Case-based reasoning: Foundational issues, methodological
+variations, and system approaches. *AI Communications, 7*(1), 39–59.
+https://doi.org/10.3233/AIC-1994-7104
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos). Se cita como obra fundacional del
+  razonamiento basado en casos, sin atribuirle resultados.
+
+### Liu et al. (2008)
+
+Liu, F. T., Ting, K. M., & Zhou, Z.-H. (2008). Isolation forest. En *2008 Eighth IEEE International
+Conference on Data Mining* (pp. 413–422). https://doi.org/10.1109/ICDM.2008.17
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos), y búsqueda web con descripciones del método,
+  incluida la versión extendida de los mismos autores en *ACM Transactions on Knowledge Discovery
+  from Data*.
+- **Afirmación contrastada:** las anomalías son pocas y diferentes, y por eso susceptibles de
+  aislamiento. El método construye un conjunto de árboles de partición aleatoria, y cuanto más corta
+  es la longitud del camino necesario para aislar una observación, mayor es su grado de anomalía.
+
 ## Gemelos digitales y sombra digital
 
 ### Sacks et al. (2020)
@@ -194,6 +251,31 @@ https://doi.org/10.1016/j.aei.2021.101495
   no *Automation in Construction* 142, 104465. Las cifras de clasificación de cláusulas con BERT
   (exactitud 0,889; F1 0,934) que el estado del arte atribuye a estos autores no se localizaron en
   este artículo y no se citan.
+
+### Reimers y Gurevych (2019)
+
+Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence embeddings using siamese BERT-networks.
+En *Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the
+9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)* (pp. 3980–3990).
+https://doi.org/10.18653/v1/D19-1410
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos), y búsqueda web con el resumen (ACL Anthology).
+- **Afirmación contrastada:** Sentence-BERT modifica la red BERT preentrenada con estructuras de
+  redes siamesas y de tripletas para obtener representaciones vectoriales de oraciones con
+  significado semántico, comparables mediante la similitud del coseno, y reduce drásticamente el
+  tiempo de búsqueda del par más similar en una colección.
+
+### Reimers y Gurevych (2020)
+
+Reimers, N., & Gurevych, I. (2020). Making monolingual sentence embeddings multilingual using
+knowledge distillation. En *Proceedings of the 2020 Conference on Empirical Methods in Natural
+Language Processing (EMNLP)* (pp. 4512–4525). https://doi.org/10.18653/v1/2020.emnlp-main.365
+
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos). Se cita, en los términos de su título, como
+  el método que extiende las representaciones de oraciones a varios idiomas mediante destilación
+  de conocimiento.
 
 ## Antecedentes latinoamericanos y nacionales
 
@@ -333,6 +415,20 @@ https://www.civ.net.ve/noticia/propuesta-de-ley-marco-del-civ-para-la-difusion-y
   ruta de ocho fases hasta 2030. Sostiene la afirmación del capítulo I.
 - **Corrección:** el título es el de la ley marco del Plan Nacional BIM Venezuela.
 - **Falta:** fecha de publicación de la noticia en el sitio del CIV.
+
+### Colegio de Ingenieros de Venezuela (2018)
+
+Colegio de Ingenieros de Venezuela, Departamento de Análisis y Costos. (2018). *Importancia del
+factor de costos asociados al salario (FCAS)*.
+
+- **Estado:** pendiente
+- **Verificación:** búsqueda web, 2026‑09‑15: documento atribuido al Departamento de Análisis y
+  Costos del CIV (febrero de 2018), localizado en un sitio de terceros. Según ese documento, el FCAS
+  es un porcentaje producto de un modelo matemático que estima los costos asociados al salario a
+  partir de las condiciones esperadas de la obra; no es un valor único ni permanente; los valores
+  de las guías referenciales del CIV son solo referenciales; y el cálculo se basa en las cláusulas
+  económicas de la convención colectiva de la construcción.
+- **Falta:** localizar el documento en una fuente oficial del CIV y confirmar autor y fecha.
 
 ## Normativa y referencias técnicas
 

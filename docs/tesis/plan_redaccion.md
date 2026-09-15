@@ -196,6 +196,8 @@ y se buscan sus usos en los capítulos.
 | Total del caso | 1 586,61 USD · curva 99,30 % | [linea_base.md](../linea_base.md) · `data/linea_base/APUS_CLINICA.pdf` |
 | Siete inconsistencias del caso didáctico (magnitudes) | encofrado 5,92 vs 4,48 m² (+32 %) · concreto 0,415 vs 0,224 m³ (+85 %) · curva 1 575,50 USD, 11,11 USD sin conciliar · relleno 1,30 vs ≈ 8,6 m³ · depreciación 0,03 vs 1,00 | [linea_base.md §5](../linea_base.md) · `tests/fixtures/apu_linea_base.py` |
 | Dimensiones del caso didáctico | 24 m de PVC de 4" · cuatro tanquillas de 0,80 × 0,80 × 0,80 m con paredes de 0,10 m · cinco partidas | [linea_base.md §1](../linea_base.md) · `tests/fixtures/apu_linea_base.py` |
+| Parámetros de costo del caso didáctico | FCAS 6,00 (600 %) · bono de alimentación 1,00 USD por obrero y día · administración 15 % · utilidad 10 %, en cascada | `core/contracts/apu.py` (`ParametrosCosto`) · [CLAUDE.md §4](../../CLAUDE.md) |
+| Umbrales de la compuerta G2 (técnica según datos) | más de 200 registros por dominio: XGBoost con bosques aleatorios como contraste · de 50 a 200: razonamiento basado en casos · menos de 50: sistema de reglas con análisis de sensibilidad | [CLAUDE.md §8.1](../../CLAUDE.md) · `ml/prediction/reglas.py` (`tecnica_para`) |
 | Inconsistencia del ejercicio ARENAZA | tubo corrugado 80 m (cómputo) vs 90 m (presupuesto) | [data/telecom/fuentes/README.md](../../data/telecom/fuentes/README.md) · `uv run pytest tests/integration/test_auditoria_arenaza.py` |
 | Metas de sprint | 12/12 | `uv run python scripts/meta_i6.py` |
 | Conteo G2 | civil 5 · resto 0 (< 50) | [resultados_ml.md](../resultados_ml.md) |
