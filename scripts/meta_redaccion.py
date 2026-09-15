@@ -81,11 +81,17 @@ ENCABEZADOS_GEMELO: tuple[str, ...] = (
     "definicion de terminos",
 )
 
-_PRIMERA_PERSONA = re.compile(
-    r"\b(nosotros|nosotras|nuestros?|nuestras?|hemos|realizamos|proponemos|presentamos|"
-    r"consideramos|planteamos|desarrollamos|analizamos|buscamos|pretendemos|creemos|observamos|"
-    r"encontramos|obtuvimos|hicimos|diseñamos|implementamos|evaluamos|auditamos)\b",
-    re.IGNORECASE,
+_PRONOMBRES_PRIMERA_PERSONA = re.compile(
+    r"\b(nosotros|nosotras|nuestros?|nuestras?|hemos)\b", re.IGNORECASE
+)
+#: Primera persona del plural en cualquier verbo, no en una lista cerrada (una prueba sobre el
+#: capitulo real mostro que "empleamos" pasaba). Solo letras sin tilde: "ultimos", "prestamos" o
+#: "minimos" llevan tilde en el texto y la vocal acentuada impide el limite de palabra.
+_VERBO_PRIMERA_PLURAL = re.compile(r"\b([a-zñ]+(?:amos|emos|imos))\b", re.IGNORECASE)
+#: Sustantivos y adjetivos sin tilde con la misma terminacion.
+_NO_VERBOS: frozenset[str] = frozenset(
+    {"amos", "ramos", "tramos", "gramos", "kilogramos", "reclamos", "remos", "extremos",
+     "supremos", "primos", "racimos", "mimos"}
 )
 _TABLA_ESTADO = re.compile(
     r"^\|\s*capitulo\s*\|\s*estado\s*\|\s*ultima revision\s*\|", re.MULTILINE
@@ -218,7 +224,13 @@ def evaluar_primera_persona(textos: Mapping[str, str]) -> tuple[Estado, str]:
         return Estado.PENDIENTE, "sin capitulos que revisar"
     hallazgos = []
     for nombre, texto in textos.items():
-        palabras = sorted({m.group(1).lower() for m in _PRIMERA_PERSONA.finditer(texto)})
+        pronombres = {m.group(1).lower() for m in _PRONOMBRES_PRIMERA_PERSONA.finditer(texto)}
+        verbos = {
+            m.group(1).lower()
+            for m in _VERBO_PRIMERA_PLURAL.finditer(texto)
+            if m.group(1).lower() not in _NO_VERBOS
+        }
+        palabras = sorted(pronombres | verbos)
         if palabras:
             hallazgos.append(f"{nombre}: {', '.join(palabras)}")
     if hallazgos:

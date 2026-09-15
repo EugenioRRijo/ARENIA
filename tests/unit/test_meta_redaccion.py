@@ -187,6 +187,22 @@ def test_primera_persona_falla_citando_capitulo_y_palabra():
     assert "cap1" in evidencia and "nuestro" in evidencia and "realizamos" in evidencia
 
 
+def test_primera_persona_con_verbos_fuera_de_una_lista_cerrada():
+    """Una prueba sobre el capitulo real mostro que "empleamos" pasaba: la deteccion no puede
+    depender de una lista de verbos. Los sustantivos y adjetivos terminados igual no cuentan.
+    """
+    con_verbos = "Para examinar el mecanismo empleamos un caso y decidimos auditarlo."
+    sin_verbos = (
+        "La tubería tiene cuatro tramos; los últimos préstamos y los mínimos extremos no cambian."
+    )
+
+    estado, evidencia = meta.evaluar_primera_persona({"cap1": con_verbos})
+
+    assert estado is Estado.FALLA
+    assert "empleamos" in evidencia and "decidimos" in evidencia
+    assert meta.evaluar_primera_persona({"cap1": sin_verbos})[0] is Estado.OK
+
+
 def test_sin_capitulos_que_revisar_pendiente():
     assert meta.evaluar_primera_persona({})[0] is Estado.PENDIENTE
 
