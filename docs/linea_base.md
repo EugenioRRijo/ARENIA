@@ -5,6 +5,11 @@ elaborado por el procedimiento tradicional (croquis → cómputo en hoja de cál
 → plan de trabajo). Es simultáneamente la **línea base de comparación** (indicador 2) y la **evidencia
 empírica del problema** (indicador 1: siete inconsistencias que el sistema debe detectar).
 
+> **Naturaleza del caso.** Este presupuesto es un caso de **ejemplo**: reproduce el contenido y el
+> formato reales de un APU venezolano, pero no corresponde a una obra ejecutada. Los APU de casos
+> reales que el usuario suministre en el futuro se versionarán como evidencia adicional en `data/`
+> sin sustituir esta línea base ([CLAUDE.md §1](../CLAUDE.md#1-qué-es-este-proyecto)).
+
 | Versión | Dónde |
 |---|---|
 | Evidencia primaria | [`data/linea_base/APUS_CLINICA.pdf`](../data/linea_base/APUS_CLINICA.pdf) |

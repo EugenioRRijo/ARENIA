@@ -195,15 +195,6 @@ y se buscan sus usos en los capítulos.
 
 ## 6. Tablero de avance
 
-Se actualiza al cerrar cada sesión de redacción (una fila por capítulo, como la bitácora de un
-sprint):
-
-| Capítulo | Archivo | Estado | Bloqueado por |
-|---|---|---|---|
-| IV. Desarrollo | `capitulos/04-desarrollo.md` | pendiente | — |
-| V. Resultados | `capitulos/05-resultados.md` | pendiente | juicio de expertos (parcial, declarable) |
-| III. Metodológico | `capitulos/03-marco-metodologico.md` | pendiente | — |
-| II. Marco teórico | `capitulos/02-marco-teorico.md` | pendiente | D4 (como nota) |
-| I. El problema | `capitulos/01-el-problema.md` | pendiente | D3 (objetivos en dos variantes) |
-| Conclusiones | `capitulos/06-conclusiones.md` | pendiente | capítulos IV y V |
-| Introducción | `capitulos/00-introduccion.md` | pendiente | todo lo demás |
+El tablero vive en un solo lugar: [capitulos/README.md](capitulos/README.md) (índice y estado de
+los capítulos, con el resumen del proyecto para quien llega de nuevo). Se actualiza al cerrar
+cada sesión de redacción, como la bitácora de un sprint.

@@ -18,6 +18,12 @@ de 0,80 × 0,80 × 0,80 m con paredes de 0,10 m, cinco partidas, 1 586,61 USD), 
 fue auditado y presenta **siete inconsistencias** que el sistema debe detectar (y hacer imposibles por
 construcción). Detalle en [docs/linea_base.md](docs/linea_base.md).
 
+**Naturaleza de la línea base.** El presupuesto de la clínica es un caso de **ejemplo**: ilustra el
+contenido y el formato reales de un APU y es la línea base normativa de las pruebas, pero no proviene
+de una obra ejecutada. Cuando el usuario suministre APU utilizados en casos reales, se incorporarán
+como evidencia adicional en `data/` (con fixture propio en `tests/fixtures/`) sin sustituir esta
+línea base, salvo decisión explícita documentada en `docs/bitacora/`.
+
 **Hipótesis central.** El núcleo (`core/`) no cambia cuando se agrega un dominio. Se demuestra con
 `git diff --stat core/` vacío tras implementar los adaptadores telecom, industrial y sistemas
 (Sesión I5) y con la prueba `tests/unit/test_arquitectura.py`, que falla si un adaptador importa algo
@@ -92,7 +98,7 @@ administración = 0,15 · utilidad = 0,10. El rendimiento se expresa en unidades
 Los dos errores más probables al implementar el motor, y que las pruebas vigilan explícitamente:
 dividir los materiales entre el rendimiento; sumar administración y utilidad en vez de encadenarlas.
 
-### Cinco APU reales verificados (USD, 28/04/2026)
+### Cinco APU de la línea base, verificados (USD, 28/04/2026)
 
 | Partida | Unidad | Rend. | Materiales | Equipos Σ | MO Σsueldo / obreros | Costo directo | **PU** |
 |---|---|---|---|---|---|---|---|
