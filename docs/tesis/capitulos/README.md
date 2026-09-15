@@ -49,7 +49,7 @@ Estados: `pendiente` → `en redacción` → `borrador completo` → `revisado p
 | 2.º | V. Resultados y evaluación | `05-resultados.md` | los cinco indicadores con cifra y procedencia; ISO/IEC 25010; IEEE 829 | pendiente | — | juicio de expertos (parcial, declarable) |
 | 3.º | III. Marco metodológico | `03-marco-metodologico.md` | tipo y diseño, fases, instrumentos, compuertas como decisión metodológica | pendiente | — | — |
 | 4.º | II. Marco teórico | `02-marco-teorico.md` | antecedentes, BIM‑5D, sombra digital, estructura del APU, ML, bases normativas | pendiente | — | D4 (como nota) |
-| 5.º | I. El problema | `01-el-problema.md` | planteamiento con el caso, formulación, objetivos, justificación, delimitación | pendiente | — | D3 (objetivos en dos variantes) |
+| 5.º | I. El problema | `01-el-problema.md` | planteamiento con los casos didácticos, formulación, objetivos, justificación, delimitación | en redacción (Sprint R1) | 2026-09-15 | D3 (objetivos en dos variantes) |
 | 6.º | Conclusiones y recomendaciones | `06-conclusiones.md` | respuesta a cada pregunta, limitaciones con nombre, recomendaciones con semilla en el repo | pendiente | — | capítulos IV y V |
 | 7.º | Introducción | `00-introduccion.md` | contexto, problema, aporte y estructura del documento | pendiente | — | todo lo demás |
 
