@@ -1,7 +1,11 @@
-# Prototipo de composición de APU — diseño
+# AREN.IA — prototipo de composición de APU · diseño
 
 **Fecha:** 2026-09-16 · **Rama:** `inc/PLAN-prototipo` · **Base:** etiqueta `p-base` (`471b3e2`)
-**Plan que lo ejecuta:** `PLAN_PROTOTIPO.md` (13 sesiones, tres compuertas)
+**Plan que lo ejecuta:** `PLAN_PROTOTIPO.md` (14 sesiones, tres compuertas)
+
+**AREN.IA** es el nombre del prototipo que se entrega a ARENAZA después de la defensa. La «IA» del
+nombre no es una promesa a futuro: son las piezas de aprendizaje automático que el repositorio ya
+tiene construidas y probadas, y que hoy no están conectadas a ninguna pantalla (sección 3.7).
 
 ---
 
@@ -34,8 +38,9 @@ que la práctica existe—; el respaldo normativo está en la sección 5.
 **Entra:** componer una partida desde la interfaz (tres tablas de insumos, unidad, rendimiento),
 ver el precio unitario desglosarse en vivo, guardar y **editar** la partida, asignarle cantidades de
 obra, generar el presupuesto con su curva, auditarlo con las siete reglas y exportarlo a Excel.
-Más: las primeras pruebas automatizadas de interfaz del repositorio, un juego de datos de
-demostración y un corpus simulado para probar con volumen.
+Más: conectar a esa pantalla las cuatro ayudas de aprendizaje automático que ya existen y están
+desconectadas (§3.7), las primeras pruebas automatizadas de interfaz del repositorio, un juego de
+datos de demostración y un corpus simulado para probar con volumen.
 
 **No entra:** bimoneda real en el motor (se diseña, no se implementa — sección 3.5); endpoints de
 API para crear partidas (la interfaz llama a `core` directo, como las ocho páginas existentes);
@@ -146,6 +151,27 @@ resolución de insumos y registrando un rendimiento nuevo en lugar de pisar el a
 `core/catalog/` no está entre los contratos congelados de `CLAUDE.md` §5: es trabajo ordinario.
 El `commit` lo hace la interfaz, como en `ui/paginas/actualizacion.py`.
 
+### 3.7 La «IA» de AREN.IA: cablear lo que ya existe
+
+El repositorio tiene cuatro piezas de aprendizaje automático construidas, probadas y **desconectadas
+de toda pantalla de composición**, porque cuando se escribieron esa pantalla no existía. La
+composición manual es exactamente el lugar donde sirven:
+
+| Pieza | Dónde vive | Qué hace al componer |
+|---|---|---|
+| Partidas similares (UC‑03) | `ml/normalization/` | Al escribir la descripción, propone composiciones de partidas parecidas del catálogo para partir de algo en vez de una tabla vacía |
+| Precios atípicos | `ml/anomaly/` | Avisa si un precio tecleado se aparta del histórico del insumo. Nunca impide guardar |
+| Propuesta de rendimiento | `core/catalog/rendimientos.py` | Precarga el rendimiento con su dispersión (§3.3) |
+| Estimación por reglas | `ml/prediction/` | Contrasta el precio unitario recién compuesto contra la estimación, con el marco AACE |
+
+Ninguna de las cuatro bloquea: todas sugieren o avisan. Esa es la condición de diseño — la persona
+que hace el análisis decide, tal como exige §3.3. Y ninguna obliga a tocar `core/`: la pantalla las
+invoca desde `ui/`, con importación perezosa para que la interfaz siga arrancando sin el extra `ml`,
+como ya hace `ui/paginas/similares.py`.
+
+La compuerta **G2 no se revierte**: la estimación sigue siendo el sistema de reglas con análisis de
+sensibilidad declarado como limitación. Cablear no es reentrenar.
+
 ---
 
 ## 4. Arquitectura
@@ -246,7 +272,7 @@ meta del sprint falla si algo de `ml/` lo referencia. G2 sigue cruzada con degra
 |---|---|---|
 | **P0** documentar | `P0.1` ERS (UC‑10 componer, UC‑11 editar, RF nuevos); transcripción de la nota de campo y archivo de las fuentes primarias de la sección 5 —LOTTT, convención colectiva, Ley del Seguro Social— en `docs/fuentes/` · `P0.2` arquitectura y **D9 al tutor** | **GP0** |
 | **P1** núcleo | `P1.1` modalidad de mano de obra y motor, con pruebas antes que implementación · `P1.2` `reemplazar_composicion` y lista MAPREX en USD, más la siembra de rendimientos de la línea base | |
-| **P2** pantalla | `P2.1` funciones puras de composición · `P2.2` las tres tablas y el desglose en vivo · `P2.3` buscador MAPREX y autocompletado de depreciación | |
+| **P2** pantalla | `P2.1` funciones puras de composición · `P2.2` las tres tablas y el desglose en vivo · `P2.3` buscador MAPREX y autocompletado de depreciación · `P2.4` las cuatro ayudas de aprendizaje automático, todas como sugerencia y ninguna bloqueante (§3.7) | |
 | **P3** flujo | `P3.1` presupuesto, auditoría y Excel · `P3.2` caso de demostración y regresión de la línea base | **GP1** |
 | **P4** pruebas | `P4.1` primeras pruebas de interfaz del repositorio · `P4.2` siembra de demostración y guión IEEE 829 · `P4.3` corpus simulado y su cuarentena | **GP2** |
 | **P5** cerrar | `P5.1` navegación curada para la entrega, bitácora y manuales | |
