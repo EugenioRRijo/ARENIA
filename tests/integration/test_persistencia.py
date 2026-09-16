@@ -389,6 +389,49 @@ def test_reemplazar_composicion_sin_cambios_no_agrega_rendimiento(sesion):
     assert Catalogo(sesion).composicion("LB-05-REL") == linea_base.APU_RELLENO
 
 
+def test_reemplazar_composicion_tras_un_medido_no_deja_el_estimado_obsoleto(sesion):
+    """Regresion: `_registrar_rendimiento_si_cambia` comparaba contra el ultimo rendimiento de
+    CUALQUIER tipo, pero `composicion()` reconstruye el APU con el ultimo ESTIMADO (via
+    `_rendimiento_estimado`). Si entre medio se registra un MEDIDO con el mismo valor y
+    condiciones que la edicion siguiente, la comparacion contra "cualquiera" concluye que nada
+    cambio y no registra el ESTIMADO nuevo -- `composicion()` sigue devolviendo el rendimiento
+    viejo, en silencio.
+    """
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    condiciones = "cuadrilla ampliada, compactadora nueva"
+
+    sesion.add(
+        models.Ejecucion(
+            referencia="EJ-REL-01",
+            fecha_inicio=date(2026, 7, 1),
+            descripcion="Relleno compactado, tramo medido",
+        )
+    )
+    sesion.flush()
+    catalogo.registrar_rendimiento(
+        contracts.Rendimiento(
+            codigo_partida="LB-05-REL",
+            valor=Decimal("9"),
+            tipo=contracts.TipoRendimiento.MEDIDO,
+            fecha=date(2026, 7, 1),
+            condiciones=condiciones,
+            referencia_ejecucion="EJ-REL-01",
+        )
+    )
+
+    corregido = replace(linea_base.APU_RELLENO, rendimiento=Decimal("9"))
+    catalogo.reemplazar_composicion(
+        corregido,
+        lista,
+        contracts.Dominio.CIVIL,
+        date(2026, 7, 2),
+        condiciones=condiciones,
+    )
+
+    assert Catalogo(sesion).composicion("LB-05-REL").rendimiento == Decimal("9")
+
+
 def test_reemplazar_composicion_agrega_rendimiento_solo_si_cambian_condiciones(sesion):
     """Arreglo 2, complemento: mismo valor pero condiciones distintas si cuenta como cambio."""
     catalogo = Catalogo(sesion)

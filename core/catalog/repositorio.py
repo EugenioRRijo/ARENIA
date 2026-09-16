@@ -304,14 +304,19 @@ class Catalogo:
     ) -> None:
         """Añade un rendimiento ESTIMADO solo si el valor o las condiciones cambiaron (arreglo 2).
 
-        Compara contra el último rendimiento de la partida (cualquier tipo, el más reciente por
-        fecha e id, igual que `proponer_rendimiento`). Repetir un rendimiento idéntico no es
-        evidencia: es la misma patología que el ruling de la siembra (`scripts/seed.py`) evitó a
-        propósito para la línea base, reintroducida aquí por cada edición de UC‑11 antes de este
-        arreglo.
+        Compara contra el último rendimiento ESTIMADO de la partida (el más reciente por fecha e
+        id), no contra el último de cualquier tipo: el consumidor que importa es `composicion()`,
+        que reconstruye el APU con `_rendimiento_estimado`, filtrado estrictamente por
+        `tipo == ESTIMADO`. Comparar contra el último de cualquier tipo (incluido un MEDIDO
+        registrado entre medio con `registrar_rendimiento`) podía concluir que «no cambió nada» y
+        omitir el ESTIMADO nuevo aunque el MEDIDO no sea lo que `composicion()` lee: el rendimiento
+        vigente quedaba obsoleto en silencio. Repetir un rendimiento idéntico tampoco es evidencia:
+        es la misma patología que el ruling de la siembra (`scripts/seed.py`) evitó a propósito
+        para la línea base, reintroducida aquí por cada edición de UC‑11 antes de este arreglo.
         """
         historico = self.rendimientos(composicion.codigo_partida)
-        anterior = historico[-1] if historico else None
+        estimados = [r for r in historico if r.tipo is TipoRendimiento.ESTIMADO]
+        anterior = estimados[-1] if estimados else None
         if (
             anterior is not None
             and anterior.valor == composicion.rendimiento
