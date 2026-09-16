@@ -1,0 +1,91 @@
+"""Modalidad de mano de obra por linea: jornal frente a destajo.
+
+El destajo es el salario por unidad de obra del articulo 114 de la LOTTT: entra completo al precio
+unitario, sin factor de costos asociados al salario, sin bono de alimentacion y sin dividirse entre
+el rendimiento. Ver docs/bitacora/2026-09-16-P0-hallazgo-destajo.md y la decision D9.
+"""
+
+from __future__ import annotations
+
+from decimal import Decimal
+
+from core.contracts.apu import (
+    ComposicionAPU,
+    LineaManoObra,
+    ModalidadManoObra,
+    ParametrosCosto,
+)
+from core.costing import calcular_apu
+from tests.fixtures import apu_linea_base as lb
+
+TOLERANCIA = Decimal("0.01")
+
+
+def _mixta() -> ComposicionAPU:
+    """Una partida con un ayudante a jornal y un instalador a destajo."""
+    return ComposicionAPU(
+        codigo_partida="X-01",
+        descripcion="Instalacion de piso ceramico",
+        unidad="m2",
+        rendimiento=Decimal("50"),
+        mano_obra=(
+            LineaManoObra("Ayudante", Decimal("2"), Decimal("3")),
+            LineaManoObra(
+                "Instalador a destajo",
+                Decimal("1"),
+                Decimal("6"),
+                ModalidadManoObra.DESTAJO,
+            ),
+        ),
+    )
+
+
+def test_una_linea_sin_modalidad_es_jornal():
+    linea = LineaManoObra("Albanil de 1ra", Decimal("1"), Decimal("5"))
+
+    assert linea.modalidad is ModalidadManoObra.JORNAL
+
+
+def test_el_destajo_entra_completo():
+    """6 USD por m2 instalado son 6 USD en el APU: ni FCAS, ni bono, ni division."""
+    composicion = ComposicionAPU(
+        codigo_partida="X-02",
+        descripcion="Instalacion a destajo",
+        unidad="m2",
+        rendimiento=Decimal("50"),
+        mano_obra=(
+            LineaManoObra(
+                "Instalador", Decimal("1"), Decimal("6"), ModalidadManoObra.DESTAJO
+            ),
+        ),
+    )
+
+    resultado = calcular_apu(composicion, ParametrosCosto())
+
+    assert resultado.mano_obra == Decimal("6")
+
+
+def test_total_obreros_excluye_el_destajo():
+    """Un subcontratista que cobra por metro no devenga bono de alimentacion."""
+    assert _mixta().total_obreros == Decimal("2")
+
+
+def test_la_composicion_mixta_suma_los_dos_bloques():
+    parametros = ParametrosCosto()
+    composicion = _mixta()
+
+    resultado = calcular_apu(composicion, parametros)
+
+    jornal = (
+        Decimal("2") * Decimal("3") * (1 + parametros.fcas)
+        + parametros.bono_alimentacion * Decimal("2")
+    ) / Decimal("50")
+    assert resultado.mano_obra == jornal + Decimal("6")
+
+
+def test_la_linea_base_no_se_mueve():
+    """Caracterizacion: con todas las lineas en JORNAL, el resultado es el de siempre."""
+    for apu in lb.APUS_LINEA_BASE:
+        resultado = calcular_apu(apu, lb.PARAMETROS_LINEA_BASE)
+        esperado = lb.PRECIO_UNITARIO_ESPERADO[apu.codigo_partida]
+        assert abs(resultado.precio_unitario - esperado) <= TOLERANCIA, apu.codigo_partida
