@@ -76,6 +76,19 @@ RUTA_BITACORA = RAIZ / "docs" / "bitacora"
 #: Carpetas que nunca contienen el generador del corpus simulado ni las pruebas que corren.
 CARPETAS_EXCLUIDAS: tuple[str, ...] = (".git", ".venv", "__pycache__", "node_modules")
 
+#: Los unicos `.md` de docs/fuentes/ que NO son "documentos archivados" con procedencia externa:
+#: el propio indice y la transcripcion de una comunicacion personal (contenido propio del
+#: proyecto, no una fuente que fichar). Se nombran explicitamente, no por extension: un `.md`
+#: nuevo en docs/fuentes/ (p. ej. la captura de una pagina web archivada como procedencia) SI debe
+#: ficharse, y P2 debe fallar si no aparece mencionado en el README (hallazgo de la ronda 1).
+ARCHIVOS_FUENTES_SIN_FICHA: tuple[str, ...] = ("README.md", "2026-09-16-nota-practica-apu.md")
+
+#: Ruta fija del generador del corpus simulado. El nombre lo fija el plan, no es una suposicion:
+#: `PLAN_PROTOTIPO.md` (Sesion P4.3) y el spec de diseno
+#: (docs/superpowers/specs/2026-09-16-prototipo-composicion-apu-design.md, linea 190) declaran
+#: `scripts/simular_corpus.py`.
+GENERADOR_CORPUS_SIMULADO: tuple[str, ...] = ("scripts", "simular_corpus.py")
+
 
 def metas_hasta(fase: str) -> list[str]:
     """Codigos de las metas de `fase` y de todas las fases anteriores, en orden P0 -> P5."""
@@ -256,11 +269,10 @@ def _leer(ruta: Path) -> str | None:
 
 
 def _archivos_de_fuentes(raiz_fuentes: Path) -> tuple[str, ...]:
-    """Documentos archivados a fichar: todo archivo de la carpeta salvo las notas `.md`.
-
-    El propio README.md y cualquier otra nota en Markdown que viva en `docs/fuentes/` (p. ej. una
-    transcripcion de comunicacion personal) no son "documentos archivados" con procedencia externa
-    que fichar: son contenido propio del proyecto sobre la carpeta.
+    """Documentos archivados a fichar: todo archivo de la carpeta salvo los de
+    `ARCHIVOS_FUENTES_SIN_FICHA`, nombrados de forma explicita (no por extension `.md`): un `.md`
+    nuevo que se archive como fuente (p. ej. una captura de pagina web) debe aparecer aqui y, si el
+    README no lo menciona, P2 debe fallar en vez de quedar ciega ante el.
     """
     if not raiz_fuentes.is_dir():
         return ()
@@ -268,7 +280,7 @@ def _archivos_de_fuentes(raiz_fuentes: Path) -> tuple[str, ...]:
         sorted(
             ruta.name
             for ruta in raiz_fuentes.iterdir()
-            if ruta.is_file() and ruta.suffix.lower() != ".md"
+            if ruta.is_file() and ruta.name not in ARCHIVOS_FUENTES_SIN_FICHA
         )
     )
 
@@ -284,16 +296,17 @@ def _alguna_prueba_usa_apptest(raiz_tests: Path) -> bool:
 
 
 def _generador_corpus_simulado(raiz: Path) -> Path | None:
-    """Ruta del script que genera el corpus simulado, si ya existe en el repositorio."""
-    patron = re.compile(r"corpus.*simulado|simulado.*corpus", re.IGNORECASE)
-    if not raiz.is_dir():
-        return None
-    for ruta in sorted(raiz.rglob("*.py")):
-        if any(parte in CARPETAS_EXCLUIDAS for parte in ruta.parts):
-            continue
-        if patron.search(ruta.name):
-            return ruta
-    return None
+    """Ruta del script que genera el corpus simulado, si ya existe en el repositorio.
+
+    Se comprueba la ruta fija `GENERADOR_CORPUS_SIMULADO` en vez de adivinar con un patron de
+    nombre: la primera version de esta meta usaba `corpus.*simulado|simulado.*corpus`, que NUNCA
+    casa con el nombre real (`scripts/simular_corpus.py`, con raiz "simul-", no "simulado-") que
+    fijan `PLAN_PROTOTIPO.md` (Sesion P4.3) y el spec de diseno. Con ese patron, P11 se habria
+    quedado en PENDIENTE para siempre incluso despues de que la Sesion P4.3 creara el generador
+    (hallazgo de la ronda 1). Una ruta fija es menos adivinatoria y evita ese error.
+    """
+    ruta = raiz.joinpath(*GENERADOR_CORPUS_SIMULADO)
+    return ruta if ruta.is_file() else None
 
 
 def _referencias_ml_a_corpus(raiz_ml: Path, generador: Path) -> tuple[str, ...]:
