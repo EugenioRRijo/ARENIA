@@ -46,11 +46,20 @@ RUTA_POR_DEFECTO = "data/apu.db"
 #: una cuadrilla real. Se escriben para que la siembra de la base sea trazable, siguiendo la misma
 #: exigencia que la pantalla de composicion (fase P2) le hara a cualquier rendimiento nuevo.
 CONDICIONES_LINEA_BASE: dict[str, str] = {
-    "LB-01-EXC": "cuadrilla de cinco obreros, terreno sin roca, excavacion manual con pala y pico",
+    "LB-01-EXC": (
+        "cuadrilla de cinco obreros (operador de equipo y dos choferes incluidos), excavacion "
+        "mecanizada con retroexcavadora y acarreo en camion de volteo"
+    ),
     "LB-02-TUB": "cuadrilla de tres obreros, tuberia PVC de 4 pulgadas, zanja abierta y nivelada",
     "LB-03-ENC": "cuadrilla de cuatro obreros, encofrado de madera reutilizable, paredes rectas",
-    "LB-04-CON": "cuadrilla de seis obreros, concreto premezclado vaciado por gravedad, sin bombeo",
-    "LB-05-REL": "cuadrilla de seis obreros, material granular en sitio, compactacion manual",
+    "LB-04-CON": (
+        "cuadrilla de seis obreros, concreto dosificado y mezclado en sitio con mezcladora, "
+        "consolidado con vibrador de concreto"
+    ),
+    "LB-05-REL": (
+        "cuadrilla de seis obreros, material granular en sitio, compactacion mecanizada con "
+        "compactadora tipo sapo y agua para control de humedad"
+    ),
 }
 
 _TABLAS_DEL_RESUMEN = (
