@@ -163,13 +163,42 @@ class Catalogo:
                 "volver a cargarla (reemplazarla en silencio duplicaría sus líneas)"
             )
 
-        resumen = ResumenCarga(partida=partida)
-        lineas = lineas_de(composicion)
-        insumos = [self._resolver_insumo(linea, lista, resumen) for linea in lineas]
-        self._sesion.add_all(a_modelo_lineas(lineas, partida, insumos))
-        self._sesion.add(a_modelo_rendimiento_estimado(composicion, partida, fecha_rendimiento))
+        return self._cargar_lineas(partida, composicion, lista, fecha_rendimiento)
+
+    def reemplazar_composicion(
+        self,
+        composicion: ComposicionAPU,
+        lista: models.ListaPrecios,
+        dominio: Dominio,
+        fecha_rendimiento: date,
+    ) -> ResumenCarga:
+        """Sustituye el desglose de una partida existente y registra un rendimiento nuevo.
+
+        El rendimiento anterior NO se pisa: queda en el histórico, porque la serie de
+        rendimientos de una partida es evidencia (UC-11). No hace `commit`: eso es de la capa
+        que llama, como en `cargar_composicion`.
+
+        `dominio` se acepta por simetría de firma con `cargar_composicion` y no se usa: la
+        partida ya existe y su dominio no cambia al corregir su desglose.
+
+        `.clear()` fuerza la carga de la colección `partida.composicion` (hace falta para saber
+        qué borrar). `_cargar_lineas` inserta las líneas nuevas con `partida_id` explícito
+        (`a_modelo_lineas`), sin pasar por esa colección ORM, así que tras el `flush()` la
+        colección en memoria queda vacía y obsoleta: una lectura posterior de `partida.composicion`
+        (p. ej. `Catalogo.composicion()`, que la recorre para reconstruir el contrato) vería cero
+        líneas aunque ya estén en la base. Se expira el atributo para que la próxima lectura
+        dispare una consulta nueva en vez de servir la colección cacheada.
+        """
+        partida = self._buscar_partida(composicion.codigo_partida)
+        if partida is None:
+            raise LookupError(
+                f"no se puede reemplazar la composición de {composicion.codigo_partida}: "
+                "la partida no existe en el catálogo"
+            )
+        partida.composicion.clear()
         self._sesion.flush()
-        return resumen
+        self._sesion.expire(partida, ["composicion"])
+        return self._cargar_lineas(partida, composicion, lista, fecha_rendimiento)
 
     def registrar_rendimiento(self, rendimiento: Rendimiento) -> models.Rendimiento:
         """Persiste un rendimiento del contrato. Un MEDIDO exige una `Ejecucion` ya registrada."""
@@ -223,6 +252,22 @@ class Catalogo:
             )
             is not None
         )
+
+    def _cargar_lineas(
+        self,
+        partida: models.Partida,
+        composicion: ComposicionAPU,
+        lista: models.ListaPrecios,
+        fecha_rendimiento: date,
+    ) -> ResumenCarga:
+        """Persiste líneas, insumos, precios y el rendimiento estimado de una partida ya creada."""
+        resumen = ResumenCarga(partida=partida)
+        lineas = lineas_de(composicion)
+        insumos = [self._resolver_insumo(linea, lista, resumen) for linea in lineas]
+        self._sesion.add_all(a_modelo_lineas(lineas, partida, insumos))
+        self._sesion.add(a_modelo_rendimiento_estimado(composicion, partida, fecha_rendimiento))
+        self._sesion.flush()
+        return resumen
 
     def _resolver_insumo(
         self, linea: LineaCatalogo, lista: models.ListaPrecios, resumen: ResumenCarga

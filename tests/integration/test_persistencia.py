@@ -7,6 +7,7 @@ Las comparaciones son por igualdad de dataclass del contrato; no interviene el m
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
@@ -257,6 +258,48 @@ def test_cargar_composicion_dos_veces_lanza_valueerror(sesion):
     assert _contar(sesion, models.ComposicionAPU) == lineas_antes
     assert _contar(sesion, models.Rendimiento) == rendimientos_antes
     assert Catalogo(sesion).composicion("LB-05-REL") == linea_base.APU_RELLENO
+
+
+def test_reemplazar_composicion_permite_corregir_una_partida(sesion):
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    corregido = replace(
+        linea_base.APU_RELLENO,
+        rendimiento=linea_base.APU_RELLENO.rendimiento + Decimal("1"),
+    )
+
+    resumen = catalogo.reemplazar_composicion(
+        corregido, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+    )
+
+    assert resumen.partida.codigo == "LB-05-REL"
+    assert Catalogo(sesion).composicion("LB-05-REL") == corregido
+
+
+def test_reemplazar_conserva_el_rendimiento_anterior_en_el_historico(sesion):
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    original = linea_base.APU_RELLENO.rendimiento
+    corregido = replace(linea_base.APU_RELLENO, rendimiento=original + Decimal("1"))
+
+    catalogo.reemplazar_composicion(
+        corregido, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+    )
+
+    valores = [rendimiento.valor for rendimiento in catalogo.rendimientos("LB-05-REL")]
+    assert original in valores
+    assert corregido.rendimiento in valores
+
+
+def test_reemplazar_una_partida_inexistente_lanza_lookuperror(sesion):
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    inventada = replace(linea_base.APU_RELLENO, codigo_partida="LB-99-NADA")
+
+    with pytest.raises(LookupError, match="LB-99-NADA"):
+        catalogo.reemplazar_composicion(
+            inventada, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+        )
 
 
 def test_script_seed_crea_la_base(tmp_path):
