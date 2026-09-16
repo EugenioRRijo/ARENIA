@@ -64,7 +64,7 @@ El destajo no es una preferencia de interfaz: es una modalidad salarial tipifica
 Orgánica del Trabajo, los Trabajadores y las Trabajadoras y regulada específicamente para el sector
 construcción por su convención colectiva. Verificado en fuente primaria el 2026‑09‑16:
 
-**LOTTT, artículo 114** (`docs/fuentes/LOTTT_GO_6076_Ext_2012-05-07.txt`, líneas 2276‑2284; Gaceta
+**LOTTT, artículo 114** (`docs/fuentes/LOTTT_GO_6076_Ext_2012-05-07.txt`, líneas 2276‑2283; Gaceta
 Oficial N.º 6.076 Extraordinario, 7 de mayo de 2012):
 
 > Salario por unidad de obra, por pieza o a destajo. Artículo 114. Se entenderá que el salario ha

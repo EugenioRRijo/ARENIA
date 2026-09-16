@@ -14,6 +14,18 @@ MaPreX es una referencia de mercado del sector construccion venezolano, no una r
 cotizaciones vigente levantada para este proyecto: sirve para contrastar los precios que el
 sistema construye, no para sustituir la lista de precios de ningun presupuesto real.
 
+ADVERTENCIA sobre `tipo=equipo`: la columna `precio` de la salida es el valor de reposicion del
+activo completo (lo que cuesta comprarlo), NO una tarifa diaria de uso. Por ejemplo, la fila
+`equipo,CAMION VOLTEO 8 M3 FORD 7000 O SIM,dia,113244.4451` no significa que el camion cueste
+113 244,4451 USD por dia: ese numero es el precio del camion nuevo. El CSV crudo de origen
+(`referencia_civil.csv` y hermanos) trae ademas `factor_depreciacion` (0,004000 para ese camion),
+y es `precio x factor_depreciacion` lo que aproxima una tarifa diaria (≈ 453 USD/dia). El formato
+canonico de cuatro columnas (`tipo,insumo,unidad,precio`) no tiene donde poner ese factor: quien
+componga un APU con un equipo de esta lista debe ir a buscar `factor_depreciacion` al CSV crudo,
+igual que exige `LineaEquipo.depreciacion` (`core/contracts/apu.py`) y la regla R6
+(`CriterioDepreciacion`), que pide que el factor viva declarado en la composicion, no en la lista
+de precios.
+
 Que hace `filas_canonicas()`
 -----------------------------
 1. Lee los cuatro CSV de origen con `csv.DictReader` (no con un troceo por comas: varias

@@ -92,7 +92,7 @@ publicado en el marco teórico.
 **Hallazgo relacionado, a favor de la fórmula vigente del motor.** La Cláusula 20 de la misma
 convención colectiva dice que el beneficio que respalda el bono de alimentación *«no tiene
 carácter salarial, a ningún efecto legal o contractual»*
-(`docs/fuentes/CCT_Construccion_GO_6752_Ext_2023-07-06.txt`, líneas 837‑841). El motor
+(`docs/fuentes/CCT_Construccion_GO_6752_Ext_2023-07-06.txt`, líneas 837‑840). El motor
 (`core/costing/motor.py`) ya suma el bono aparte del bloque de sueldos y **no** lo multiplica por
 `(1 + fcas)` (ver la fórmula de CLAUDE.md §4: `bono × Σ cantidad`, fuera del paréntesis que sí
 lleva FCAS). La decisión de diseño resulta estar normativamente respaldada; no requiere cambio.
@@ -140,7 +140,7 @@ puede expresar hoy: `LineaManoObra` (`core/contracts/apu.py`) solo modela `descr
 `calcular_apu` (`core/costing/motor.py`) aplica `(1 + fcas)`, suma el bono por obrero y divide
 entre el rendimiento a **toda** línea de `composicion.mano_obra` por igual. El destajo no es una
 preferencia de interfaz: la LOTTT lo tipifica como forma de estipular el salario (artículo 114,
-`docs/fuentes/LOTTT_GO_6076_Ext_2012-05-07.txt`, líneas 2276‑2284: *«se entenderá que el salario
+`docs/fuentes/LOTTT_GO_6076_Ext_2012-05-07.txt`, líneas 2276‑2283: *«se entenderá que el salario
 ha sido estipulado por unidad de obra, por pieza o a destajo, cuando se toma en cuenta la obra
 realizada por el trabajador o trabajadora, sin usar como medida el tiempo empleado para
 ejecutarla»*) y la Convención Colectiva de Trabajo para la Rama de la Industria de la Construcción

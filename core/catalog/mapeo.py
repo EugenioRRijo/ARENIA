@@ -231,12 +231,17 @@ def a_modelo_rendimiento(
 
 
 def a_modelo_rendimiento_estimado(
-    composicion: ComposicionAPU, partida: models.Partida, fecha: date
+    composicion: ComposicionAPU, partida: models.Partida, fecha: date, condiciones: str = ""
 ) -> models.Rendimiento:
     """El rendimiento ESTIMADO que declara un APU del contrato, listo para persistir.
 
     Pasa por `contracts.Rendimiento` a propósito: así el valor queda validado por las invariantes
     del contrato (mayor que cero) antes de tocar la base de datos.
+
+    `condiciones` es opcional aquí porque `cargar_composicion` (usado por `scripts/seed.py`) las
+    declara por fuera, editando el modelo después de persistirlo (RF-33 no la alcanza: nace junto
+    con la partida, no la corrige). `reemplazar_composicion` sí la exige y la pasa explícita: es
+    el criterio de aceptación de RF-33 (revisión final, arreglo 1).
     """
     return a_modelo_rendimiento(
         Rendimiento(
@@ -244,6 +249,7 @@ def a_modelo_rendimiento_estimado(
             valor=composicion.rendimiento,
             tipo=TipoRendimiento.ESTIMADO,
             fecha=fecha,
+            condiciones=condiciones,
         ),
         partida,
     )

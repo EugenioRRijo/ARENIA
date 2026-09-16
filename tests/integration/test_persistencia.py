@@ -269,7 +269,11 @@ def test_reemplazar_composicion_permite_corregir_una_partida(sesion):
     )
 
     resumen = catalogo.reemplazar_composicion(
-        corregido, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+        corregido,
+        lista,
+        contracts.Dominio.CIVIL,
+        linea_base.FECHA_LINEA_BASE,
+        condiciones="cuadrilla ampliada a siete obreros",
     )
 
     assert resumen.partida.codigo == "LB-05-REL"
@@ -283,7 +287,11 @@ def test_reemplazar_conserva_el_rendimiento_anterior_en_el_historico(sesion):
     corregido = replace(linea_base.APU_RELLENO, rendimiento=original + Decimal("1"))
 
     catalogo.reemplazar_composicion(
-        corregido, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+        corregido,
+        lista,
+        contracts.Dominio.CIVIL,
+        linea_base.FECHA_LINEA_BASE,
+        condiciones="cuadrilla ampliada a siete obreros",
     )
 
     valores = [rendimiento.valor for rendimiento in catalogo.rendimientos("LB-05-REL")]
@@ -298,8 +306,107 @@ def test_reemplazar_una_partida_inexistente_lanza_lookuperror(sesion):
 
     with pytest.raises(LookupError, match="LB-99-NADA"):
         catalogo.reemplazar_composicion(
-            inventada, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+            inventada,
+            lista,
+            contracts.Dominio.CIVIL,
+            linea_base.FECHA_LINEA_BASE,
+            condiciones="cuadrilla ampliada a siete obreros",
         )
+
+
+def test_reemplazar_composicion_exige_condiciones_no_vacias(sesion):
+    """RF-33: no se persiste una composicion cuyo rendimiento no declare condiciones (arreglo 1).
+
+    Antes del arreglo, `reemplazar_composicion` ni siquiera aceptaba `condiciones`: llamaba a
+    `a_modelo_rendimiento_estimado` sin ese dato y dejaba un `Rendimiento` con `condiciones=''`
+    en cada edicion de UC-11. La reproduccion manual (script efimero sobre `data/apu.db`
+    sembrada) lo confirmo antes de tocar el codigo: la segunda fila impresa traia
+    `condiciones=''`.
+    """
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    corregido = replace(
+        linea_base.APU_RELLENO,
+        rendimiento=linea_base.APU_RELLENO.rendimiento + Decimal("1"),
+    )
+
+    for condiciones_vacias in ("", "   "):
+        with pytest.raises(ValueError, match="condiciones"):
+            catalogo.reemplazar_composicion(
+                corregido,
+                lista,
+                contracts.Dominio.CIVIL,
+                linea_base.FECHA_LINEA_BASE,
+                condiciones=condiciones_vacias,
+            )
+
+
+def test_reemplazar_composicion_propaga_las_condiciones_al_rendimiento(sesion):
+    """Arreglo 1: el rendimiento que registra la edicion trae las condiciones que se declararon."""
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    corregido = replace(
+        linea_base.APU_RELLENO,
+        rendimiento=linea_base.APU_RELLENO.rendimiento + Decimal("1"),
+    )
+
+    catalogo.reemplazar_composicion(
+        corregido,
+        lista,
+        contracts.Dominio.CIVIL,
+        linea_base.FECHA_LINEA_BASE,
+        condiciones="cuadrilla ampliada a siete obreros",
+    )
+
+    rendimientos = catalogo.rendimientos("LB-05-REL")
+    assert rendimientos[-1].condiciones == "cuadrilla ampliada a siete obreros"
+    assert all(rendimiento.condiciones for rendimiento in rendimientos)
+
+
+def test_reemplazar_composicion_sin_cambios_no_agrega_rendimiento(sesion):
+    """Arreglo 2: repetir el mismo valor y las mismas condiciones no anade una fila al historico.
+
+    Es la patologia que el ruling de la tarea 7 elimino de la siembra (`4f2075a`), reintroducida
+    por `reemplazar_composicion`: registrar un rendimiento nuevo en cada edicion, aunque nada
+    cambie, deja `obs=2, min=8, max=8` (varianza cero) y hace que cualquier valor futuro dispare
+    `advertencia_rendimiento`. Reemplazar las lineas con la misma composicion no debe tocar el
+    historico de rendimientos.
+    """
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    antes = catalogo.rendimientos("LB-05-REL")
+
+    catalogo.reemplazar_composicion(
+        linea_base.APU_RELLENO,
+        lista,
+        contracts.Dominio.CIVIL,
+        linea_base.FECHA_LINEA_BASE,
+        condiciones=antes[-1].condiciones,
+    )
+
+    despues = catalogo.rendimientos("LB-05-REL")
+    assert despues == antes
+    assert Catalogo(sesion).composicion("LB-05-REL") == linea_base.APU_RELLENO
+
+
+def test_reemplazar_composicion_agrega_rendimiento_solo_si_cambian_condiciones(sesion):
+    """Arreglo 2, complemento: mismo valor pero condiciones distintas si cuenta como cambio."""
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    antes = catalogo.rendimientos("LB-05-REL")
+
+    catalogo.reemplazar_composicion(
+        linea_base.APU_RELLENO,
+        lista,
+        contracts.Dominio.CIVIL,
+        linea_base.FECHA_LINEA_BASE,
+        condiciones="compactacion manual, sin compactadora",
+    )
+
+    despues = catalogo.rendimientos("LB-05-REL")
+    assert len(despues) == len(antes) + 1
+    assert despues[-1].condiciones == "compactacion manual, sin compactadora"
+    assert despues[-1].valor == linea_base.APU_RELLENO.rendimiento
 
 
 def test_script_seed_crea_la_base(tmp_path):
