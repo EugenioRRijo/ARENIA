@@ -40,9 +40,7 @@ def test_seed_carga_cinco_partidas_y_una_lista(sesion):
     assert _contar(sesion, models.Proyecto) == 1
     assert _contar(sesion, models.Partida) == len(linea_base.APUS_LINEA_BASE)
     assert _contar(sesion, models.ListaPrecios) == 1
-    # Dos por partida: el estimado sin condiciones de cargar_composicion y el de la siembra con
-    # las condiciones del caso didactico (CONDICIONES_LINEA_BASE, scripts/seed.py).
-    assert _contar(sesion, models.Rendimiento) == 2 * len(linea_base.APUS_LINEA_BASE)
+    assert _contar(sesion, models.Rendimiento) == len(linea_base.APUS_LINEA_BASE)
 
     lista = sesion.scalars(select(models.ListaPrecios)).one()
     assert lista.moneda == linea_base.MONEDA
@@ -166,10 +164,7 @@ def test_rendimiento_medido_exige_ejecucion(sesion):
     assert medido.tipo == contracts.TipoRendimiento.MEDIDO.value
 
     rendimientos = Catalogo(sesion).rendimientos("LB-01-EXC")
-    # Dos estimados de la siembra (sin condiciones el de cargar_composicion, con condiciones el
-    # del caso didactico) mas el medido que acaba de registrar esta prueba.
     assert [rendimiento.tipo for rendimiento in rendimientos] == [
-        contracts.TipoRendimiento.ESTIMADO,
         contracts.TipoRendimiento.ESTIMADO,
         contracts.TipoRendimiento.MEDIDO,
     ]
@@ -334,4 +329,4 @@ def test_la_siembra_deja_rendimientos_estimados_con_condiciones(sesion):
     for codigo in CODIGOS:
         registrados = catalogo.rendimientos(codigo)
         assert registrados, codigo
-        assert any(rendimiento.condiciones for rendimiento in registrados), codigo
+        assert all(rendimiento.condiciones for rendimiento in registrados), codigo
