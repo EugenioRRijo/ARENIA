@@ -617,6 +617,27 @@ El adaptador civil añade sus reglas paramétricas como texto trazable
 `REGLA_EXCAVACION_ZANJA`, `REGLA_TUBERIA`, `REGLA_VOLUMEN_TUBERIA`, `REGLA_RELLENO` en
 `adapters/civil/reglas.py`) y las evalúa con `adapters/civil/evaluador.py::evaluar_regla`.
 
+### 2.4 Composición de partidas en la UI (`ui/composicion.py`, Sesión P1)
+
+`ui/composicion.py` es **lógica pura probada sin Streamlit**: arma y valida una `ComposicionAPU` a
+partir de las líneas que el proyectista teclea (UC‑10, UC‑11) — incluida la modalidad de mano de
+obra por línea de la decisión D9 ([dossier_g0.md](dossier_g0.md#d9-modalidad-de-mano-de-obra-por-linea-cambio-a-un-contrato-declarado-estable))
+— y se prueba con `tests/unit/` como el resto del núcleo, sin depender de un `AppTest` ni de un
+servidor Streamlit.
+
+`ui/paginas/componer.py` **solo pinta**: llama a `ui/composicion.py` para el cálculo y la
+validación y a `core.catalog.Catalogo` para persistir, sin lógica de negocio propia. Es el mismo
+reparto que ya usan las páginas existentes — `ui/paginas/similares.py` separa la composición
+(`ml.normalization`) de la pintura, y `ui/paginas/visor.py` aísla el import perezoso del extra
+`civil` del resto de la página.
+
+Las ayudas de aprendizaje automático (la referencia de precio de mercado sugerida, RF‑35) se
+invocan **desde `ui/`, con importación perezosa, nunca desde `core/`**: mismo criterio que
+`ml.normalization` en `_cargar_normalizacion()` de `ui/paginas/similares.py` y que el resto de
+`ml/` en la API (`docs/bitacora/2026-08-31-sprint-i6.md`). `core/` no importa `ml` (ADR 2,
+CLAUDE.md §2); si `ui/composicion.py` llegara a necesitar que el núcleo conociera `ml`, sería un
+hallazgo para documentar en `docs/bitacora/`, no un import que se agrega en silencio.
+
 ## 3. Vista de proceso
 
 El sistema es de **un solo proceso y un solo hilo**: no hay concurrencia que documentar, y esa es una
