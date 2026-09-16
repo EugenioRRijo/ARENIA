@@ -30,3 +30,23 @@ en la Sesión R1.7 y la meta se volvió a correr sobre el resultado.
 **Resultado:** aprobado en revisión, con cinco correcciones aplicadas (T2, T7, T8, T9, T13) y dos
 observaciones llevadas al tutor académico: la elección entre 18R‑97 y 56R‑08 (T4) y la base de OE7
 si se elige la variante A (T2). Ningún criterio quedó en «no cumple».
+
+## Anexo — Correcciones de la sesión de referencias (2026-09-15)
+
+- **T4 — la observación sobre AACE ya tiene cifras.** Se consiguió el texto completo de la 56R‑08
+  (revisión del 5 de diciembre de 2012): su clase 3 abarca una definición del 10 % al 40 % y admite
+  de −5 % a −15 % y de +10 % a +20 %, menos holgura que la 18R‑97. La sección 2.3.3 lo dice con esas
+  cifras. La elección entre ambas prácticas sigue siendo del tutor académico y su justificación
+  corresponde al marco metodológico.
+- **T4 — norma COVENIN.** El título registrado estaba cruzado con el de las partes I (carreteras) y
+  III (obras hidráulicas). La sección 2.3.1 pasó a «Mediciones y codificación de partidas para
+  estudios, proyectos y construcción. Parte II.A», y el documento de 1999 se identificó como el
+  suplemento n.º 1 de la norma de 1992.
+- **T4 — convención colectiva.** La sección 2.3.2 se reescribió: la convención **no menciona** el
+  FCAS, así que tratarlo como parámetro del caso de estudio ya no se apoya en que faltara confirmar
+  su vigencia, sino en un hecho verificado del texto.
+- **T7 y T9 — antecedentes nacionales.** «Garnica (s.f.)» pasó a «Garnica Patiño (2017)», de la
+  Universidad Metropolitana y no de la Universidad Católica Andrés Bello, y el Colegio de Ingenieros
+  de Venezuela, a (2022). Quiñones y Uzcátegui y Chacón y Cuervo conservan su marca porque sus
+  repositorios no respondieron; el detalle está en la
+  [bitácora de la sesión](../../bitacora/2026-09-15-referencias-pendientes.md).

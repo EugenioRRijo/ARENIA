@@ -66,3 +66,22 @@ et al. (afirmación sin contrastar con el texto), Lulo Software, Colegio de Inge
   de Normas Industriales (COVENIN, 1999)»; las siguientes, en el capítulo II, usan «COVENIN (1999)».
   La revisión mostró además que la meta R5 rechazaba la forma parentética con corchetes, y se
   corrigió con una prueba nueva ([acta del capítulo II](R1-capitulo-2.md), T8).
+
+## Anexo — Correcciones de la sesión de referencias (2026-09-15)
+
+Al completar las referencias pendientes se corrigieron dos atribuciones del capítulo:
+
+- **T4 — FCAS y convención colectiva.** El capítulo afirmaba que el FCAS «depende» de la convención
+  colectiva vigente y citaba solo la convención. La lectura íntegra de la Gaceta Oficial N.° 6.752
+  Extraordinario, del 6 de julio de 2023, muestra que su texto **no menciona** ese factor: quien lo
+  calcula y lo publica es el Colegio de Ingenieros de Venezuela a partir de sus cláusulas económicas.
+  La oración pasó a citar cada fuente en su papel, «(Colegio de Ingenieros de Venezuela, 2018;
+  Convención Colectiva de la Industria de la Construcción, 2023)», y la Tabla 1.3 se ajustó igual.
+- **T4 — Tayefeh Hashemi et al. (2020).** El capítulo les atribuía que «las redes neuronales
+  dependen fuertemente del volumen de datos y rinden mal con conjuntos pequeños». El resumen del
+  artículo no lo dice: la oración se reescribió para atribuirles solo el repertorio de métodos que
+  documenta su revisión sistemática.
+- **T10 — marcas retiradas.** Ya no llevan marca las citas de COVENIN (1999), de la convención
+  (2023), del CIV (2022) ni de DataLaing. De las referencias que cita este capítulo solo siguen
+  pendientes Miranda Miranda y Lulo Software, con el motivo anotado en la
+  [bitácora de la sesión](../../bitacora/2026-09-15-referencias-pendientes.md).
