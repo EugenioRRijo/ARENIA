@@ -28,7 +28,14 @@ from sqlalchemy import func, select  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from core import models  # noqa: E402
-from core.catalog import Catalogo, abrir_sesion, crear_esquema, crear_motor  # noqa: E402
+from core.catalog import (  # noqa: E402
+    Catalogo,
+    abrir_sesion,
+    crear_esquema,
+    crear_motor,
+    registrar_rendimiento,
+)
+from core.contracts.apu import TipoRendimiento  # noqa: E402
 from core.contracts.dominio import Dominio  # noqa: E402
 from tests.fixtures import apu_linea_base as linea_base  # noqa: E402
 
@@ -39,6 +46,19 @@ DESCRIPCION_PROYECTO = (
 )
 ORIGEN_LISTA = "APUS_CLINICA.pdf"
 RUTA_POR_DEFECTO = "data/apu.db"
+
+#: Condiciones bajo las que se estimo cada rendimiento de la linea base.
+#:
+#: Son supuestos declarados de un caso didactico, no mediciones de obra ejecutada: nadie cronometro
+#: una cuadrilla real. Se escriben para que la siembra de la base sea trazable, siguiendo la misma
+#: exigencia que la pantalla de composicion (fase P2) le hara a cualquier rendimiento nuevo.
+CONDICIONES_LINEA_BASE: dict[str, str] = {
+    "LB-01-EXC": "cuadrilla de cinco obreros, terreno sin roca, excavacion manual con pala y pico",
+    "LB-02-TUB": "cuadrilla de tres obreros, tuberia PVC de 4 pulgadas, zanja abierta y nivelada",
+    "LB-03-ENC": "cuadrilla de cuatro obreros, encofrado de madera reutilizable, paredes rectas",
+    "LB-04-CON": "cuadrilla de seis obreros, concreto premezclado vaciado por gravedad, sin bombeo",
+    "LB-05-REL": "cuadrilla de seis obreros, material granular en sitio, compactacion manual",
+}
 
 _TABLAS_DEL_RESUMEN = (
     models.Partida,
@@ -74,6 +94,14 @@ def sembrar(sesion: Session) -> models.Proyecto:
     catalogo = Catalogo(sesion)
     for apu in linea_base.APUS_LINEA_BASE:
         catalogo.cargar_composicion(apu, lista, Dominio.CIVIL, linea_base.FECHA_LINEA_BASE)
+        registrar_rendimiento(
+            sesion,
+            codigo_partida=apu.codigo_partida,
+            valor=apu.rendimiento,
+            tipo=TipoRendimiento.ESTIMADO,
+            fecha=linea_base.FECHA_LINEA_BASE,
+            condiciones=CONDICIONES_LINEA_BASE[apu.codigo_partida],
+        )
 
     sesion.commit()
     return proyecto
