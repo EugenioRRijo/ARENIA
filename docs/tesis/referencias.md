@@ -30,10 +30,14 @@ Miranda Miranda, J. J. (s.f.). *Gestión de proyectos: Identificación, formulac
 financiera, económica, social y ambiental* (4.ª ed.). MM Editores.
 
 - **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: la obra existe en 4.ª edición de MM Editores; la
-  5.ª edición es de 2005 (436 páginas, ISBN 9789589622728).
-- **Falta:** año de la 4.ª edición y ciudad. Confirmar qué edición se consulta: si es la 5.ª,
-  citarla con su año.
+- **Verificación:** catálogos y fichas editoriales, 2026‑09‑15. MM Editores (Bogotá) publicó la obra
+  en varias ediciones: 3.ª en 1999; una de 2001 con 438 páginas e ISBN 9589622704 (registro de
+  Internet Archive); 5.ª en 2005; y una de 2010 con 436 páginas e ISBN 9589622720 (ficha de Google
+  Books). **Ninguna ficha declara cuál es la 4.ª edición**, que es la que registra esta entrada.
+- **Falta:** qué edición se consulta, con su año, y contrastar en su texto las dos afirmaciones que
+  le atribuye el capítulo II: las tres fases del ciclo del proyecto (preinversión, inversión y
+  operación) y la distinción entre precios determinados por la estructura de costos, por el mercado
+  y por la competencia. Hasta entonces se cita con «s.f.» y con marca de pendiente.
 
 ## BIM, cómputo métrico y dimensión de costos
 
@@ -43,11 +47,12 @@ Ma, Z., Wei, Z., Song, W., & Lou, Z. (2011). Application and extension of the IF
 construction cost estimating for tendering in China. *Automation in Construction, 20*(2), 196–204.
 https://doi.org/10.1016/j.autcon.2010.09.017
 
-- **Estado:** pendiente
+- **Estado:** verificada
 - **Verificación:** Crossref, 2026‑09‑15: título, revista, volumen, número, páginas y DOI.
 - **Corrección:** las páginas son 196–204, no 196–207.
-- **Falta:** confirmar en la página de la editorial el orden de apellido y nombre de los autores;
-  Crossref los registra con los campos invertidos («Zhiliang, Ma»; «Zhe, Lou»).
+- **Orden de los autores:** Crossref invierte los campos de los cuatro (registra «family: Zhiliang,
+  given: Ma»). Los apellidos son Ma, Wei, Song y Lou, y los nombres, Zhiliang, Zhenhua, Wu y Zhe,
+  como se cita arriba.
 
 ### Khosakitchalert et al. (2019)
 
@@ -104,12 +109,13 @@ planning. *Applied Sciences, 12*(19), 9553. https://doi.org/10.3390/app12199553
 BIMForum. (2024). *Level of Development (LOD) specification* [Versión en inglés y en español].
 https://bimforum.org/bimforum-level-of-development-lod-specification-2024-in-english-and-spanish-language-version/
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: la especificación 2024 existe en versión inglés y
-  español en el sitio de BIMForum; la edición oficial más reciente es la de 2025.
-- **Falta:** contrastar con el texto de la especificación la definición de los niveles de
-  desarrollo (en particular LOD 300, 350 y 400) y decidir si se cita la edición 2024 en español o
-  la 2025.
+- **Estado:** verificada
+- **Verificación:** sitio de BIMForum, 2026‑09‑15: la especificación 2024 (Parte I) está publicada
+  en inglés y en español, y el PDF oficial en inglés es de noviembre de 2024
+  (`bimforum.org/wp-content/uploads/2024/11/LOD-Spec-2024-Part-I-official-English.pdf`).
+- **Afirmación contrastada:** la especificación permite precisar el contenido y la fiabilidad de los
+  modelos en cada etapa del proyecto mediante niveles de desarrollo, con las definiciones de LOD 100
+  a 500 alineadas con el documento contractual AIA E201‑2022. El capítulo II le atribuye solo eso.
 
 ## Aprendizaje automático aplicado a costos
 
@@ -131,11 +137,15 @@ Tayefeh Hashemi, S., Ebadati, O. M., & Kaur, H. (2020). Cost estimation and pred
 construction projects: A systematic review on machine learning techniques. *SN Applied Sciences,
 2*(10), Artículo 1703. https://doi.org/10.1007/s42452-020-03497-1
 
-- **Estado:** pendiente
-- **Verificación:** Crossref, 2026‑09‑15: metadatos confirmados (número 10 agregado, DOI).
-- **Falta:** contrastar con el texto la afirmación citada en el capítulo I (las redes neuronales
-  dependen fuertemente del volumen de datos y rinden mal con conjuntos pequeños); Crossref no
-  incluye el resumen.
+- **Estado:** verificada
+- **Verificación:** Crossref, 2026‑09‑15 (metadatos: número 10, DOI), y la página del artículo en
+  SpringerLink con su resumen: artículo 1703.
+- **Afirmación contrastada:** es una revisión sistemática de las técnicas de aprendizaje automático
+  para estimar y predecir costos de proyectos de construcción; analiza 92 trabajos de los últimos
+  treinta años por área de aplicación, método y técnica.
+- **Corrección de una afirmación:** el capítulo I le atribuía que «las redes neuronales dependen
+  fuertemente del volumen de datos y rinden mal con conjuntos pequeños». El resumen **no** lo dice;
+  la oración se reescribió para atribuirle solo el repertorio de métodos que la revisión documenta.
 
 ### Kim et al. (2004)
 
@@ -310,35 +320,44 @@ http://erevistas.saber.ula.ve/index.php/cienciaeingenieria/article/viewFile/1858
   Andes: autoras Alexandra Quiñones y Maylett Uzcátegui; volumen 44, número 1 (diciembre–marzo
   2023). El artículo analiza la aplicación de BIM a la optimización de recursos según las buenas
   prácticas del PMI, con el caso de un conjunto residencial en Múnich (Alemania).
-- **Falta:** páginas del artículo.
+- **Falta:** páginas del artículo. El 2026‑09‑15 el servidor de la revista
+  (`erevistas.saber.ula.ve`) no respondió: la lectura por HTTPS fue rechazada y la descarga directa
+  del PDF por HTTP agotó el tiempo de espera, de modo que no se pudo abrir el artículo.
 
 ### Rozo-Martínez y Tumay-Gamba (2024)
 
 Rozo-Martínez, D. A., & Tumay-Gamba, G. I. (2024). *Aplicación de la metodología BIM 5D para la
-gestión del costo: Aplicado al proyecto de vivienda Vasily* [Trabajo de grado]. Universidad
-Católica de Colombia.
+gestión del costo: Aplicado al proyecto de vivienda Vasily* [Trabajo de grado, Universidad Católica
+de Colombia]. Repositorio Institucional RIUCaC.
+https://repository.ucatolica.edu.co/bitstreams/13b199fe-caf0-4508-8410-eeba202eba9d/download
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: el trabajo está en el Repositorio Institucional de la
-  Universidad Católica de Colombia (RIUCaC); autores Daniel Armando Rozo-Martínez y Gimeth Ileana
-  Tumay-Gamba. Muestra cómo la dimensión 5D de BIM puede generar beneficios económicos para
-  empresas pequeñas y compara presupuestos elaborados por el método tradicional con los obtenidos
-  con BIM.
+- **Estado:** verificada
+- **Verificación:** repositorio de la Universidad Católica de Colombia, 2026‑09‑15: trabajo de junio
+  de 2024, de Daniel Armando Rozo-Martínez y Gimeth Ileana Tumay-Gamba. Muestra cómo la dimensión 5D
+  de BIM puede generar beneficios económicos para empresas pequeñas y compara presupuestos
+  elaborados por el método tradicional con los obtenidos con BIM, a partir de la documentación de la
+  constructora (presupuesto, análisis de precios unitarios y planos CAD).
 - **Corrección:** el subtítulo es «Aplicado al proyecto de vivienda Vasily».
-- **Falta:** URL del registro en el repositorio.
+- **Nota:** el buscador del repositorio responde con una verificación antihumana automatizada, así
+  que se cita el enlace directo al archivo; no se obtuvo el identificador persistente (handle).
 
-### Garnica (s.f.)
+### Garnica Patiño (2017)
 
-Garnica, A. (s.f.). *Diseño de metodología integral orientada a la gestión de construcción
-eficiente (GCE) usando BIM* [Trabajo de grado]. Universidad Católica Andrés Bello.
+Garnica Patiño, A. G. (2017). *Diseño de metodología integral orientada a la gestión de proyectos
+de construcción civil empleando la herramienta Building Information Modeling (BIM). Caso: vivienda
+unifamiliar* [Resumen de trabajo de grado, Universidad Metropolitana]. Saber UNIMET.
+https://saber.unimet.edu.ve/rest/api/core/bitstreams/9fef57ec-ecf8-46d6-844b-3eec7926bec9/content
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: solo se localizó una copia en un sitio de terceros
-  (BIM Forum Chile, https://www.bimforum.cl/wp-content/uploads/2017/10/Tesis-Andrea-Garnica-P.pdf),
-  que identifica a la autora como Andrea Garnica P. y describe la gestión de construcción eficiente
-  como metodología integrada coordinada mediante BIM.
-- **Falta:** año, confirmación en el repositorio de la UCAB y su vínculo con la Cámara Venezolana
-  de la Construcción (las Bases lo marcan VERIFICAR).
+- **Estado:** verificada
+- **Verificación:** resumen extendido del trabajo, leído el 2026‑09‑15 en el repositorio Saber de la
+  Universidad Metropolitana: autora Andrea Geraldine Garnica Patiño, tutor Alberto Lindner, Caracas,
+  noviembre de 2017.
+- **Corrección:** tres datos de la entrada anterior eran erróneos. El título registrado nombraba la
+  metodología GCE, que es el **resultado** del trabajo y no su título; la universidad es la
+  Metropolitana, no la Católica Andrés Bello; y el año no es «s.f.», sino 2017.
+- **Afirmación contrastada:** el trabajo diseña una metodología integral de gestión de construcción
+  eficiente (GCE) que coordina las fases de diseño, ejecución y puesta en marcha sobre un modelo
+  tridimensional, integrando BIM con el PMBOK y con Lean Construction – Last Planner.
 
 ### Carbonell Charchabal et al. (2026)
 
@@ -366,7 +385,9 @@ http://mriuc.bc.uc.edu.ve/bitstream/handle/123456789/6952/dchacon.pdf
 - **Verificación:** repositorio institucional de la Universidad de Carabobo, 2026‑09‑15: autores
   Daniel Chacón y Génesis Cuervo, tutor José P. Olival. El trabajo compara la metodología BIM con la
   CAD tradicional; sus palabras clave son BIM, Revit, interoperabilidad y parametrización.
-- **Falta:** año de aprobación.
+- **Falta:** año de aprobación. El 2026‑09‑15 el repositorio de la Universidad de Carabobo
+  (`mriuc.bc.uc.edu.ve`) no respondió: la lectura por HTTPS fue rechazada y la descarga del PDF por
+  HTTP agotó el tiempo de espera, así que no se pudo leer la portada.
 
 ## Programas de presupuesto de uso regional
 
@@ -405,73 +426,103 @@ Lulo Software. (s.f.). *LuloWin NG* [Software]. http://lulo.com.ve
   Caracas, fundada en 1997). La función de recálculo automático de los precios unitarios ante
   variaciones de prestaciones sociales, administración, utilidad, financiamiento, precios y salarios
   se leyó en páginas de terceros (catálogos y cursos), no en el sitio oficial.
-- **Falta:** confirmar esa función en el sitio oficial o en el manual del producto.
+- **Falta:** confirmar esa función en el sitio oficial o en el manual del producto. El 2026‑09‑15 se
+  consultó `lulo.com.ve`: está construido con marcos y las páginas visibles solo anuncian el paquete
+  de actualización de mayo de 2024 y remiten al manual `LULOWinNG.pdf`, que se distribuye dentro del
+  programa. La descripción funcional sigue apoyada en páginas de terceros.
 
 ## Contexto institucional
 
-### Colegio de Ingenieros de Venezuela (s.f.)
+### Colegio de Ingenieros de Venezuela (2022)
 
-Colegio de Ingenieros de Venezuela. (s.f.). *Propuesta de ley marco del CIV para la difusión y
-adopción progresiva de la digitalización y modelado de información de la construcción en
+Colegio de Ingenieros de Venezuela. (2022, 11 de agosto). *Propuesta de ley marco del CIV para la
+difusión y adopción progresiva de la digitalización y modelado de información de la construcción en
 Venezuela: Plan Nacional BIM Venezuela*.
 https://www.civ.net.ve/noticia/propuesta-de-ley-marco-del-civ-para-la-difusion-y-adopcion-progresiva-de-la-digitalizacion-y-modelado-de-informacion-de-la-construccion-en-venezuela---plan-nacional-bim-venezuela
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: la propuesta existe en el sitio del CIV, que
-  presentó a la Asamblea Nacional dos propuestas de ley (la ley marco del Plan Nacional BIM y una
-  ley de incorporación progresiva de BIM a la contratación de proyectos y obras), con una hoja de
-  ruta de ocho fases hasta 2030. Sostiene la afirmación del capítulo I.
-- **Corrección:** el título es el de la ley marco del Plan Nacional BIM Venezuela.
-- **Falta:** fecha de publicación de la noticia en el sitio del CIV.
+- **Estado:** verificada
+- **Verificación:** sitio del CIV, 2026‑09‑15: la publicación es del 11 de agosto de 2022 y el
+  documento se presentó el 25 de julio de 2022, en Caracas, ante la Junta Directiva Nacional del CIV
+  y la Comisión Nacional BIM, como aporte ad honorem del Plan de Formación BIM. El CIV propuso dos
+  leyes: la ley marco del Plan Nacional BIM y una ley de incorporación progresiva de BIM a la
+  contratación de proyectos y obras.
+- **Corrección:** deja de citarse con «s.f.»; el año es 2022. El título es el de la ley marco del
+  Plan Nacional BIM Venezuela.
+- **Afirmación contrastada:** el CIV propone una ley marco para la difusión y la adopción progresiva
+  de BIM en Venezuela, que es lo que los capítulos le atribuyen.
 
 ### Colegio de Ingenieros de Venezuela (2018)
 
-Colegio de Ingenieros de Venezuela, Departamento de Análisis y Costos. (2018). *Importancia del
-factor de costos asociados al salario (FCAS)*.
+Colegio de Ingenieros de Venezuela, Departamento de Análisis y Costos. (2018, 14 de febrero).
+*Importancia de la correcta aplicación y cálculo del factor de costos asociados al salario
+(F.C.A.S.)* [Comunicado].
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: documento atribuido al Departamento de Análisis y
-  Costos del CIV (febrero de 2018), localizado en un sitio de terceros. Según ese documento, el FCAS
-  es un porcentaje producto de un modelo matemático que estima los costos asociados al salario a
-  partir de las condiciones esperadas de la obra; no es un valor único ni permanente; los valores
-  de las guías referenciales del CIV son solo referenciales; y el cálculo se basa en las cláusulas
-  económicas de la convención colectiva de la construcción.
-- **Falta:** localizar el documento en una fuente oficial del CIV y confirmar autor y fecha.
+- **Estado:** verificada
+- **Verificación:** texto del comunicado, leído el 2026‑09‑15. Encabeza «COLEGIO DE INGENIEROS DE
+  VENEZUELA — DPTO. DE ANÁLISIS Y COSTOS», está fechado en Caracas el 14 de febrero de 2018 y lleva
+  el membrete de la sede de Quebrada Honda. La copia consultada está en el sitio del distribuidor que
+  figura en ese mismo membrete; no se localizó en `civ.net.ve`.
+- **Corrección:** el título es el del comunicado, más largo que el registrado antes, y la fecha
+  exacta es el 14 de febrero de 2018.
+- **Afirmación contrastada:** los factores de las guías referenciales «son pura y llanamente ejemplos
+  o referencias de los probables valores»; «estos cálculos se basan en la Convención Colectiva
+  2016‑2018 y las Leyes vigentes»; el FCAS «refleja los beneficios consagrados en las cláusulas de la
+  Convención Colectiva de Trabajo de la Industria de la Construcción»; y el Departamento «recomienda
+  que cada empresa constructora y en general cada contratista calcule el Factor de Costos Asociados
+  al Salario para cada obra», de donde se sigue que no es un valor único ni permanente.
 
 ## Normativa y referencias técnicas
 
 ### COVENIN (1999)
 
-Comisión Venezolana de Normas Industriales. (1999). *Sector construcción: Especificaciones,
-codificación y mediciones. Parte II: Edificaciones* (Norma COVENIN 2000-2:1999).
+Comisión Venezolana de Normas Industriales. (1999). *Mediciones y codificación de partidas para
+estudios, proyectos y construcción. Parte II.A: Edificaciones. Suplemento n.º 1* (Norma
+COVENIN‑MINDUR 2000-2:1999). Comisión Permanente de Normas para Edificaciones del Ministerio del
+Desarrollo Urbano.
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: la parte 2 (edificaciones) circula con el código
-  COVENIN 2000-2:1999, y el catálogo del Centro de Documentación de SENCAMER registra la parte 2
-  de la serie, con un suplemento de 1992.
-- **Corrección:** el año de la parte II es 1999 (el número 2000 es el de la norma, no su año).
+- **Estado:** verificada
+- **Verificación:** texto del suplemento, leído el 2026‑09‑15. Su introducción presenta el
+  «SUPLEMENTO No. 1 DE LA NORMA COVENIN – MINDUR 2000 del año 1992» como primera revisión y
+  actualización de la norma COVENIN‑MINDUR 2000-92, «MEDICIONES Y CODIFICACIÓN DE PARTIDAS PARA
+  ESTUDIOS, PROYECTOS Y CONSTRUCCIÓN. Parte II.A EDIFICACIONES», declarada obligatoria en la Gaceta
+  Oficial N.° 35.225 del 3 de junio de 1993. Cierra en Caracas, el 10 de febrero de 1999, firmado por
+  la Comisión Permanente de Normas para Edificaciones.
+- **Corrección:** el título de la parte de edificaciones es «Mediciones y codificación de partidas
+  para estudios, proyectos y construcción». «Especificaciones, codificación y mediciones» es el
+  título de las partes I (carreteras) y III (obras hidráulicas) de la norma COVENIN 2000-80, según
+  las referencias del propio suplemento: la entrada anterior cruzaba ambos títulos.
+- **Afirmación contrastada:** el suplemento revisa el capítulo «Criterios generales de codificación,
+  descripción y medición de partidas» y desarrolla los capítulos por especialidad; cada partida
+  aparece con su código, su unidad y su descripción (por ejemplo, «E332000140 m3 CONCRETO DE Fc 400
+  kgf/cm2…»). Es lo que el capítulo II le atribuye.
 - **Forma de cita:** la primera, en el capítulo I, introduce la abreviatura, «Comisión Venezolana
   de Normas Industriales (COVENIN, 1999)»; las siguientes usan «COVENIN (1999)».
 - **Falta:** título exacto de la edición de 1999 en el catálogo de SENCAMER o de Fondonorma, y
   confirmar en el texto de la norma que asigna a cada partida su unidad y su criterio de medición.
 
-### AACE International (2020a)
+### AACE International (2012)
 
-AACE International. (2020a). *Cost estimate classification system: As applied in engineering,
-procurement, and construction for the building and general construction industries* (Recommended
-Practice No. 56R-08). https://www.pathlms.com/aace/courses/2928/documents/3839
+AACE International. (2012). *Cost estimate classification system: As applied for the building and
+general construction industries* (Recommended Practice No. 56R-08, revisión del 5 de diciembre de
+2012). https://www.efis.psc.mo.gov/Document/Display/24614
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: la revisión del 7 de agosto de 2020 figura en el sitio
-  de AACE International, y la tabla de contenido de la práctica, en web.aacei.org.
-- **Afirmación contrastada:** su ámbito es la edificación y la construcción general (título de la
-  práctica).
-- **Falta:** rango de exactitud y características que la práctica asigna a la clase 3, consultados en
-  su texto; decidir si sustituye a la 18R‑97 como marco de contraste del sistema.
+- **Estado:** verificada
+- **Verificación:** texto completo de la práctica, leído el 2026‑09‑15 en la copia presentada ante la
+  Comisión de Servicios Públicos de Misuri. La revisión consultada es la del 5 de diciembre de 2012;
+  AACE International lista además una del 7 de agosto de 2020, que no se consultó, y por eso la
+  entrada se cita por 2012.
+- **Afirmación contrastada:** la Tabla 1 asigna a la clase 3 una madurez de definición del proyecto
+  del 10 % al 40 %, el uso típico «design development, budget authorization, feasibility», una
+  metodología de costos unitarios semidetallados con partidas a nivel de ensamblaje, y un rango de
+  exactitud esperado de −5 % a −15 % en el extremo inferior y de +10 % a +20 % en el superior. La
+  práctica advierte que ese rango se determina con el análisis de riesgo del proyecto y que la
+  madurez de los entregables es la característica primaria de la clase. El documento de Alberta
+  Infrastructure sobre la norma ASTM E2516‑11 (2024) reproduce los mismos valores para la clase 3.
+- **Corrección:** deja de llevar el sufijo «2020a»: ya no coexisten dos obras del mismo autor y año.
 
-### AACE International (2020b)
+### AACE International (2020)
 
-AACE International. (2020b). *Cost estimate classification system: As applied in engineering,
+AACE International. (2020). *Cost estimate classification system: As applied in engineering,
 procurement, and construction for the process industries* (Recommended Practice No. 18R-97).
 https://www.pathlms.com/aace/courses/2928/documents/3803
 
@@ -489,20 +540,26 @@ https://www.pathlms.com/aace/courses/2928/documents/3803
   de los entregables clave, no por el porcentaje; la clase 3 corresponde a una definición del 10 % al
   40 % y a la autorización o el control del presupuesto.
 
-### Convención Colectiva de la Industria de la Construcción (s.f.)
+### Convención Colectiva de la Industria de la Construcción (2023)
 
-Convención Colectiva de Trabajo de la Industria de la Construcción, Similares y Conexos de
-Venezuela. (s.f.).
+Convención Colectiva de Trabajo para la Rama de la Industria de la Construcción, Similares y Conexos
+de la República Bolivariana de Venezuela, Gaceta Oficial N.° 6.752 Extraordinario (2023).
+https://datalaing.com/site/wp-content/uploads/2023/07/convencion-colectiva-de-la-construccion-2023-GOE-6.752.pdf
 
-- **Estado:** pendiente
-- **Verificación:** búsqueda web, 2026‑09‑15: la convención más reciente localizada es la de 2023,
-  publicada en la Gaceta Oficial Extraordinaria N.° 6.752 (copia en el sitio de DataLaing); la
-  anterior, 2016–2018, se publicó en la Gaceta Oficial N.° 40.793. Aplica a las empresas afiliadas
-  a las cámaras de la construcción.
-- **Falta:** período de vigencia en la fuente oficial, texto consultado directamente en la Gaceta
-  Oficial y confirmar si define o permite calcular el FCAS. Es la fuente citable del FCAS (decisión
-  D4 del dossier G0); mientras no se confirme, el FCAS se presenta como «parámetro del caso de
-  estudio».
+- **Estado:** verificada
+- **Verificación:** texto de la Gaceta Oficial N.° 6.752 Extraordinario, Caracas, jueves 6 de julio
+  de 2023, leído íntegro el 2026‑09‑15 (dieciséis páginas). Homologada por el Ministerio del Poder
+  Popular para el Proceso Social de Trabajo; las partes son la Cámara Venezolana de la Construcción y
+  la Cámara Bolivariana de la Construcción, con las federaciones y los sindicatos del sector.
+- **Afirmación contrastada:** la cláusula 15 establece que la convención «comenzará a regir a partir
+  de la fecha de su depósito», que «tendrá una duración de veinticuatro (24) meses» y que «sus
+  disposiciones continuarán vigentes hasta tanto sean reemplazadas por otras que las sustituyan».
+- **Hallazgo (decisión D4):** el texto **no menciona** el factor de costos asociados al salario ni la
+  expresión «costos asociados al salario». Son sus cláusulas económicas las que alimentan el cálculo
+  que publica el CIV (véase su comunicado de 2018), de modo que el FCAS no se deriva de la convención
+  y el del caso de estudio se mantiene como parámetro declarado.
+- **Forma de cita:** documento legal; en el texto, «(Convención Colectiva de la Industria de la
+  Construcción, 2023)».
 
 ---
 
