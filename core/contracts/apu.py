@@ -96,6 +96,7 @@ class LineaManoObra:
     def __post_init__(self) -> None:
         _no_negativo("cantidad", self.cantidad)
         _no_negativo("sueldo", self.sueldo)
+        object.__setattr__(self, "modalidad", ModalidadManoObra(self.modalidad))
 
     @property
     def total(self) -> Decimal:

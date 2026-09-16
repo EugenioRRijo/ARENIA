@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
+
 from core.contracts.apu import (
     ComposicionAPU,
     LineaManoObra,
@@ -46,6 +48,18 @@ def test_una_linea_sin_modalidad_es_jornal():
     assert linea.modalidad is ModalidadManoObra.JORNAL
 
 
+def test_modalidad_coacciona_desde_texto_valido():
+    """Una modalidad que llega como str (p. ej. desde una columna de base de datos) se normaliza."""
+    linea = LineaManoObra("Instalador", Decimal("1"), Decimal("6"), "destajo")
+
+    assert linea.modalidad is ModalidadManoObra.DESTAJO
+
+
+def test_modalidad_invalida_lanza_value_error():
+    with pytest.raises(ValueError):
+        LineaManoObra("Instalador", Decimal("1"), Decimal("6"), "cualquier_cosa")
+
+
 def test_el_destajo_entra_completo():
     """6 USD por m2 instalado son 6 USD en el APU: ni FCAS, ni bono, ni division."""
     composicion = ComposicionAPU(
@@ -80,7 +94,16 @@ def test_la_composicion_mixta_suma_los_dos_bloques():
         Decimal("2") * Decimal("3") * (1 + parametros.fcas)
         + parametros.bono_alimentacion * Decimal("2")
     ) / Decimal("50")
-    assert resultado.mano_obra == jornal + Decimal("6")
+    destajo = Decimal("6")
+    assert resultado.mano_obra == jornal + destajo
+
+    # El destajo debe llegar hasta el costo directo, no quedarse contabilizado y sin facturar.
+    assert resultado.costo_directo == resultado.materiales + resultado.equipos + resultado.mano_obra
+
+    costo_directo_esperado = jornal + destajo
+    con_administracion_esperado = costo_directo_esperado * (1 + parametros.administracion)
+    precio_unitario_esperado = con_administracion_esperado * (1 + parametros.utilidad)
+    assert resultado.precio_unitario == precio_unitario_esperado
 
 
 def test_la_linea_base_no_se_mueve():
