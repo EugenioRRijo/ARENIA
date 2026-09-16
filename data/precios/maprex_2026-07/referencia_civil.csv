@@ -1,0 +1,38 @@
+tipo,insumo,unidad,precio_bs,bono_bs,factor_depreciacion,precio_usd,fecha_vigencia,archivo,ref_maprex,notas
+material,"TUBO PVC A.N. D=4"" / 110 MM E = 2,2 MM NORMA",m,8822.17,,,13.9291,2026-07-09,materiales.pdf,PLOA38,"equivalente de 'Tuberia PVC 4 pulg'; PVC A.N. (sanitario/drenaje) NORMA, D=4""/110mm"
+material,"CODO PVC 90 GRADOS A.N. D=4""",pza,4530.00,,,7.1523,2026-07-09,materiales.pdf,PLO035,"equivalente de 'Curva PVC 4 pulg'; codo PVC 90 grados A.N. D=4"""
+material,"UNION PVC A.B. 4""",pza,5285.00,,,8.3443,2026-07-09,materiales.pdf,PLO560,"equivalente de 'Conector PVC 4 pulg'; union PVC A.B. 4"" (generica, sin distincion A.N./A.B. en MaPreX para uniones)"
+material,PEGAMENTO PARA PVC  1/4 GL TANGIT  O SIM,env,21895.00,,,34.5694,2026-07-09,materiales.pdf,MT539,equivalente de 'Pegamento para PVC'; pegamento 1/4 gl marca Tangit o similar
+material,MADERA PARA ENCOFRADO DE PINO O SIMILAR,m3,528500.00,,,834.4328,2026-07-09,materiales.pdf,ENC010,"equivalente de 'Madera'; madera de pino para encofrado, MaPreX cotiza por m3 (la linea base usa m2 de consumo simplificado, no unidad comercial)"
+material,"LISTON MADERA P/ENCOFRADO 2"" X 4"" X 3 MT",und,2642.50,,,4.1722,2026-07-09,materiales.pdf,ENC048,"equivalente de 'Listones de madera 2x2'; MaPreX solo lista liston 2""x4""x3mt, no 2x2; se usa como proxy dimensional mas cercano"
+material,"CLAVO DE ACERO LISO L=2 1/2""",pza,302.00,,,0.4768,2026-07-09,materiales.pdf,ACE076,"equivalente de 'Clavos de acero 2 1/2 pulg'; clavo de acero liso L=2 1/2"", unidad pza"
+material,DESENCOFRANTE SIKA,lt,5738.00,,,9.0596,2026-07-09,materiales.pdf,MZ0201,equivalente de 'Desencofrante'; desencofrante Sika
+material,"CEMENTO GRIS PORTLAND SACO 42.5 KG/93,7 LB",sco,12080.00,,,19.0727,2026-07-09,materiales.pdf,CEM019,equivalente de 'Cemento Portland'; cemento gris Portland saco 42.5 kg (estandar de mercado)
+material,ARENA LAVADA,m3,37750.00,,,59.6023,2026-07-09,materiales.pdf,MZ0027,equivalente de 'Arena lavada'
+material,PIEDRA PICADA PARA CONCRETO,m3,37750.00,,,59.6023,2026-07-09,materiales.pdf,AGR081,equivalente de 'Piedra picada'; variante 'para concreto'
+material,AGUA SUMINISTRADA EN CAMION CISTERNA O TANQUE,m3,7550.00,,,11.9205,2026-07-09,materiales.pdf,AGR003,"equivalente de 'Agua'; agua suministrada en camion cisterna o tanque (agua de obra, no potable embotellada)"
+material,MATERIAL GRANULAR INTEGRAL,m3,4530.00,,,7.1523,2026-07-09,materiales.pdf,BAS006,equivalente de 'Material granular'; material granular integral
+equipo,RETROEXCAVADORA CASE O SIM,dia,69686500.00,,0.003500,110025.9187,2026-07-09,equipos.pdf,MOV027,"equivalente de 'Retroexcavadora'; CASE o similar, sin martillo hidraulico adosado"
+equipo,PICO CON CABO,dia,25670.00,,0.033000,40.5296,2026-07-09,equipos.pdf,ALB072,equivalente de 'Pico'; pico con cabo
+equipo,PALA CUADRADA CON CABO DE MADERA,dia,22650.00,,0.016700,35.7614,2026-07-09,equipos.pdf,EZ0576,equivalente de 'Pala'; pala cuadrada con cabo de madera
+equipo,CAMION VOLTEO 8 M3 FORD 7000 O SIM,dia,71725000.00,,0.004000,113244.4451,2026-07-09,equipos.pdf,VEH010,"equivalente de 'Camion de volteo'; Ford 7000 u similar, 8 m3"
+equipo,VEHICULO PARA TRANSPORTE DE PERSONAL,dia,135900.00,,1.000000,214.5684,2026-07-09,equipos.pdf,EZ0512,equivalente de 'Vehiculo de transporte'; vehiculo para transporte de personal
+equipo,SEGUETA AJUSTABLE (ARCO),dia,21895.00,,0.022000,34.5694,2026-07-09,equipos.pdf,CAR010,equivalente de 'Segueta'; segueta ajustable (arco)
+equipo,CINTA METRICA 3 MT / CINTA Y CARCAZA METALICA,dia,11325.00,,0.010000,17.8807,2026-07-09,equipos.pdf,MED001,equivalente de 'Cinta metrica'; cinta metrica de 3 m
+equipo,"SIERRA ELECTRICA CIRCULAR D=7 1/4"" 110V 1,6 KWH",dia,264250.00,,0.020000,417.2164,2026-07-09,equipos.pdf,ALB045,"equivalente de 'Sierra circular electrica'; D=7 1/4"" 110V"
+equipo,"MARTILLO CARPINTERO NACIONAL 0,6 KGM MANGO MAD",dia,21895.00,,0.022000,34.5694,2026-07-09,equipos.pdf,DEM005,"equivalente de 'Martillo'; martillo carpintero nacional 0,6 kgm"
+equipo,"NIVEL DE 3 BURBUJAS Y 18""",dia,33220.00,,0.011000,52.4501,2026-07-09,equipos.pdf,ALB024,"equivalente de 'Nivel de mano'; nivel de 3 burbujas 18"""
+equipo,ALICATE PARA ELECTRICISTA,dia,31710.00,,0.003000,50.0660,2026-07-09,equipos.pdf,ELE046,equivalente de 'Alicate'; alicate para electricista
+equipo,"MEZCLADORA P/CONCRETO CAP=0,40 M3 12,2 HP (DIESE",dia,6040000.00,,0.007000,9536.3743,2026-07-09,equipos.pdf,CON007,"equivalente de 'Mezcladora de concreto'; capacidad 0,40 m3, 12,2 HP diesel"
+equipo,VIBRADOR PARA CONCRETO,dia,604000.00,,0.009500,953.6374,2026-07-09,equipos.pdf,CON041,equivalente de 'Vibrador de concreto'
+equipo,CARRETILLA PARA CONSTRUCCION,dia,153265.00,,0.020000,241.9855,2026-07-09,equipos.pdf,ALB073,equivalente de 'Carretilla'; carretilla para construccion
+equipo,TOBO PLASTICO CAP= 10 LT DE ALBAÑILERIA,dia,9060.00,,0.070000,14.3046,2026-07-09,equipos.pdf,ALB146,equivalente de 'Tobos plasticos'; tobo plastico 10 lt de albañileria
+equipo,COMPACTADORA RANA / PLANCHA 0.50 X 1.0M - 280 KG,dia,60400.00,,1.000000,95.3637,2026-07-09,equipos.pdf,CPT018,"equivalente de 'Compactadora de percusion tipo sapo'; MaPreX la llama 'rana' (sinonimo), 280 kg"
+equipo,HERRAMIENTAS MENORES,dia,9060.00,,1.000000,14.3046,2026-07-09,equipos.pdf,ALB213,"equivalente de 'Herramientas menores'; MaPreX tiene tres filas con la misma descripcion exacta (ALB213 9.060 Bs, ALB171 30.200 Bs, EZ0263 37.750 Bs) sin ningun otro campo que las distinga; se elige la de menor precio (ALB213) como referencia conservadora ante la falta de un criterio propio de MaPreX"
+mano_obra,OPERADOR DE EQUIPO PESADO DE 1RA -N8,dia,1618.86,3445.50,,2.5560,2026-07-01,mano_de_obra.pdf,24-5.4,"equivalente de 'Operador de equipo de 1ra'; tabulador construccion, operador de equipo pesado 1ra"
+mano_obra,AYUDANTE - TABULADOR CONSTRUCCION -N2,dia,1128.42,3939.53,,1.7816,2026-07-01,mano_de_obra.pdf,1-1.2,"equivalente de 'Ayudante'; tabulador construccion, ayudante generico"
+mano_obra,CHOFER DE 2DA (DE 3 A 8 TON) -N4,dia,1262.81,3806.52,,1.9938,2026-07-01,mano_de_obra.pdf,8-3.5,"equivalente de 'Chofer de 2da'; tabulador construccion, chofer de 2da (3 a 8 ton)"
+mano_obra,CHOFER DE 4TA -N2,dia,1128.42,3939.53,,1.7816,2026-07-01,mano_de_obra.pdf,4-3.3,equivalente de 'Chofer de 4ta'; tabulador construccion
+mano_obra,MAESTRO ELECTRICISTA -N7,dia,1470.34,3597.51,,2.3215,2026-07-01,mano_de_obra.pdf,24-216,"equivalente de 'Maestro (electricista, segun el APU original)'; maestro electricista, tabulador construccion"
+mano_obra,CARPINTERO DE 1RA -N5,dia,1385.63,3679.85,,2.1877,2026-07-01,mano_de_obra.pdf,19-2.5,equivalente de 'Carpintero de 1ra'; tabulador construccion
+mano_obra,ALBAÑIL DE 1RA -N5,dia,1385.63,3679.85,,2.1877,2026-07-01,mano_de_obra.pdf,19-2.2,equivalente de 'Albañil de 1ra'; tabulador construccion

@@ -107,6 +107,26 @@ def test_contraste_aace_fuera_del_rango_es_hallazgo_advertencia():
     assert por_debajo is not None and por_debajo.severidad is Severidad.ADVERTENCIA
 
 
+def test_contraste_aace_presenta_a_dos_decimales_con_redondeo_hacia_arriba():
+    """Sesion M4.1: la descripcion presenta importes y desviacion a dos decimales con
+    ROUND_HALF_UP, la convencion de `core.verification.texto.formatear_decimal`; el formato
+    `:.2f` de `Decimal` redondea al par y presentaria 2.125 como 2.12. Los valores del hallazgo
+    siguen exactos.
+    """
+    from ml.prediction import contrastar_aace
+
+    importe_empatado = contrastar_aace("X", Decimal("2.125"), Decimal("1"))
+    assert importe_empatado is not None
+    assert "(2.13)" in importe_empatado.descripcion
+    assert "(1.00)" in importe_empatado.descripcion
+    assert importe_empatado.valor_observado == Decimal("2.125")
+
+    # (1400.25 - 1000) / 1000 = 40.025 %: al par seria +40.02.
+    desviacion_empatada = contrastar_aace("X", Decimal("1400.25"), Decimal("1000"))
+    assert desviacion_empatada is not None
+    assert "+40.03 %" in desviacion_empatada.descripcion
+
+
 def test_contraste_con_estimado_no_positivo_se_rechaza():
     from ml.prediction import contrastar_aace
 

@@ -163,11 +163,13 @@ Los dos puntos que más preguntas generan:
 ## 7. `ml/` y sus compuertas
 
 `ml/` recibe datos planos y devuelve datos planos; la capa de composición (quién consulta la
-base y le pasa los pares) es la página o la ruta que lo usa. Nada en `ml/` importa de `core` —
-ni siquiera contratos. Los tres módulos: `normalization` (similitud del coseno, umbral 0,5),
-`anomaly` (Isolation Forest, semilla 42, se **abstiene** con menos de 8 observaciones) y
-`prediction` (técnica según el conteo de registros del dominio — compuerta G2, hoy reglas con
-sensibilidad, declarado limitación). Métricas reproducibles:
+base y le pasa los pares) es la página o la ruta que lo usa. De `core`, `ml/` importa
+**únicamente `core.contracts`** (el `Hallazgo` del contraste AACE de `prediction`): la misma
+frontera que los adaptadores, vigilada por `tests/unit/test_arquitectura.py`. Los tres módulos:
+`normalization` (similitud del coseno, umbral 0,5), `anomaly` (Isolation Forest, semilla 42, se
+**abstiene** con menos de 8 observaciones) y `prediction` (técnica según el conteo de registros
+del dominio — compuerta G2, hoy reglas con sensibilidad en los cuatro dominios, declarado
+limitación). Conteo G2 y métricas por dominio, reproducibles:
 `uv run python scripts/generar_resultados_ml.py` → [resultados_ml.md](resultados_ml.md).
 
 ## 8. Scripts reproducibles
@@ -175,12 +177,41 @@ sensibilidad, declarado limitación). Métricas reproducibles:
 | Script | Produce |
 |---|---|
 | `scripts/seed.py` | `data/apu.db` con la línea base (idempotente) |
+| `scripts/seed_telecom.py`, `scripts/seed_industrial.py`, `scripts/seed_sistemas.py` | catálogo, presupuesto auditado y lista de precios de cada dominio en su propia base (sección 8.1) |
+| `scripts/extraer_maprex.py` | `data/precios/maprex_2026-07/referencia_<dominio>.csv` desde los tres listados MaPreX |
+| `scripts/extraer_arenaza.py` | `data/telecom/fuentes/presupuesto_{1,2}_arenaza.csv` desde los PDF ARENAZA |
+| `scripts/derivar_listas_telecom.py` | las dos listas UC‑02 de telecom (ARENAZA y MaPreX); `--verificar` las compara con las de disco |
 | `scripts/simular_lista.py` | listas de precios de prueba, deterministas por semilla |
 | `scripts/generar_tanquilla_ifc.py` | `data/samples/tanquilla.ifc` (la muestra de G1) |
 | `scripts/exportar_openapi.py` | `docs/api.json` |
-| `scripts/generar_resultados_ml.py` | `docs/resultados_ml.md` (métricas RF‑28) |
+| `scripts/generar_resultados_ml.py` | `docs/resultados_ml.md` (conteo G2 y métricas RF‑28 por dominio) |
 | `scripts/medir_rnf03.py` | evidencia de RNF‑03 (100 partidas, umbral 5 s) |
-| `scripts/meta_alpha.py`, `scripts/meta_i6.py` | evaluación automática de metas de sprint |
+| `scripts/meta_alpha.py`, `scripts/meta_i6.py`, `scripts/meta_multidominio.py` | evaluación automática de metas de sprint |
+
+PyMuPDF no es dependencia del proyecto: los dos extractores se ejecutan con
+`uv run --with pymupdf python scripts/<extractor>.py` y ninguna prueba lo importa. Sus salidas
+están versionadas, así que regenerarlas solo hace falta si cambia el PDF de origen.
+
+### 8.1 Catálogos por dominio
+
+Los cuatro dominios siguen el patrón de la línea base: evidencia de precios fechada en `data/`,
+**una sola copia** estructurada en `tests/fixtures/` y un seed que es el único módulo fuera de
+`tests/` que importa ese fixture. Ningún seed escribe un precio: todos los leen.
+
+| Dominio | Fuente de precios | Copia única | Seed → base por defecto |
+|---|---|---|---|
+| civil | `data/linea_base/APUS_CLINICA.pdf` (caso de ejemplo, 28/04/2026) | `apu_linea_base.py` | `seed.py` → `data/apu.db` |
+| telecom | presupuestos ARENAZA de `data/samples/telecom/`, estructurados en `data/telecom/fuentes/` (18/05/2026) | `presupuestos_arenaza.py` | `seed_telecom.py` → `data/apu_telecom.db` |
+| industrial | referencia MaPreX jul‑2026 como proxy declarado (degradación GM2): `data/precios/maprex_2026-07/referencia_industrial.csv` | `mantenimiento_industrial.py` | `seed_industrial.py` → `data/apu_industrial.db` |
+| sistemas | tabulador CIV al 01/07/2026: `data/precios/maprex_2026-07/referencia_sistemas.csv` (la productividad HH/PF es un supuesto declarado) | `tarifas_sistemas.py` | `seed_sistemas.py` → `data/apu_sistemas.db` |
+
+Los cuatro seeds aceptan `--db <ruta>` y `--reiniciar`. Cada carpeta `data/<dominio>/fuentes/`
+trae un `README.md` con origen, vigencia y supuestos de sus precios; las reglas de uso de MaPreX
+(referencia, no ronda vigente; tasa única 633,3644 Bs/USD del 01/07/2026) están en
+`data/precios/maprex_2026-07/README.md`. Una cotización de campo nueva no se edita en ningún
+fixture: se registra según [protocolo_precios.md](protocolo_precios.md) y entra por UC‑02 como
+lista fechada, lo que abre el histórico real de `CambioPrecio` del dominio. La API sirve el
+catálogo de otro dominio apuntando `APU_BASE` a su base (`sqlite:///data/apu_telecom.db`).
 
 ## 9. Decisiones que conviene conocer antes de tocar nada
 

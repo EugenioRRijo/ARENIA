@@ -56,3 +56,83 @@ Particularidades que importan a la tesis:
 2. Solo se extraen los insumos que los catálogos necesitan; jamás el volcado completo de
    ≈ 16 000 renglones.
 3. Cualquier precio citado en la tesis referencia archivo, Ref y fecha.
+
+## CSV de referencia (Sesión M0.2)
+
+`scripts/extraer_maprex.py` (ejecutar con `uv run --with pymupdf python scripts/extraer_maprex.py`)
+parsea los tres PDF y escribe cuatro CSV en esta misma carpeta, uno por dominio, con la cabecera
+exacta:
+
+```
+tipo,insumo,unidad,precio_bs,bono_bs,factor_depreciacion,precio_usd,fecha_vigencia,archivo,ref_maprex,notas
+```
+
+`tipo` es `material` | `equipo` | `mano_obra`; `bono_bs` solo aplica a mano de obra y
+`factor_depreciacion` solo a equipos (las demás filas dejan esas columnas vacías). `precio_usd`
+se calcula como `(precio_bs / 633,3644).quantize(0,0001, ROUND_HALF_UP)`. Cada fila fue elegida a
+mano y verificada dígito a dígito contra el PDF (Ref, descripción, unidad y precio); las
+decisiones de equivalencia y las filas sin equivalente claro (omitidas, nunca adivinadas) están en
+[docs/bitacora/2026-09-02-M0.2-referencia-maprex.md](../../bitacora/2026-09-02-M0.2-referencia-maprex.md).
+
+| CSV | Alcance | Filas |
+|---|---|---|
+| `referencia_civil.csv` | Los 37 insumos (materiales, equipos y roles de mano de obra) de los cinco APU de `tests/fixtures/apu_linea_base.py` | 37 |
+| `referencia_telecom.csv` | Renglones comparables con los presupuestos ARENAZA (`data/telecom/plantilla_precios.csv`): UTP, tubo corrugado, conectores RJ45, canalización, cajetines, más fibra óptica, patch panel y rack como referencia de categoría | 18 |
+| `referencia_industrial.csv` | Repuestos y servicios aplicables a los activos de `data/samples/industrial/activos_planta.csv`: rodamientos, correas, válvulas, aceites, filtros, sello mecánico, transformadores y técnicos por tabulador | 13 |
+| `referencia_sistemas.csv` | Las 43 filas completas del tabulador CIV (agrupación `TAB CIV`, escalafón P-1…P-10) | 43 |
+
+Algunas descripciones de MaPreX vienen truncadas por el ancho fijo de columna del propio reporte
+(terminan en `\` o cortan una palabra a mitad, típicamente en el tabulador CIV cuando el nombre del
+rol es largo). Se conservan tal como las imprime el PDF —no se completan por conjetura— y se marcan
+en `notas` con «descripcion truncada en el PDF».
+
+## Depreciación MaPreX de los equipos de la línea base
+
+Criterio externo y fechado para la regla **R6** (`CriterioDepreciacion`): el factor Cop/Depr. de
+`equipos.pdf` para el equivalente MaPreX de cada equipo de la línea base, contrastado con el factor
+que usó el presupuesto manual (columna «Línea base»). Fuente: `referencia_civil.csv`.
+
+| Equipo (línea base) | Factor línea base | Ref MaPreX | Factor MaPreX | Coincide |
+|---|---|---|---|---|
+| Retroexcavadora | 1,00 | MOV027 | 0,003500 | No |
+| Pico | 0,03 | ALB072 | 0,033000 | Aprox. |
+| Pala | 0,03 | EZ0576 | 0,016700 | No |
+| Camión de volteo | 1,00 | VEH010 | 0,004000 | No |
+| Vehículo de transporte | 1,00 / 0,03 (hallazgo 7) | EZ0512 | 1,000000 | Coincide con el 1,00 |
+| Segueta | 0,03 | CAR010 | 0,022000 | Aprox. |
+| Cinta métrica | 0,03 | MED001 | 0,010000 | No |
+| Sierra circular eléctrica | 0,03 | ALB045 | 0,020000 | Aprox. |
+| Martillo | 0,03 | DEM005 | 0,022000 | Aprox. |
+| Nivel de mano | 0,03 | ALB024 | 0,011000 | No |
+| Alicate | 0,03 | ELE046 | 0,003000 | No |
+| Mezcladora de concreto | 1,00 | CON007 | 0,007000 | No |
+| Vibrador de concreto | 1,00 | CON041 | 0,009500 | No |
+| Carretilla | 0,03 | ALB073 | 0,020000 | Aprox. |
+| Tobos plásticos | 0,03 | ALB146 | 0,070000 | No |
+| Compactadora de percusión tipo sapo | 1,00 | CPT018 | 1,000000 | Coincide |
+| Herramientas menores | 1,00 | ALB213 | 1,000000 | Coincide |
+
+Lectura para la tesis: el presupuesto manual usa solo dos valores (1,00 o 0,03) sin que quede
+declarado un criterio de por qué un equipo deprecia distinto a otro (el propio hallazgo 7 lo
+expone: el vehículo de transporte lleva 1,00 en cuatro APU y 0,03 en el de tubería). MaPreX, en
+cambio, trae un factor propio por referencia de equipo, calculado por el proveedor de la base de
+datos con un criterio de mercado — no siempre cercano al valor del presupuesto manual, pero sí
+externo, fechado y reproducible. Ese contraste (no la sustitución silenciosa de un valor por otro)
+es lo que la regla R6 y el indicador correspondiente de la tesis necesitan declarar.
+
+## Jornal + bono del tabulador construcción
+
+Evidencia para la decisión de fuente del FCAS del [dossier G0](../../../docs/dossier_g0.md). El
+tabulador de la construcción (agrupación `a-SAL CONST-25032026+BONO X240$/ME`, `mano_de_obra.pdf`)
+trae un jornal y un bono de alimentación distintos por nivel (N1…N9); como referencia del rol más
+usado en la línea base («Ayudante», presente en las cinco partidas), el par exacto es:
+
+| Ref MaPreX | Rol | Jornal (Bs) | Jornal (USD) | Bono (Bs) | Bono (USD) |
+|---|---|---|---|---|---|
+| `1-1.2` | AYUDANTE - TABULADOR CONSTRUCCION -N2 | 1.128,42 | 1,7816 | 3.939,53 | 6,2192 |
+
+El nombre de la agrupación («BONO X240$/ME») es la etiqueta interna de MaPreX para la política de
+bono vigente (equivalente declarado a 240 USD/mes); el monto en bolívares del bono varía por nivel
+del escalafón (N1…N9), por lo que no se fuerza aquí una reconciliación exacta día-a-día con esa
+cifra mensual — se deja el valor diario tal como lo imprime el PDF, con su Ref, para que el dossier
+G0 decida cómo lo usa.

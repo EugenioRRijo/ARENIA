@@ -60,12 +60,12 @@ PDF), que convierte al dominio en el **segundo caso de auditoría** de la tesis.
 
 ## 2. Compuertas y criterios de degradación
 
-| Compuerta | Criterio de cruce | Degradación declarada si falla |
-|---|---|---|
-| **GM1** (telecom, tras M1.3) | El presupuesto ARENAZA se reproduce del catálogo ± 0,01 y la auditoría detecta la inconsistencia 80/90 m | sin degradación posible: los datos ya están en el repo |
-| **GM2** (industrial, tras M2.2) | Presupuesto de mantenimiento con ≥ 3 activos costeados con precios cotizados reales | si no llegan cotizaciones: precios de contrato/factura histórica aportados por el autor, con origen declarado; siguiente instancia: referencia nacional MaPreX jul‑2026 (`data/precios/maprex_2026-07/`) declarada como proxy fechado; última instancia, solo para insumos ausentes en MaPreX: referencia internacional (RSMeans/Richardson) |
-| **GM3** (sistemas, tras M3.2) | Presupuesto del alcance funcional costeado con tarifas reales (CIV o encuesta fechada) y productividad HH/PF con fuente | el tabulador CIV jul‑2026 ya está en el repo (listado MO de MaPreX, estructurado en M0.2); si un rol no aparece ahí: encuesta salarial fechada; la productividad HH/PF siempre se toma de benchmark declarado (ISBSG o literatura), nunca inventada |
-| **GM4** (cierre, tras M4.1) | Recuento G2 regenerado por dominio y `resultados_ml.md` reflejando los dominios poblados | — (informativa) |
+| Compuerta | Criterio de cruce | Degradación declarada si falla | Estado |
+|---|---|---|---|
+| **GM1** (telecom, tras M1.3) | El presupuesto ARENAZA se reproduce del catálogo ± 0,01 y la auditoría detecta la inconsistencia 80/90 m | sin degradación posible: los datos ya están en el repo | CRUZADA |
+| **GM2** (industrial, tras M2.2) | Presupuesto de mantenimiento con ≥ 3 activos costeados con precios cotizados reales | si no llegan cotizaciones: precios de contrato/factura histórica aportados por el autor, con origen declarado; siguiente instancia: referencia nacional MaPreX jul‑2026 (`data/precios/maprex_2026-07/`) declarada como proxy fechado; última instancia, solo para insumos ausentes en MaPreX: referencia internacional (RSMeans/Richardson) | CRUZADA‑CON‑DEGRADACIÓN |
+| **GM3** (sistemas, tras M3.2) | Presupuesto del alcance funcional costeado con tarifas reales (CIV o encuesta fechada) y productividad HH/PF con fuente | el tabulador CIV jul‑2026 ya está en el repo (listado MO de MaPreX, estructurado en M0.2); si un rol no aparece ahí: encuesta salarial fechada; la productividad HH/PF siempre se toma de benchmark declarado (ISBSG o literatura), nunca inventada | CRUZADA |
+| **GM4** (cierre, tras M4.1) | Recuento G2 regenerado por dominio y `resultados_ml.md` reflejando los dominios poblados | — (informativa) | CRUZADA |
 
 Los cuatro dominios seguirán < 50 registros: la técnica de `ml/prediction/` **sigue siendo
 reglas** y la limitación **sigue declarada**. Este plan no promete revertir G2; promete que la
