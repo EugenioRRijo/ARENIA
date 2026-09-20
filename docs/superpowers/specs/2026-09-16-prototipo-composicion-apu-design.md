@@ -113,7 +113,9 @@ los medidos.
 
 **Requisito funcional nuevo:** el sistema **no persiste una composición cuyo rendimiento no haya
 sido declarado explícitamente junto con sus condiciones.** No hay valor por defecto que pase en
-silencio.
+silencio. Los dos caminos que persisten una composición —`cargar_composicion`, que crea la partida
+(UC‑10), y `reemplazar_composicion`, que corrige la existente (UC‑11)— exigen las condiciones y
+lanzan `ValueError` si vienen vacías; ningún ayudante del mapeo las suple con un valor por defecto.
 
 `core/catalog/rendimientos.proponer_rendimiento()` —escrito en I6.2 y nunca conectado a una
 pantalla— precarga la sugerencia, y `advertencia_rendimiento()` muestra la dispersión sin bloquear.
@@ -180,7 +182,9 @@ sensibilidad declarado como limitación. Cablear no es reentrenar.
 |---|---|
 | `core/contracts/apu.py` | `ModalidadManoObra`; campo en `LineaManoObra`; `total_obreros` excluye destajo |
 | `core/costing/motor.py` | La mano de obra se parte en dos sumandos |
-| `core/catalog/repositorio.py` | `reemplazar_composicion()` |
+| `core/catalog/repositorio.py` | `reemplazar_composicion()`; `cargar_composicion()` exige las condiciones |
+| `core/models/entidades.py` | La línea persistida gana `modalidad` (anulable, como `depreciacion`) |
+| `core/catalog/mapeo.py` | La modalidad en la ida y la vuelta; `condiciones` sin valor por defecto |
 | `ui/composicion.py` | **Nuevo.** Funciones puras: tablas → `ComposicionAPU`, validación, búsqueda MAPREX |
 | `ui/paginas/componer.py` | **Nuevo.** Solo `render()`, delgado |
 | `ui/app.py` | Registra la página; filtro de navegación para el modo entrega |

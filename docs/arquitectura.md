@@ -247,7 +247,7 @@ classDiagram
         +lista_vigente(fecha) models_ListaPrecios
         +composicion(codigo_partida, fecha, lista) ComposicionAPU
         +composiciones(codigos, fecha) dict~str, ComposicionAPU~
-        +cargar_composicion(composicion, lista, dominio, fecha_rendimiento) ResumenCarga
+        +cargar_composicion(composicion, lista, dominio, fecha_rendimiento, condiciones) ResumenCarga
         +registrar_rendimiento(rendimiento Rendimiento) models_Rendimiento
     }
     class mapeo {
@@ -259,7 +259,7 @@ classDiagram
         +a_modelo_insumo(linea, codigo) models_Insumo
         +a_modelo_lineas(lineas, partida, insumos) list~models_ComposicionAPU~
         +a_modelo_rendimiento(rendimiento, partida, ejecucion) models_Rendimiento
-        +a_modelo_rendimiento_estimado(composicion, partida, fecha) models_Rendimiento
+        +a_modelo_rendimiento_estimado(composicion, partida, fecha, condiciones) models_Rendimiento
     }
     class sesion {
         <<module>>
@@ -395,6 +395,7 @@ class Catalogo:
         lista: models.ListaPrecios,
         dominio: Dominio,
         fecha_rendimiento: date,
+        condiciones: str,
     ) -> ResumenCarga
     def registrar_rendimiento(self, rendimiento: Rendimiento) -> models.Rendimiento
 
