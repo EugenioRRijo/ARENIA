@@ -53,11 +53,39 @@ def decimal_desde_texto(texto: str, campo: str) -> Decimal:
     return valor
 
 
+def _texto(fila: Mapping[str, str], clave: str) -> str:
+    """Extrae y normaliza una celda, incluida la frontera con el productor real de las filas.
+
+    El tipo declarado de `fila` es `Mapping[str, str]`, pero `st.data_editor` con
+    `num_rows="dynamic"` (docstring líneas 6-8) entrega `None` o NaN en las celdas de una fila
+    recién añadida en blanco: `str(None)` es `"None"` y `str(float("nan"))` es `"nan"`, y ninguno
+    de los dos es vacío para `str.strip()`. Esta es la frontera donde ambos se normalizan a
+    cadena vacía, antes de que lleguen a `_fila_vacia` o a cualquier conversión.
+    """
+    valor = fila.get(clave)
+    if valor is None:
+        return ""
+    texto = str(valor).strip()
+    return "" if texto.lower() == "nan" else texto
+
+
 def _fila_vacia(valores: Sequence[str]) -> bool:
     """Una fila dinámica sin ningún dato todavía no es un error: es una fila que el usuario no
     llenó. Se descarta antes de intentar convertir nada.
     """
     return all(not valor.strip() for valor in valores)
+
+
+def _exigir_descripcion(tabla: str, indice: int, descripcion: str) -> None:
+    """Una fila con algún dato pero sin descripción no es "vacía": es un error (spec §4, plan P2.2).
+
+    Sin este control, `Catalogo._resolver_insumo` (core/catalog/repositorio.py) identifica los
+    insumos por (tipo, descripcion, unidad): varias líneas sin nombre con la misma unidad y precio
+    colapsarían calladamente en un solo insumo, y la regla R6 (`CriterioDepreciacion`) las
+    confundiría con "el mismo insumo" entre APU distintos.
+    """
+    if not descripcion:
+        raise ComposicionInvalida(f"{tabla}, fila {indice}: la descripcion no puede estar vacia")
 
 
 def _modalidad_desde_texto(texto: str, descripcion: str) -> ModalidadManoObra:
@@ -77,15 +105,15 @@ def _modalidad_desde_texto(texto: str, descripcion: str) -> ModalidadManoObra:
         ) from error
 
 
-def _material_desde_fila(fila: Mapping[str, str]) -> LineaMaterial | None:
-    descripcion = str(fila.get("descripcion", ""))
-    unidad = str(fila.get("unidad", ""))
-    cantidad_texto = str(fila.get("cantidad", ""))
-    precio_texto = str(fila.get("precio", ""))
+def _material_desde_fila(fila: Mapping[str, str], indice: int) -> LineaMaterial | None:
+    descripcion = _texto(fila, "descripcion")
+    unidad = _texto(fila, "unidad")
+    cantidad_texto = _texto(fila, "cantidad")
+    precio_texto = _texto(fila, "precio")
     if _fila_vacia((descripcion, unidad, cantidad_texto, precio_texto)):
         return None
+    _exigir_descripcion("materiales", indice, descripcion)
 
-    descripcion = descripcion.strip()
     cantidad = decimal_desde_texto(cantidad_texto, f"cantidad ({descripcion})")
     precio = decimal_desde_texto(precio_texto, f"precio ({descripcion})")
     try:
@@ -93,18 +121,20 @@ def _material_desde_fila(fila: Mapping[str, str]) -> LineaMaterial | None:
             descripcion=descripcion, unidad=unidad, cantidad=cantidad, precio=precio
         )
     except ValueError as error:
-        raise ComposicionInvalida(str(error)) from error
+        raise ComposicionInvalida(
+            f"materiales, fila {indice} ({descripcion}): {error}"
+        ) from error
 
 
-def _equipo_desde_fila(fila: Mapping[str, str]) -> LineaEquipo | None:
-    descripcion = str(fila.get("descripcion", ""))
-    cantidad_texto = str(fila.get("cantidad", ""))
-    precio_texto = str(fila.get("precio", ""))
-    depreciacion_texto = str(fila.get("depreciacion", ""))
+def _equipo_desde_fila(fila: Mapping[str, str], indice: int) -> LineaEquipo | None:
+    descripcion = _texto(fila, "descripcion")
+    cantidad_texto = _texto(fila, "cantidad")
+    precio_texto = _texto(fila, "precio")
+    depreciacion_texto = _texto(fila, "depreciacion")
     if _fila_vacia((descripcion, cantidad_texto, precio_texto, depreciacion_texto)):
         return None
+    _exigir_descripcion("equipos", indice, descripcion)
 
-    descripcion = descripcion.strip()
     cantidad = decimal_desde_texto(cantidad_texto, f"cantidad ({descripcion})")
     precio = decimal_desde_texto(precio_texto, f"precio ({descripcion})")
     depreciacion = decimal_desde_texto(depreciacion_texto, f"depreciacion ({descripcion})")
@@ -113,18 +143,20 @@ def _equipo_desde_fila(fila: Mapping[str, str]) -> LineaEquipo | None:
             descripcion=descripcion, cantidad=cantidad, precio=precio, depreciacion=depreciacion
         )
     except ValueError as error:
-        raise ComposicionInvalida(str(error)) from error
+        raise ComposicionInvalida(
+            f"equipos, fila {indice} ({descripcion}): {error}"
+        ) from error
 
 
-def _mano_obra_desde_fila(fila: Mapping[str, str]) -> LineaManoObra | None:
-    descripcion = str(fila.get("descripcion", ""))
-    cantidad_texto = str(fila.get("cantidad", ""))
-    sueldo_texto = str(fila.get("sueldo", ""))
-    modalidad_texto = str(fila.get("modalidad", ""))
+def _mano_obra_desde_fila(fila: Mapping[str, str], indice: int) -> LineaManoObra | None:
+    descripcion = _texto(fila, "descripcion")
+    cantidad_texto = _texto(fila, "cantidad")
+    sueldo_texto = _texto(fila, "sueldo")
+    modalidad_texto = _texto(fila, "modalidad")
     if _fila_vacia((descripcion, cantidad_texto, sueldo_texto, modalidad_texto)):
         return None
+    _exigir_descripcion("mano de obra", indice, descripcion)
 
-    descripcion = descripcion.strip()
     cantidad = decimal_desde_texto(cantidad_texto, f"cantidad ({descripcion})")
     sueldo = decimal_desde_texto(sueldo_texto, f"sueldo ({descripcion})")
     modalidad = _modalidad_desde_texto(modalidad_texto, descripcion)
@@ -133,7 +165,9 @@ def _mano_obra_desde_fila(fila: Mapping[str, str]) -> LineaManoObra | None:
             descripcion=descripcion, cantidad=cantidad, sueldo=sueldo, modalidad=modalidad
         )
     except ValueError as error:
-        raise ComposicionInvalida(str(error)) from error
+        raise ComposicionInvalida(
+            f"mano de obra, fila {indice} ({descripcion}): {error}"
+        ) from error
 
 
 def composicion_desde_tablas(
@@ -151,14 +185,22 @@ def composicion_desde_tablas(
     materiales `descripcion`, `unidad`, `cantidad`, `precio`; equipos `descripcion`, `cantidad`,
     `precio`, `depreciacion`; mano de obra `descripcion`, `cantidad`, `sueldo`, `modalidad`.
     """
+    # El indice empieza en 1 y cuenta las filas tal como llegaron (antes de descartar las
+    # vacias), para que el mensaje de error coincida con lo que la persona ve en pantalla.
     materiales = tuple(
-        linea for fila in filas_materiales if (linea := _material_desde_fila(fila)) is not None
+        linea
+        for indice, fila in enumerate(filas_materiales, start=1)
+        if (linea := _material_desde_fila(fila, indice)) is not None
     )
     equipos = tuple(
-        linea for fila in filas_equipos if (linea := _equipo_desde_fila(fila)) is not None
+        linea
+        for indice, fila in enumerate(filas_equipos, start=1)
+        if (linea := _equipo_desde_fila(fila, indice)) is not None
     )
     mano_obra = tuple(
-        linea for fila in filas_mano_obra if (linea := _mano_obra_desde_fila(fila)) is not None
+        linea
+        for indice, fila in enumerate(filas_mano_obra, start=1)
+        if (linea := _mano_obra_desde_fila(fila, indice)) is not None
     )
     valor_rendimiento = decimal_desde_texto(rendimiento, "rendimiento")
 

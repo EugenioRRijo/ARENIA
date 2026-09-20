@@ -111,3 +111,109 @@ def test_decimal_desde_texto_rechaza_lo_que_no_es_finito():
     assert decimal_desde_texto(" 7.5 ", "cantidad") == Decimal("7.5")
     with pytest.raises(ComposicionInvalida, match="cantidad"):
         decimal_desde_texto("Infinity", "cantidad")
+
+
+# --- Hallazgo 2.1: los errores del contrato deben nombrar la tabla y la fila culpables ---------
+
+
+def test_una_cantidad_negativa_en_la_segunda_fila_nombra_la_tabla_y_la_fila():
+    filas = [
+        {"descripcion": "Cemento", "unidad": "saco", "cantidad": "7.5", "precio": "8.00"},
+        {"descripcion": "Arena", "unidad": "saco", "cantidad": "-5", "precio": "3.00"},
+    ]
+
+    with pytest.raises(ComposicionInvalida) as error:
+        composicion_desde_tablas("P-01", "Prueba", "m3", "8", filas, [], MANO_OBRA)
+
+    assert "materiales, fila 2" in str(error.value)
+    assert "no puede ser negativo" in str(error.value)
+
+
+def test_una_depreciacion_fuera_de_rango_nombra_la_tabla_equipos():
+    filas = [
+        {"descripcion": "Vibrador", "cantidad": "1", "precio": "300.00", "depreciacion": "1.5"}
+    ]
+
+    with pytest.raises(ComposicionInvalida) as error:
+        composicion_desde_tablas("P-01", "Prueba", "m3", "8", [], filas, MANO_OBRA)
+
+    assert "equipos, fila 1" in str(error.value)
+    assert "depreciacion debe estar en" in str(error.value)
+
+
+def test_una_unidad_vacia_en_una_fila_se_distingue_de_la_unidad_vacia_de_la_partida():
+    fila_sin_unidad = [
+        {"descripcion": "Cemento", "unidad": "  ", "cantidad": "7.5", "precio": "8.00"}
+    ]
+
+    with pytest.raises(ComposicionInvalida) as error_de_fila:
+        composicion_desde_tablas("P-01", "Prueba", "m3", "8", fila_sin_unidad, [], MANO_OBRA)
+    with pytest.raises(ComposicionInvalida) as error_de_partida:
+        composicion_desde_tablas("P-01", "Prueba", "  ", "8", MATERIALES, [], MANO_OBRA)
+
+    assert "materiales, fila 1" in str(error_de_fila.value)
+    assert "materiales" not in str(error_de_partida.value)
+    assert "La unidad no puede estar vac" in str(error_de_fila.value)
+    assert "La unidad no puede estar vac" in str(error_de_partida.value)
+
+
+# --- Hallazgo 2.2: una fila con datos pero sin descripcion se rechaza --------------------------
+
+
+def test_una_fila_de_materiales_con_datos_pero_sin_descripcion_se_rechaza():
+    filas = [{"descripcion": "   ", "unidad": "saco", "cantidad": "7.5", "precio": "8.00"}]
+
+    with pytest.raises(ComposicionInvalida) as error:
+        composicion_desde_tablas("P-01", "Prueba", "m3", "8", filas, [], MANO_OBRA)
+
+    assert "materiales, fila 1" in str(error.value)
+    assert "descripcion" in str(error.value)
+
+
+def test_una_fila_de_equipos_con_datos_pero_sin_descripcion_se_rechaza():
+    filas = [{"descripcion": "", "cantidad": "1", "precio": "300.00", "depreciacion": "0.03"}]
+
+    with pytest.raises(ComposicionInvalida) as error:
+        composicion_desde_tablas("P-01", "Prueba", "m3", "8", [], filas, MANO_OBRA)
+
+    assert "equipos, fila 1" in str(error.value)
+    assert "descripcion" in str(error.value)
+
+
+def test_una_fila_de_mano_de_obra_con_datos_pero_sin_descripcion_se_rechaza():
+    filas = [{"descripcion": "", "cantidad": "1", "sueldo": "12.50", "modalidad": "jornal"}]
+
+    with pytest.raises(ComposicionInvalida) as error:
+        composicion_desde_tablas("P-01", "Prueba", "m3", "8", MATERIALES, [], filas)
+
+    assert "mano de obra, fila 1" in str(error.value)
+    assert "descripcion" in str(error.value)
+
+
+# --- Hallazgo 2.3: `None` y NaN de `st.data_editor` se normalizan a vacio -----------------------
+
+
+def test_una_fila_con_none_en_todas_las_celdas_se_descarta_como_vacia():
+    filas = [{"descripcion": None, "unidad": None, "cantidad": None, "precio": None}]
+
+    composicion = composicion_desde_tablas("P-01", "Prueba", "m3", "8", filas, [], MANO_OBRA)
+
+    assert composicion.materiales == ()
+
+
+def test_una_fila_con_nan_en_todas_las_celdas_se_descarta_como_vacia():
+    filas = [{"descripcion": "nan", "unidad": "NaN", "cantidad": "nan", "precio": "NaN"}]
+
+    composicion = composicion_desde_tablas("P-01", "Prueba", "m3", "8", filas, [], MANO_OBRA)
+
+    assert composicion.materiales == ()
+
+
+def test_una_fila_con_none_solo_en_cantidad_nombra_la_fila_no_el_texto_none():
+    filas = [{"descripcion": "Cemento", "unidad": "saco", "cantidad": None, "precio": "8.00"}]
+
+    with pytest.raises(ComposicionInvalida) as error:
+        composicion_desde_tablas("P-01", "Prueba", "m3", "8", filas, [], MANO_OBRA)
+
+    assert "None" not in str(error.value)
+    assert "cantidad (Cemento)" in str(error.value)
