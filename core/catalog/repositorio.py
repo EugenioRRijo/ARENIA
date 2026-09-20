@@ -141,6 +141,7 @@ class Catalogo:
         lista: models.ListaPrecios,
         dominio: Dominio,
         fecha_rendimiento: date,
+        condiciones: str,
     ) -> ResumenCarga:
         """Persiste un APU del contrato: partida, insumos, precios, líneas y rendimiento estimado.
 
@@ -150,8 +151,19 @@ class Catalogo:
         **No es reentrante.** Si la partida ya tiene composición cargada, lanza `ValueError` en vez
         de añadir un segundo juego de líneas: duplicarlas dejaría un APU con insumos repetidos y un
         segundo rendimiento estimado de la misma fecha, y hacerlo en silencio sería peor que fallar.
-        Reemplazar una composición existente es una operación distinta, todavía no implementada.
+        Reemplazar una composición existente es `reemplazar_composicion`, una operación distinta.
+
+        RF‑33 (`docs/ERS.md`, UC‑10; spec §3.3): el sistema no persiste una composición cuyo
+        rendimiento no haya sido declarado explícitamente junto con sus condiciones. Por eso
+        `condiciones` es obligatorio (`ValueError` si viene vacío o solo espacios), igual que en
+        `reemplazar_composicion`, y se rechaza antes de tocar la sesión: dejar la partida creada
+        y fallar después habría dejado una partida huérfana, sin composición ni rendimiento.
         """
+        if not condiciones.strip():
+            raise ValueError(
+                "cargar_composicion exige las condiciones del rendimiento (RF-33): el sistema no "
+                "persiste una composición cuyo rendimiento no se declare junto con ellas"
+            )
         partida = self._buscar_partida(composicion.codigo_partida)
         if partida is None:
             partida = a_modelo_partida(composicion, dominio)
@@ -164,7 +176,9 @@ class Catalogo:
             )
 
         resumen = self._cargar_lineas(partida, composicion, lista)
-        self._sesion.add(a_modelo_rendimiento_estimado(composicion, partida, fecha_rendimiento))
+        self._sesion.add(
+            a_modelo_rendimiento_estimado(composicion, partida, fecha_rendimiento, condiciones)
+        )
         self._sesion.flush()
         return resumen
 

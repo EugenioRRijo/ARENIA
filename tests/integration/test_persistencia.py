@@ -253,11 +253,55 @@ def test_cargar_composicion_dos_veces_lanza_valueerror(sesion):
             lista,
             contracts.Dominio.CIVIL,
             linea_base.FECHA_LINEA_BASE,
+            "reintento de carga",
         )
 
     assert _contar(sesion, models.ComposicionAPU) == lineas_antes
     assert _contar(sesion, models.Rendimiento) == rendimientos_antes
     assert Catalogo(sesion).composicion("LB-05-REL") == linea_base.APU_RELLENO
+
+
+def test_cargar_composicion_sin_condiciones_lanza_valueerror(sesion):
+    """RF‑33 alcanza los dos caminos, no solo el de UC‑11 (spec §3.3).
+
+    `reemplazar_composicion` ya lo exigía; crear una partida nueva sin declarar en qué condiciones
+    se midió su rendimiento dejaba un ESTIMADO con `condiciones=''`, que es exactamente el valor
+    por defecto silencioso que el spec prohíbe.
+    """
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    nueva = replace(linea_base.APU_RELLENO, codigo_partida="LB-98-NUE")
+    lineas_antes = _contar(sesion, models.ComposicionAPU)
+
+    with pytest.raises(ValueError, match="RF-33"):
+        catalogo.cargar_composicion(
+            nueva, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE, "   "
+        )
+
+    assert _contar(sesion, models.ComposicionAPU) == lineas_antes
+
+
+def test_cargar_composicion_registra_las_condiciones_declaradas(sesion):
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    nueva = replace(linea_base.APU_RELLENO, codigo_partida="LB-97-NUE")
+
+    catalogo.cargar_composicion(
+        nueva,
+        lista,
+        contracts.Dominio.CIVIL,
+        linea_base.FECHA_LINEA_BASE,
+        "cuadrilla de cuatro, suelo seco",
+    )
+    sesion.flush()
+
+    registrado = sesion.scalars(
+        select(models.Rendimiento)
+        .join(models.Partida)
+        .where(models.Partida.codigo == "LB-97-NUE")
+    ).one()
+    assert registrado.condiciones == "cuadrilla de cuatro, suelo seco"
+    assert registrado.tipo == contracts.TipoRendimiento.ESTIMADO
 
 
 def test_reemplazar_composicion_permite_corregir_una_partida(sesion):
@@ -507,7 +551,11 @@ def test_la_modalidad_a_destajo_sobrevive_el_viaje_por_el_catalogo(sesion):
     )
 
     catalogo.cargar_composicion(
-        mixto, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+        mixto,
+        lista,
+        contracts.Dominio.CIVIL,
+        linea_base.FECHA_LINEA_BASE,
+        "composicion de prueba con jornal y destajo",
     )
     sesion.flush()
     vuelta = Catalogo(sesion).composicion("LB-99-MIX", fecha=linea_base.FECHA_LINEA_BASE)

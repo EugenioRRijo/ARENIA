@@ -95,16 +95,13 @@ def sembrar(sesion: Session) -> models.Proyecto:
 
     catalogo = Catalogo(sesion)
     for apu in linea_base.APUS_LINEA_BASE:
-        catalogo.cargar_composicion(apu, lista, Dominio.CIVIL, linea_base.FECHA_LINEA_BASE)
-        # cargar_composicion ya registro el rendimiento estimado de esta partida (sin
-        # condiciones); se le declaran aqui las condiciones del caso didactico en vez de crear
-        # un segundo Rendimiento, para que la partida siga teniendo uno solo, trazable.
-        rendimiento = sesion.scalars(
-            select(models.Rendimiento)
-            .join(models.Partida)
-            .where(models.Partida.codigo == apu.codigo_partida)
-        ).one()
-        rendimiento.condiciones = CONDICIONES_LINEA_BASE[apu.codigo_partida]
+        catalogo.cargar_composicion(
+            apu,
+            lista,
+            Dominio.CIVIL,
+            linea_base.FECHA_LINEA_BASE,
+            CONDICIONES_LINEA_BASE[apu.codigo_partida],
+        )
 
     sesion.commit()
     return proyecto

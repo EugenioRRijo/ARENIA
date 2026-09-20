@@ -245,17 +245,19 @@ def a_modelo_rendimiento(
 
 
 def a_modelo_rendimiento_estimado(
-    composicion: ComposicionAPU, partida: models.Partida, fecha: date, condiciones: str = ""
+    composicion: ComposicionAPU, partida: models.Partida, fecha: date, condiciones: str
 ) -> models.Rendimiento:
     """El rendimiento ESTIMADO que declara un APU del contrato, listo para persistir.
 
     Pasa por `contracts.Rendimiento` a propósito: así el valor queda validado por las invariantes
     del contrato (mayor que cero) antes de tocar la base de datos.
 
-    `condiciones` es opcional aquí porque `cargar_composicion` (usado por `scripts/seed.py`) las
-    declara por fuera, editando el modelo después de persistirlo (RF-33 no la alcanza: nace junto
-    con la partida, no la corrige). `reemplazar_composicion` sí la exige y la pasa explícita: es
-    el criterio de aceptación de RF-33 (revisión final, arreglo 1).
+    `condiciones` no tiene valor por defecto a propósito: RF‑33 (spec §3.3) exige que ningún
+    rendimiento se persista sin declarar junto a él las condiciones en que se estimó, y los dos
+    caminos que llaman a esta función —`cargar_composicion` y `reemplazar_composicion`— la exigen
+    y la validan antes de llegar aquí. Un valor por defecto habría dejado abierta la puerta que
+    RF‑33 quiere cerrada: que un llamador nuevo la omita y persista un `Rendimiento` con
+    `condiciones=''` en silencio.
     """
     return a_modelo_rendimiento(
         Rendimiento(
