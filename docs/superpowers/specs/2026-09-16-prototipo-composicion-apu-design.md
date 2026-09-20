@@ -143,12 +143,12 @@ exportador. Queda declarado como extensión prevista, no como omisión.
 
 ### 3.6 Guardar y editar
 
-`cargar_composicion()` crea la partida si no existe, pero lanza `ValueError` si la partida ya tiene
-composición: reemplazarla está marcado en el código como «operación distinta, todavía no
-implementada». Sin resolverlo, el prototipo no permite corregir un error de tipeo después de
-guardar.
+`cargar_composicion()` crea la partida si no existe, pero sigue rechazando con `ValueError` la
+partida que ya tiene composición cargada, para no duplicar sus líneas: corregirla es la operación
+distinta, `reemplazar_composicion()`. Ambos caminos exigen ahora `condiciones` (§3.3, RF‑33) y
+lanzan `ValueError` si vienen vacías, antes de tocar la sesión.
 
-Se agrega `Catalogo.reemplazar_composicion()` en `core/catalog/repositorio.py`, con la misma
+`Catalogo.reemplazar_composicion()` existe en `core/catalog/repositorio.py`, con la misma
 resolución de insumos y registrando un rendimiento nuevo en lugar de pisar el anterior.
 `core/catalog/` no está entre los contratos congelados de `CLAUDE.md` §5: es trabajo ordinario.
 El `commit` lo hace la interfaz, como en `ui/paginas/actualizacion.py`.
