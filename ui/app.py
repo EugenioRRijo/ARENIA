@@ -1,9 +1,10 @@
 """Interfaz Streamlit multipagina del sistema APU (Sesion F.1, Tarea 4).
 
-Enrutador `st.navigation` sobre las ocho pantallas de `ui/paginas/`: actualizacion masiva de
-precios (UC-02), catalogo, elaborar presupuesto (UC-01), los escenarios de sensibilidad (UC-08),
-historico de cambios de precio, las partidas similares (UC-03, Sesion I2), el simulador de listas
-de prueba y el visor 3D del modelo IFC (Tarea 7).
+Enrutador `st.navigation` sobre las nueve pantallas de `ui/paginas/`: actualizacion masiva de
+precios (UC-02), catalogo, componer o editar una partida a mano (UC-10 / UC-11, Sesion P2.2),
+elaborar presupuesto (UC-01), los escenarios de sensibilidad (UC-08), historico de cambios de
+precio, las partidas similares (UC-03, Sesion I2), el simulador de listas de prueba y el visor 3D
+del modelo IFC (Tarea 7).
 
 Cada pagina expone `def render() -> None` sin efectos al importarse (los suyos, y los de este
 modulo, los comprueba `tests/unit/test_ui_importable.py` con `importlib.import_module`): este
@@ -34,6 +35,7 @@ import streamlit as st
 from ui.paginas import (
     actualizacion,
     catalogo,
+    componer,
     elaborar,
     escenarios,
     historico,
@@ -51,6 +53,7 @@ def main() -> None:
     paginas = [
         st.Page(actualizacion.render, title="Actualizacion de precios (UC-02)", default=True),
         st.Page(catalogo.render, title="Catalogo"),
+        st.Page(componer.render, title="Componer partida (UC-10 / UC-11)"),
         st.Page(elaborar.render, title="Elaborar presupuesto (UC-01)"),
         st.Page(escenarios.render, title="Escenarios (UC-08)"),
         st.Page(historico.render, title="Historico de precios"),
