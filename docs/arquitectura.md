@@ -248,6 +248,7 @@ classDiagram
         +composicion(codigo_partida, fecha, lista) ComposicionAPU
         +composiciones(codigos, fecha) dict~str, ComposicionAPU~
         +cargar_composicion(composicion, lista, dominio, fecha_rendimiento, condiciones) ResumenCarga
+        +reemplazar_composicion(composicion, lista, dominio, fecha_rendimiento, condiciones) ResumenCarga
         +registrar_rendimiento(rendimiento Rendimiento) models_Rendimiento
     }
     class mapeo {
@@ -390,6 +391,14 @@ class Catalogo:
         self, codigos: Iterable[str], fecha: date | None = None
     ) -> dict[str, ComposicionAPU]
     def cargar_composicion(
+        self,
+        composicion: ComposicionAPU,
+        lista: models.ListaPrecios,
+        dominio: Dominio,
+        fecha_rendimiento: date,
+        condiciones: str,
+    ) -> ResumenCarga
+    def reemplazar_composicion(
         self,
         composicion: ComposicionAPU,
         lista: models.ListaPrecios,
@@ -618,7 +627,7 @@ El adaptador civil añade sus reglas paramétricas como texto trazable
 `REGLA_EXCAVACION_ZANJA`, `REGLA_TUBERIA`, `REGLA_VOLUMEN_TUBERIA`, `REGLA_RELLENO` en
 `adapters/civil/reglas.py`) y las evalúa con `adapters/civil/evaluador.py::evaluar_regla`.
 
-### 2.4 Composición de partidas en la UI (`ui/composicion.py`, Sesión P1)
+### 2.4 Composición de partidas en la UI (`ui/composicion.py`, Sesión P2.1)
 
 `ui/composicion.py` es **lógica pura probada sin Streamlit**: arma y valida una `ComposicionAPU` a
 partir de las líneas que el proyectista teclea (UC‑10, UC‑11) — incluida la modalidad de mano de

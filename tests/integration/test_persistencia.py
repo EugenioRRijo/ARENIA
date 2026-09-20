@@ -573,15 +573,22 @@ def test_la_modalidad_a_destajo_sobrevive_el_viaje_por_el_catalogo(sesion):
 
 
 def test_una_linea_sin_modalidad_persistida_vuelve_como_jornal(sesion):
-    """Las filas escritas antes de la columna tienen NULL: el contrato las lee como JORNAL.
+    """Tras un `ALTER TABLE ... ADD COLUMN modalidad`, las filas preexistentes quedan en NULL y el
+    contrato debe leerlas como JORNAL, su valor por defecto.
 
-    Es el valor por defecto del contrato y el de toda la línea base, así que la lectura de una
-    base anterior a esta columna no cambia ni un céntimo.
+    Esta prueba simula esa migración asignando `None` a mano: no reproduce que una base anterior a
+    esta columna "no cambia ni un céntimo" al leerse, porque sin el `ALTER TABLE` esa base ni
+    siquiera abre — `Base.metadata.create_all` (`core/catalog/sesion.py`) nunca altera una tabla
+    que ya existe. Ese hallazgo, y las dos salidas para conservar los datos de una base así, están
+    en `docs/bitacora/2026-09-20-P2-hallazgo-migraciones.md`. Lo que esta prueba sí garantiza es la
+    rama NULL→JORNAL de `core/catalog/mapeo.py:87-89`, que es la que hace legibles las filas viejas
+    una vez aplicado el `ALTER TABLE`.
     """
     linea = sesion.scalars(
         select(models.ComposicionAPU)
         .join(models.Insumo)
         .where(models.Insumo.tipo == models.TipoInsumo.MANO_OBRA)
+        .order_by(models.ComposicionAPU.id)
     ).first()
     linea.modalidad = None
     sesion.flush()
