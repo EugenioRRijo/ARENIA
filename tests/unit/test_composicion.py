@@ -11,6 +11,8 @@ import pytest
 from core.contracts import Dominio, ModalidadManoObra, OrigenTipo
 from ui.composicion import (
     ComposicionInvalida,
+    FilaReferencia,
+    buscar_referencia,
     composicion_desde_tablas,
     decimal_desde_texto,
     item_desde_cantidad,
@@ -217,3 +219,58 @@ def test_una_fila_con_none_solo_en_cantidad_nombra_la_fila_no_el_texto_none():
 
     assert "None" not in str(error.value)
     assert "cantidad (Cemento)" in str(error.value)
+
+
+# --- Tarea 2: busqueda en la referencia MaPreX, como funcion pura ------------------------------
+#
+# Filas reales de `data/precios/maprex_2026-07/referencia_civil.csv` (no inventadas), elegidas
+# porque cubren los cinco casos del brief con datos ya presentes en el archivo:
+# - CEM019 "CEMENTO GRIS PORTLAND SACO 42.5 KG/93,7 LB" (material): sin factor_depreciacion ni
+#   bono_bs.
+# - MOV027 "RETROEXCAVADORA CASE O SIM" (equipo): con factor_depreciacion, sin bono_bs.
+# - 19-2.2 "ALBAÑIL DE 1RA -N5" (mano_obra): con bono_bs, sin factor_depreciacion; sirve ademas
+#   para probar mayusculas y acentos porque su descripcion lleva una eñe.
+
+
+def test_buscar_referencia_encuentra_la_fila_esperada_con_ref_y_precio_decimal():
+    resultados = buscar_referencia("cemento gris portland", "material")
+
+    assert len(resultados) == 1
+    fila = resultados[0]
+    assert isinstance(fila, FilaReferencia)
+    assert fila.descripcion == "CEMENTO GRIS PORTLAND SACO 42.5 KG/93,7 LB"
+    assert fila.ref_maprex == "CEM019"
+    assert fila.precio_usd == Decimal("19.0727")
+    assert type(fila.precio_usd) is Decimal
+
+
+def test_buscar_referencia_sin_coincidencias_devuelve_lista_vacia():
+    resultados = buscar_referencia("insumo que no existe en ningun listado", "material")
+
+    assert resultados == []
+
+
+def test_buscar_referencia_es_insensible_a_mayusculas_y_acentos():
+    resultados = buscar_referencia("ALBANIL", "mano_obra")
+
+    assert len(resultados) == 1
+    assert resultados[0].descripcion == "ALBAÑIL DE 1RA -N5"
+    assert resultados[0].ref_maprex == "19-2.2"
+
+
+def test_buscar_referencia_factor_depreciacion_solo_lleno_en_equipos():
+    equipo = buscar_referencia("retroexcavadora", "equipo")[0]
+    material = buscar_referencia("cemento gris portland", "material")[0]
+
+    assert equipo.factor_depreciacion == Decimal("0.003500")
+    assert type(equipo.factor_depreciacion) is Decimal
+    assert material.factor_depreciacion is None
+
+
+def test_buscar_referencia_todo_numero_es_decimal_construido_desde_texto():
+    mano_obra = buscar_referencia("albanil", "mano_obra")[0]
+
+    assert mano_obra.bono_bs == Decimal("3679.85")
+    assert type(mano_obra.bono_bs) is Decimal
+    assert type(mano_obra.precio_usd) is Decimal
+    assert mano_obra.factor_depreciacion is None

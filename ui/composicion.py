@@ -15,8 +15,11 @@ significa "vacío" y qué mensaje de error señala la fila y el campo culpables.
 
 from __future__ import annotations
 
+import csv
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 
 from core.contracts.apu import (
     ComposicionAPU,
@@ -27,6 +30,7 @@ from core.contracts.apu import (
 )
 from core.contracts.dominio import Dominio
 from core.contracts.item_computo import ItemComputo, OrigenTipo
+from core.verification.texto import normalizar_texto
 
 
 class ComposicionInvalida(ValueError):  # noqa: N818
@@ -247,3 +251,100 @@ def item_desde_cantidad(
         # `origen_id` no vacío ya lo exige el contrato (toda cantidad debe ser trazable); aquí
         # solo se traduce la excepción.
         raise ComposicionInvalida(str(error)) from error
+
+
+# --- Búsqueda en la referencia MaPreX (Tarea 2, UC-10/UC-11) -----------------------------------
+#
+# `data/precios/maprex_2026-07/referencia_{civil,telecom,industrial,sistemas}.csv` (Sesión M0.2,
+# `scripts/extraer_maprex.py`) son 111 filas verificadas. A diferencia de la lista canónica de
+# cuatro columnas que deriva `scripts/lista_maprex_usd.py`, aquí se leen los CSV crudos porque
+# solo ellos traen `factor_depreciacion`, `bono_bs` y `ref_maprex`: el propósito de esta búsqueda
+# es sugerir esos datos para autocompletar una fila de la pantalla, no solo un precio.
+
+_RAIZ_REPOSITORIO = Path(__file__).resolve().parents[1]
+_CARPETA_REFERENCIA = Path("data") / "precios" / "maprex_2026-07"
+#: Mismo orden que `scripts/lista_maprex_usd.py` (civil, telecom, industrial, sistemas), para que
+#: la posición de una fila en el resultado sea reproducible entre ejecuciones.
+_ARCHIVOS_REFERENCIA = (
+    "referencia_civil.csv",
+    "referencia_telecom.csv",
+    "referencia_industrial.csv",
+    "referencia_sistemas.csv",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class FilaReferencia:
+    """Una fila de la referencia MaPreX, como sugerencia editable.
+
+    MaPreX es referencia de mercado, no verdad (spec §3.4): quien presupuesta puede sobrescribir
+    el precio con su cotizacion. `factor_depreciacion` solo viene lleno en equipos.
+    """
+
+    tipo: str
+    descripcion: str
+    unidad: str
+    precio_usd: Decimal
+    factor_depreciacion: Decimal | None
+    bono_bs: Decimal | None
+    ref_maprex: str
+
+
+def _decimal_o_nada(texto: str) -> Decimal | None:
+    """`Decimal` desde una celda que puede venir vacía (`factor_depreciacion` y `bono_bs` solo se
+    llenan para ciertos `tipo`: ver `buscar_referencia`). Construido siempre desde texto.
+    """
+    texto = texto.strip()
+    return Decimal(texto) if texto else None
+
+
+def _fila_referencia_desde_csv(fila: Mapping[str, str]) -> FilaReferencia:
+    return FilaReferencia(
+        tipo=fila["tipo"],
+        descripcion=fila["insumo"],
+        unidad=fila["unidad"],
+        precio_usd=Decimal(fila["precio_usd"].strip()),
+        factor_depreciacion=_decimal_o_nada(fila["factor_depreciacion"]),
+        bono_bs=_decimal_o_nada(fila["bono_bs"]),
+        ref_maprex=fila["ref_maprex"],
+    )
+
+
+def buscar_referencia(texto: str, tipo: str, raiz: Path | None = None) -> list[FilaReferencia]:
+    """Sugerencias de la referencia MaPreX para autocompletar una fila de la composición.
+
+    MaPreX es referencia de mercado, no verdad (spec §3.4,
+    `docs/superpowers/specs/2026-09-16-prototipo-composicion-apu-design.md`): esta función busca
+    y sugiere; la Tarea 3 la muestra en pantalla, y quien compone decide si usa el precio
+    sugerido, lo edita o lo ignora. Autocompletar `factor_depreciacion` desde una sola fuente es
+    lo que evita que dos personas le den un factor distinto al mismo insumo en dos APU, que es
+    exactamente lo que vigila la regla R6 (`CriterioDepreciacion`).
+
+    Lee los cuatro `referencia_*.csv` de `data/precios/maprex_2026-07/` con el módulo `csv` de la
+    biblioteca estándar (este módulo no importa `pandas` ni `streamlit`) y filtra por `tipo`
+    exacto (`material`, `equipo` o `mano_obra`, los tres únicos que trae el archivo) y por
+    coincidencia de subcadena de `texto` contra la descripción (columna `insumo`). Ambos se
+    comparan ya normalizados con `normalizar_texto` (`core/verification/texto.py`, la única
+    normalización de texto del repositorio) para que "tuberia" encuentre "TUBERÍA" sin importar
+    mayúsculas ni acentos.
+
+    Devuelve las filas en el orden en que aparecen leyendo los archivos civil, telecom,
+    industrial y sistemas (el mismo orden que `scripts/lista_maprex_usd.py`), o una lista vacía
+    si nada coincide: nunca `None` ni una excepción.
+
+    `raiz` es la raíz del repositorio; por defecto, la que resulta de la ubicación de este
+    archivo (`ui/composicion.py` está a un nivel de la raíz, igual que `scripts/*.py`). Las
+    pruebas pueden pasar otra para apuntar a un directorio distinto.
+    """
+    carpeta = (raiz if raiz is not None else _RAIZ_REPOSITORIO) / _CARPETA_REFERENCIA
+    objetivo = normalizar_texto(texto)
+    encontradas: list[FilaReferencia] = []
+    for nombre in _ARCHIVOS_REFERENCIA:
+        with (carpeta / nombre).open(newline="", encoding="utf-8") as archivo:
+            for fila in csv.DictReader(archivo):
+                if fila["tipo"] != tipo:
+                    continue
+                if objetivo not in normalizar_texto(fila["insumo"]):
+                    continue
+                encontradas.append(_fila_referencia_desde_csv(fila))
+    return encontradas
