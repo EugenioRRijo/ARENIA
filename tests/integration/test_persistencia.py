@@ -272,6 +272,7 @@ def test_cargar_composicion_sin_condiciones_lanza_valueerror(sesion):
     lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
     nueva = replace(linea_base.APU_RELLENO, codigo_partida="LB-98-NUE")
     lineas_antes = _contar(sesion, models.ComposicionAPU)
+    partidas_antes = _contar(sesion, models.Partida)
 
     with pytest.raises(ValueError, match="RF-33"):
         catalogo.cargar_composicion(
@@ -279,6 +280,9 @@ def test_cargar_composicion_sin_condiciones_lanza_valueerror(sesion):
         )
 
     assert _contar(sesion, models.ComposicionAPU) == lineas_antes
+    assert _contar(sesion, models.Partida) == partidas_antes, (
+        "la guarda va antes de crear la partida: un rechazo no puede dejar una partida huérfana"
+    )
 
 
 def test_cargar_composicion_registra_las_condiciones_declaradas(sesion):
