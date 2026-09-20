@@ -480,3 +480,62 @@ def test_la_siembra_deja_rendimientos_estimados_con_condiciones(sesion):
         registrados = catalogo.rendimientos(codigo)
         assert registrados, codigo
         assert all(rendimiento.condiciones for rendimiento in registrados), codigo
+
+
+def test_la_modalidad_a_destajo_sobrevive_el_viaje_por_el_catalogo(sesion):
+    """Deuda 1 del ramal: una línea a destajo volvía como jornal (mapeo.py construía tres campos).
+
+    Es la diferencia entre 6,00 USD/m2 y 6,00 × (1 + FCAS) + bono, dividido entre el rendimiento:
+    el destajo del artículo 114 de la LOTTT deja de serlo en cuanto se guarda.
+    """
+    catalogo = Catalogo(sesion)
+    lista = catalogo.lista_vigente(linea_base.FECHA_LINEA_BASE)
+    mixto = contracts.ComposicionAPU(
+        codigo_partida="LB-99-MIX",
+        descripcion="Partida de prueba con las dos modalidades",
+        unidad="m2",
+        rendimiento=Decimal("20"),
+        mano_obra=(
+            contracts.LineaManoObra("Obrero de primera", Decimal("1"), Decimal("12.50")),
+            contracts.LineaManoObra(
+                "Friso a destajo",
+                Decimal("1"),
+                Decimal("6.00"),
+                contracts.ModalidadManoObra.DESTAJO,
+            ),
+        ),
+    )
+
+    catalogo.cargar_composicion(
+        mixto, lista, contracts.Dominio.CIVIL, linea_base.FECHA_LINEA_BASE
+    )
+    sesion.flush()
+    vuelta = Catalogo(sesion).composicion("LB-99-MIX", fecha=linea_base.FECHA_LINEA_BASE)
+
+    modalidades = [linea.modalidad for linea in vuelta.mano_obra]
+    assert modalidades == [
+        contracts.ModalidadManoObra.JORNAL,
+        contracts.ModalidadManoObra.DESTAJO,
+    ]
+    assert vuelta.total_obreros == Decimal("1"), "el destajista no devenga bono de alimentación"
+
+
+def test_una_linea_sin_modalidad_persistida_vuelve_como_jornal(sesion):
+    """Las filas escritas antes de la columna tienen NULL: el contrato las lee como JORNAL.
+
+    Es el valor por defecto del contrato y el de toda la línea base, así que la lectura de una
+    base anterior a esta columna no cambia ni un céntimo.
+    """
+    linea = sesion.scalars(
+        select(models.ComposicionAPU)
+        .join(models.Insumo)
+        .where(models.Insumo.tipo == models.TipoInsumo.MANO_OBRA)
+    ).first()
+    linea.modalidad = None
+    sesion.flush()
+
+    vuelta = Catalogo(sesion).composicion(linea.partida.codigo)
+
+    assert all(
+        obrero.modalidad is contracts.ModalidadManoObra.JORNAL for obrero in vuelta.mano_obra
+    )

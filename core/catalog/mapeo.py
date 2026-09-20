@@ -26,6 +26,7 @@ from core.contracts.apu import (
     LineaEquipo,
     LineaManoObra,
     LineaMaterial,
+    ModalidadManoObra,
     Rendimiento,
     TipoRendimiento,
 )
@@ -78,7 +79,16 @@ def a_composicion(
                 LineaEquipo(insumo.descripcion, linea.cantidad, precio, linea.depreciacion)
             )
         else:
-            mano_obra.append(LineaManoObra(insumo.descripcion, linea.cantidad, precio))
+            mano_obra.append(
+                LineaManoObra(
+                    insumo.descripcion,
+                    linea.cantidad,
+                    precio,
+                    ModalidadManoObra(linea.modalidad)
+                    if linea.modalidad
+                    else ModalidadManoObra.JORNAL,
+                )
+            )
 
     return ComposicionAPU(
         codigo_partida=partida.codigo,
@@ -116,7 +126,8 @@ class LineaCatalogo:
 
     Aplana las tres tuplas del contrato (materiales, equipos, mano de obra) en la secuencia única y
     ordenada que persiste `models.ComposicionAPU`, y unifica los tres nombres del importe unitario
-    (`precio` de material y equipo, `sueldo` de mano de obra) en uno solo.
+    (`precio` de material y equipo, `sueldo` de mano de obra) en uno solo. `modalidad` solo la
+    llevan las líneas de mano de obra, igual que `depreciacion` solo la llevan los equipos.
     """
 
     tipo: models.TipoInsumo
@@ -125,6 +136,7 @@ class LineaCatalogo:
     precio: Decimal
     cantidad: Decimal
     depreciacion: Decimal | None
+    modalidad: ModalidadManoObra | None = None
 
 
 def lineas_de(composicion: ComposicionAPU) -> list[LineaCatalogo]:
@@ -163,6 +175,7 @@ def lineas_de(composicion: ComposicionAPU) -> list[LineaCatalogo]:
             precio=obrero.sueldo,
             cantidad=obrero.cantidad,
             depreciacion=None,
+            modalidad=obrero.modalidad,
         )
         for obrero in composicion.mano_obra
     ]
@@ -208,6 +221,7 @@ def a_modelo_lineas(
             insumo_id=insumo.id,
             cantidad=linea.cantidad,
             depreciacion=linea.depreciacion,
+            modalidad=linea.modalidad.value if linea.modalidad is not None else None,
             orden=orden,
         )
         for orden, (linea, insumo) in enumerate(zip(lineas, insumos, strict=True))
