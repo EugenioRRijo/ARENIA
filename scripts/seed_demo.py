@@ -1,4 +1,12 @@
-"""Siembra el caso de demostracion de AREN.IA en SQLite (Sesion P3.4, fase P3 del prototipo).
+"""Una sola orden deja la aplicacion lista: linea base, demostracion y presupuesto (Sesion P4.2).
+
+Antes sembraba solo el caso de demostracion (Sesion P3.4, fase P3); desde la Tarea 2 de P4.2,
+``main`` deja la base de datos lista de punta a punta con una sola orden: primero la linea base
+civil (``scripts.seed.sembrar``), despues las tres partidas ``DEMO-*`` con su lista de precios
+heredando **todos** los precios de la vigente, y por ultimo el presupuesto ``DEMO-001`` guardado
+con su informe de auditoria. Corregia ademas un defecto real heredado de P3: la lista de precios
+de la demostracion nacia vacia, asi que sembrar la linea base y la demostracion en la misma base
+dejaba las cinco partidas ``LB-*`` sin precio desde la fecha de la demostracion en adelante.
 
 **Caso didactico, no obra ejecutada.** Igual que la linea base civil (`scripts/seed.py`) y los
 catalogos telecom/industrial/sistemas, las tres partidas de este modulo son un ejercicio academico
@@ -12,10 +20,11 @@ Hermano de `scripts/seed.py`, `scripts/seed_telecom.py`, `scripts/seed_industria
 A diferencia de ellos, este caso no proviene de ningun PDF ni CSV externo (no hay fixture que
 citar): las tres composiciones se escriben aqui mismo, en `construir_caso_demo`, que es la
 **unica** construccion del caso en todo el repositorio (principio DRY, CLAUDE.md §2). Cualquier
-otro modulo que necesite este caso -- por ejemplo la prueba de extremo a extremo de la Tarea 3,
-`tests/integration/test_composicion_extremo_a_extremo.py` -- la importa desde aqui en vez de
+otro modulo que necesite este caso -- por ejemplo la prueba de extremo a extremo de la Tarea 3 de
+P3, `tests/integration/test_composicion_extremo_a_extremo.py` -- la importa desde aqui en vez de
 copiarla: un caso de demostracion escrito dos veces es dos casos que divergen en la primera
-correccion.
+correccion. `elaborar_caso_demo` es, del mismo modo, la **unica** elaboracion del caso: la usan el
+resumen impreso, `guardar_presupuesto_demo` y las pruebas.
 
 Que ejercita el caso, partida por partida
 ==========================================
@@ -24,7 +33,9 @@ Que ejercita el caso, partida por partida
   la misma partida** (decision D9, articulo 114 de la LOTTT: el destajo se paga por unidad de obra
   instalada, sin FCAS ni bono, y entra completo al precio unitario); material con desperdicio
   (tuberia, cantidad 1,05 por cada metro: 5 % de merma, igual convencion que
-  ``tests/fixtures/apu_linea_base.py``); equipos con depreciacion parcial.
+  ``tests/fixtures/apu_linea_base.py``); equipos con depreciacion parcial. Ademas acumula **dos**
+  observaciones de rendimiento (``FECHA_OBSERVACION_PREVIA``, anterior a ``FECHA_DEMO``, y la de
+  su composicion) para que la advertencia de RF-27 tenga historial que ejercitar.
 - ``DEMO-02-VALV`` (Suministro e instalacion de valvula de paso de 6 pulgadas): mano de obra toda
   a jornal, para que el contraste con la partida anterior sea visible; material con desperdicio
   (empaques de caucho, 2 unidades + 5 % de merma = 2,10); mismo equipo que la partida anterior con
@@ -39,9 +50,14 @@ Uso::
     uv run python scripts/seed_demo.py --db /tmp/x.db  # otra ruta
     uv run python scripts/seed_demo.py --reiniciar     # borra el esquema y lo vuelve a crear
 
+Deja sembrados, todo idempotente: los cinco APU ``LB-*`` de la linea base, las tres partidas
+``DEMO-*``, las dos listas de precios (la de la linea base y la de la demostracion, que hereda
+todos los precios de la primera), el presupuesto ``DEMO-001`` guardado con su informe de
+auditoria, y dos observaciones de rendimiento para ``DEMO-01-INST``.
+
 **Nunca se corrio este script contra ``data/apu.db`` durante el desarrollo**: todas las pruebas de
-la Tarea 4 se hicieron contra un archivo temporal, siguiendo la misma precaucion que pide el plan
-de la fase P3.
+`tests/integration/test_seed_demo.py` se hicieron contra un archivo temporal, siguiendo la misma
+precaucion que pide el plan de la fase P4.
 """
 
 from __future__ import annotations
@@ -64,8 +80,20 @@ from sqlalchemy import func, select  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from core import models  # noqa: E402
-from core.budget import elaborar, generar_presupuesto, plan_secuencial  # noqa: E402
-from core.catalog import Catalogo, abrir_sesion, crear_esquema, crear_motor  # noqa: E402
+from core.budget import (  # noqa: E402
+    ResultadoElaboracion,
+    elaborar,
+    generar_presupuesto,
+    guardar_presupuesto,
+    plan_secuencial,
+)
+from core.catalog import (  # noqa: E402
+    Catalogo,
+    abrir_sesion,
+    crear_esquema,
+    crear_motor,
+    registrar_rendimiento,
+)
 from core.contracts import (  # noqa: E402
     ComposicionAPU,
     Dominio,
@@ -76,7 +104,9 @@ from core.contracts import (  # noqa: E402
     ModalidadManoObra,
     OrigenTipo,
     ParametrosCosto,
+    TipoRendimiento,
 )
+from scripts import seed  # noqa: E402
 
 NOMBRE_PROYECTO = "AREN.IA: caso de demostracion (linea de agua potable, didactico)"
 DESCRIPCION_PROYECTO = (
@@ -95,6 +125,20 @@ RUTA_POR_DEFECTO = "data/apu.db"
 # Parametros de la estructura de costos: los valores por defecto del contrato (CLAUDE.md §4), sin
 # repetirlos aqui (principio DRY).
 PARAMETROS_DEMO = ParametrosCosto()
+
+#: Segunda observacion didactica de rendimiento de `DEMO-01-INST` (hecho verificado 9 del plan):
+#: sin ella, ninguna partida sembrada llega a `MINIMO_OBSERVADO_PARA_ADVERTIR` observaciones y la
+#: advertencia de RF-27 no se puede ejercitar contra la base sembrada. Fechada **antes** de
+#: `FECHA_DEMO` a proposito: `Catalogo.composicion` y `proponer_rendimiento` siguen escogiendo el
+#: rendimiento mas reciente (el de la composicion, en `FECHA_DEMO`), asi que el total y la
+#: composicion de la demostracion no se mueven.
+FECHA_OBSERVACION_PREVIA = date(2026, 8, 15)
+#: Distinto del rendimiento de la composicion (60) para que el rango observado no sea degenerado.
+RENDIMIENTO_OBSERVACION_PREVIA = Decimal("50")
+CONDICIONES_OBSERVACION_PREVIA = (
+    "segunda estimacion didactica de DEMO-01-INST, previa a la vigente; no proviene de una "
+    "ejecucion medida (rendimiento observado antes de ajustar la cuadrilla mixta a 60 m/dia)"
+)
 
 #: RF-33 (docs/ERS.md, UC-10; spec §3.3): `Catalogo.cargar_composicion` exige declarar, junto con
 #: el rendimiento, las condiciones bajo las que se estimo -- y que no proviene de una ejecucion
@@ -290,6 +334,33 @@ def construir_caso_demo() -> CasoDemo:
     )
 
 
+def elaborar_caso_demo(caso: CasoDemo) -> ResultadoElaboracion:
+    """El presupuesto del caso, con su curva secuencial, elaborado y auditado.
+
+    **Unica** elaboracion del caso en el modulo (principio DRY, CLAUDE.md §2): antes vivia en
+    linea dentro de `_imprimir_resumen`, que ahora la llama en vez de repetirla; tambien la usan
+    `guardar_presupuesto_demo` y `tests/integration/test_seed_demo.py`.
+    """
+    composiciones_por_codigo = {apu.codigo_partida: apu for apu in caso.composiciones}
+    borrador = generar_presupuesto(
+        caso.items,
+        composiciones_por_codigo,
+        caso.parametros,
+        codigo=caso.codigo_presupuesto,
+        fecha=caso.fecha,
+        moneda=caso.moneda,
+    )
+    return elaborar(
+        caso.items,
+        composiciones_por_codigo,
+        caso.parametros,
+        codigo=caso.codigo_presupuesto,
+        fecha=caso.fecha,
+        moneda=caso.moneda,
+        plan=plan_secuencial(borrador),
+    )
+
+
 # ---------------------------------------------------------------------------------------------
 # Persistencia: el caso de demostracion en SQLite
 # ---------------------------------------------------------------------------------------------
@@ -297,7 +368,17 @@ def construir_caso_demo() -> CasoDemo:
 
 def sembrar_demo(sesion: Session, caso: CasoDemo | None = None) -> models.Proyecto:
     """Carga proyecto, lista de precios y las tres partidas `DEMO-*`. Idempotente: si el proyecto
-    ya existe, no vuelve a cargar nada (mismo criterio que `scripts/seed.py:sembrar`)."""
+    ya existe, no vuelve a cargar nada (mismo criterio que `scripts/seed.py:sembrar`).
+
+    La lista nueva **hereda todos los precios de la vigente** antes de cargar ninguna composicion,
+    igual que exige `core.catalog.precios.crear_lista_desde_archivo`: "la lista nueva nace con
+    todos los precios de la anterior". Esa funcion no sirve aqui porque exige una lista anterior y
+    lanza `CatalogoIncompleto` si no la hay, mientras que este sembrador tiene que funcionar
+    tambien sobre una base vacia (decision documentada en el brief de la Tarea 2; coste si es
+    equivocado: cinco lineas que migrar a `core/catalog/precios.py` el dia que un tercer creador
+    de listas las necesite). Si la base esta vacia -- sin ninguna lista vigente a `caso.fecha` --
+    no hay nada que heredar y `Catalogo.lista_vigente` lanza `CatalogoIncompleto` tal cual.
+    """
     caso = caso if caso is not None else construir_caso_demo()
 
     proyecto = sesion.scalars(
@@ -305,6 +386,8 @@ def sembrar_demo(sesion: Session, caso: CasoDemo | None = None) -> models.Proyec
     ).one_or_none()
     if proyecto is not None:
         return proyecto
+
+    anterior = Catalogo(sesion).lista_vigente(caso.fecha)
 
     proyecto = models.Proyecto(
         nombre=NOMBRE_PROYECTO,
@@ -320,6 +403,12 @@ def sembrar_demo(sesion: Session, caso: CasoDemo | None = None) -> models.Proyec
     sesion.add_all((proyecto, lista))
     sesion.flush()
 
+    sesion.add_all(
+        models.PrecioInsumo(lista_id=lista.id, insumo_id=precio.insumo_id, precio=precio.precio)
+        for precio in anterior.precios
+    )
+    sesion.flush()
+
     catalogo = Catalogo(sesion)
     for composicion in caso.composiciones:
         catalogo.cargar_composicion(
@@ -330,8 +419,39 @@ def sembrar_demo(sesion: Session, caso: CasoDemo | None = None) -> models.Proyec
             caso.condiciones[composicion.codigo_partida],
         )
 
+    registrar_rendimiento(
+        sesion,
+        "DEMO-01-INST",
+        RENDIMIENTO_OBSERVACION_PREVIA,
+        TipoRendimiento.ESTIMADO,
+        FECHA_OBSERVACION_PREVIA,
+        CONDICIONES_OBSERVACION_PREVIA,
+    )
+
     sesion.commit()
     return proyecto
+
+
+def guardar_presupuesto_demo(
+    sesion: Session, proyecto: models.Proyecto, caso: CasoDemo
+) -> models.Presupuesto | None:
+    """Guarda el presupuesto elaborado del caso de demostracion. Idempotente: no hace nada si el
+    proyecto ya tiene un presupuesto con `caso.codigo_presupuesto`. No confirma la transaccion,
+    igual que `core.budget.guardar_presupuesto`: eso es de quien llama (`main`)."""
+    existente = sesion.scalars(
+        select(models.Presupuesto).where(
+            models.Presupuesto.proyecto_id == proyecto.id,
+            models.Presupuesto.codigo == caso.codigo_presupuesto,
+        )
+    ).one_or_none()
+    if existente is not None:
+        return None
+
+    lista = Catalogo(sesion).lista_vigente(caso.fecha)
+    resultado = elaborar_caso_demo(caso)
+    return guardar_presupuesto(
+        sesion, resultado.presupuesto, resultado.informe, proyecto, lista, caso.parametros
+    )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -359,7 +479,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             models.Base.metadata.drop_all(motor)
         crear_esquema(motor)
         with abrir_sesion(motor) as sesion:
+            # Una sola orden deja la aplicacion lista de punta a punta (P4.2): la linea base
+            # primero (de la que la demostracion hereda precios), despues la demostracion y su
+            # presupuesto guardado.
+            seed.sembrar(sesion)
             proyecto = sembrar_demo(sesion, caso)
+            guardar_presupuesto_demo(sesion, proyecto, caso)
+            sesion.commit()
             _imprimir_resumen(sesion, ruta, proyecto, caso)
     finally:
         motor.dispose()
@@ -405,24 +531,7 @@ def _imprimir_resumen(
             f"  mano de obra {len(composicion.mano_obra)} ({modalidades})"
         )
 
-    composiciones_por_codigo = {apu.codigo_partida: apu for apu in caso.composiciones}
-    borrador = generar_presupuesto(
-        caso.items,
-        composiciones_por_codigo,
-        caso.parametros,
-        codigo=caso.codigo_presupuesto,
-        fecha=caso.fecha,
-        moneda=caso.moneda,
-    )
-    resultado = elaborar(
-        caso.items,
-        composiciones_por_codigo,
-        caso.parametros,
-        codigo=caso.codigo_presupuesto,
-        fecha=caso.fecha,
-        moneda=caso.moneda,
-        plan=plan_secuencial(borrador),
-    )
+    resultado = elaborar_caso_demo(caso)
     print(
         f"Presupuesto {resultado.presupuesto.codigo} "
         f"({len(resultado.presupuesto.partidas)} partidas):"
