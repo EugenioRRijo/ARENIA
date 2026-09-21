@@ -95,7 +95,8 @@ suite estuvo deliberadamente roja en `test_costing.py` (marcador `rojo_esperado`
 
 **Entregables:** este plan, [calidad_iso25010.md](calidad_iso25010.md), la bitácora de la sesión,
 el reporte de cobertura (sección 10) y `scripts/medir_rnf03.py` (evidencia reproducible del
-RNF‑03).
+RNF‑03). Desde la Sesión P4.2, además, el [guion de prueba manual de AREN.IA](guion_prueba_arenia.md)
+(casos CP‑01 a CP‑06 de la pantalla de componer, para quien pruebe sin programar).
 
 **Entorno de la ejecución registrada:** equipo de desarrollo con Windows 11 Home (10.0.26200),
 Python 3.13.2, `uv` con extras `ui`, `api`, `civil` y `ml`, SQLite local, modelo de
