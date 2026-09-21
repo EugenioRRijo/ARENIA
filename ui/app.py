@@ -22,13 +22,33 @@ que la unica definicion de presentacion que sí importan todas es la compartida 
 `core.verification.informe.DECIMALES_PRESENTACION` y `core.verification.texto.formatear_decimal`
 (principio DRY, CLAUDE.md §2).
 
+Modo entrega (Sesion P5.1, prototipo AREN.IA). Por defecto se ven las nueve pantallas. Con la
+variable de entorno `ARENIA_MODO_ENTREGA=1` (exactamente `"1"`; cualquier otro valor o su ausencia
+lo dejan apagado) se ven solo las cinco que AREN.IA necesita —actualizacion de precios, catalogo,
+componer, elaborar e historico— y se ocultan las cuatro de investigacion de la tesis —escenarios,
+similares, simulador y visor 3D—. El filtro es la funcion pura `paginas_visibles` sobre la tupla
+`PAGINAS` de `DefinicionPagina`, que no es de Streamlit: los `st.Page` se siguen construyendo solo
+dentro de `main()` (lo prueba `tests/unit/test_ui_app.py` sin Streamlit).
+
 Uso::
 
     uv sync --extra ui --extra api --extra civil
     uv run streamlit run ui/app.py
+
+Modo entrega, en bash::
+
+    ARENIA_MODO_ENTREGA=1 uv run streamlit run ui/app.py
+
+y en PowerShell::
+
+    $env:ARENIA_MODO_ENTREGA = "1"; uv run streamlit run ui/app.py
 """
 
 from __future__ import annotations
+
+import os
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 
 import streamlit as st
 
@@ -45,21 +65,56 @@ from ui.paginas import (
 )
 
 TITULO_APP = "Sistema APU"
+VARIABLE_MODO_ENTREGA = "ARENIA_MODO_ENTREGA"
+VALOR_MODO_ENTREGA = "1"
+
+
+@dataclass(frozen=True, slots=True)
+class DefinicionPagina:
+    """Una pantalla del enrutador, sin Streamlit: de ella nace un `st.Page` dentro de `main()`."""
+
+    render: Callable[[], None]
+    titulo: str
+    investigacion: bool  # True: pantalla de la tesis que AREN.IA no necesita
+
+
+PAGINAS: tuple[DefinicionPagina, ...] = (
+    DefinicionPagina(actualizacion.render, "Actualizacion de precios (UC-02)", False),
+    DefinicionPagina(catalogo.render, "Catalogo", False),
+    DefinicionPagina(componer.render, "Componer partida (UC-10 / UC-11)", False),
+    DefinicionPagina(elaborar.render, "Elaborar presupuesto (UC-01)", False),
+    DefinicionPagina(escenarios.render, "Escenarios (UC-08)", True),
+    DefinicionPagina(historico.render, "Historico de precios", False),
+    DefinicionPagina(similares.render, "Partidas similares (UC-03)", True),
+    DefinicionPagina(simulador.render, "Simulador de listas", True),
+    DefinicionPagina(visor.render, "Visor 3D", True),
+)
+
+
+def modo_entrega_activo(entorno: Mapping[str, str] | None = None) -> bool:
+    """Indica si el modo entrega esta encendido: la variable vale exactamente `"1"`.
+
+    `entorno` permite probar la funcion sin tocar `os.environ`; si es `None` se lee el entorno
+    del proceso.
+    """
+    if entorno is None:
+        entorno = os.environ
+    return entorno.get(VARIABLE_MODO_ENTREGA) == VALOR_MODO_ENTREGA
+
+
+def paginas_visibles(modo_entrega: bool) -> tuple[DefinicionPagina, ...]:
+    """Las pantallas que se muestran: las nueve, o sin las de investigacion en modo entrega."""
+    if not modo_entrega:
+        return PAGINAS
+    return tuple(pagina for pagina in PAGINAS if not pagina.investigacion)
 
 
 def main() -> None:
     """Punto de entrada de `streamlit run ui/app.py`: configura la pagina y arranca el enrutador."""
     st.set_page_config(page_title=TITULO_APP, layout="wide")
     paginas = [
-        st.Page(actualizacion.render, title="Actualizacion de precios (UC-02)", default=True),
-        st.Page(catalogo.render, title="Catalogo"),
-        st.Page(componer.render, title="Componer partida (UC-10 / UC-11)"),
-        st.Page(elaborar.render, title="Elaborar presupuesto (UC-01)"),
-        st.Page(escenarios.render, title="Escenarios (UC-08)"),
-        st.Page(historico.render, title="Historico de precios"),
-        st.Page(similares.render, title="Partidas similares (UC-03)"),
-        st.Page(simulador.render, title="Simulador de listas"),
-        st.Page(visor.render, title="Visor 3D"),
+        st.Page(pagina.render, title=pagina.titulo, default=indice == 0)
+        for indice, pagina in enumerate(paginas_visibles(modo_entrega_activo()))
     ]
     st.navigation(paginas).run()
 
