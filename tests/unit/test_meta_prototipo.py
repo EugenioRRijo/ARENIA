@@ -10,7 +10,9 @@ from scripts.meta_prototipo import (
     TITULOS,
     _archivos_de_fuentes,
     _generador_corpus_simulado,
+    _referencias_ml_a_corpus,
     evaluar_p2_fuentes_referenciadas,
+    evaluar_p11_ml_sin_corpus_simulado,
     main,
 )
 
@@ -65,3 +67,40 @@ def test_generador_corpus_detecta_simular_corpus(tmp_path):
 
 def test_generador_corpus_ausente_da_none(tmp_path):
     assert _generador_corpus_simulado(tmp_path) is None
+
+
+# ------------------------------------------------------------------------------------------
+# Meta P11 (Sesion P4.3): sus tres ramas y la deteccion sobre una carpeta `ml/` temporal.
+# ------------------------------------------------------------------------------------------
+
+
+def test_p11_sin_generador_es_pendiente():
+    estado, _ = evaluar_p11_ml_sin_corpus_simulado(None, ())
+    assert estado is Estado.PENDIENTE
+
+
+def test_p11_con_una_referencia_es_falla():
+    estado, evidencia = evaluar_p11_ml_sin_corpus_simulado(
+        "scripts/simular_corpus.py", ("ml/prediction/modelo.py",)
+    )
+    assert estado is Estado.FALLA
+    assert "ml/prediction/modelo.py" in evidencia
+
+
+def test_p11_sin_referencias_es_ok():
+    estado, _ = evaluar_p11_ml_sin_corpus_simulado("scripts/simular_corpus.py", ())
+    assert estado is Estado.OK
+
+
+def test_referencias_ml_a_corpus_detecta_un_modulo_de_un_ml_temporal(tmp_path):
+    """La carpeta `ml/` vive fuera del repositorio: la ruta relativa se calcula respecto de su
+    padre, no de `RAIZ` (hecho verificado 11), y se reporta como `ml/<archivo>`."""
+    raiz_ml = tmp_path / "ml"
+    (raiz_ml / "prediction").mkdir(parents=True)
+    (raiz_ml / "prediction" / "entrena.py").write_text(
+        "from scripts.simular_corpus import generar_corpus\n", encoding="utf-8"
+    )
+    (raiz_ml / "limpio.py").write_text("VALOR = 1\n", encoding="utf-8")
+    generador = tmp_path / "scripts" / "simular_corpus.py"
+
+    assert _referencias_ml_a_corpus(raiz_ml, generador) == ("ml/prediction/entrena.py",)

@@ -310,6 +310,12 @@ def _generador_corpus_simulado(raiz: Path) -> Path | None:
 
 
 def _referencias_ml_a_corpus(raiz_ml: Path, generador: Path) -> tuple[str, ...]:
+    """Modulos de `raiz_ml` que mencionan el generador o el corpus simulado, como `ml/<archivo>`.
+
+    La ruta se calcula respecto de `raiz_ml.parent` y no de `RAIZ`: con `RAIZ`, una carpeta `ml/`
+    fuera del repositorio (la de una prueba) lanzaba `ValueError` y la rama FALLA de P11 no podia
+    probarse. Sobre el repositorio el resultado es el mismo, porque `RUTA_ML.parent` es `RAIZ`.
+    """
     nombre = generador.stem
     if not raiz_ml.is_dir():
         return ()
@@ -317,7 +323,7 @@ def _referencias_ml_a_corpus(raiz_ml: Path, generador: Path) -> tuple[str, ...]:
     for ruta in sorted(raiz_ml.rglob("*.py")):
         texto = ruta.read_text(encoding="utf-8")
         if nombre in texto or "corpus_simulado" in texto or "corpus simulado" in texto.lower():
-            referencias.append(ruta.relative_to(RAIZ).as_posix())
+            referencias.append(ruta.relative_to(raiz_ml.parent).as_posix())
     return tuple(referencias)
 
 
