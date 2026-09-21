@@ -16,10 +16,12 @@ significa "vacío" y qué mensaje de error señala la fila y el campo culpables.
 from __future__ import annotations
 
 import csv
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from types import ModuleType
+from typing import TYPE_CHECKING
 
 from core.contracts.apu import (
     ComposicionAPU,
@@ -30,7 +32,12 @@ from core.contracts.apu import (
 )
 from core.contracts.dominio import Dominio
 from core.contracts.item_computo import ItemComputo, OrigenTipo
+from core.contracts.verificacion import Hallazgo
 from core.verification.texto import normalizar_texto
+
+if TYPE_CHECKING:
+    from ml.anomaly import VeredictoRendimiento
+    from ml.normalization import PartidaSimilar
 
 
 class ComposicionInvalida(ValueError):  # noqa: N818
@@ -452,3 +459,162 @@ def fila_mano_obra_desde_referencia(fila: FilaReferencia) -> dict[str, str]:
         "sueldo": str(fila.precio_usd),
         "modalidad": "",
     }
+
+
+# --- Ayudas de AREN.IA (Tarea 4, spec §3.7): sugieren, nunca deciden ----------------------------
+#
+# Las cuatro funciones de esta sección envuelven una llamada a `ml/` (o, para la ayuda 3, la
+# lectura adicional de `ml.anomaly` sobre el rendimiento ya cableado en la Tarea 1,
+# `ui/paginas/componer.py`) de modo que un fallo -- el extra `ml` ausente, sin red para descargar
+# el modelo semántico, un error aritmético del bosque de aislamiento -- degrade siempre a "sin
+# sugerencia", nunca a una excepción que interrumpa la página ni impida guardar: la condición de
+# diseño es absoluta (spec §3.7, "todas sugerencia y ninguna bloqueante"; quien compone decide,
+# nunca el sistema). El import de cada submódulo de `ml` ocurre dentro de un `_importar_*`
+# perezoso (mismo criterio que `ui/paginas/similares.py::_cargar_normalizacion`, para que la
+# interfaz siga arrancando sin el extra `ml`), inyectable por parámetro para que las pruebas lo
+# sustituyan por un doble sin instalar ni desinstalar nada real
+# (`tests/unit/test_composicion_ia.py`).
+
+#: Clave sintética de la variación implícita del precio recién tecleado (ayuda 2): no es un
+#: `CambioPrecio` real, así que no puede colisionar con un id de la base (todos son enteros).
+_ID_CANDIDATO_PRECIO = "candidato-precio-tecleado"
+
+
+def _importar_normalizacion() -> ModuleType:
+    import ml.normalization
+
+    return ml.normalization
+
+
+def _importar_anomalia() -> ModuleType:
+    import ml.anomaly
+
+    return ml.anomaly
+
+
+def _importar_prediccion() -> ModuleType:
+    import ml.prediction
+
+    return ml.prediction
+
+
+def sugerir_partidas_similares(
+    partidas: Mapping[str, str],
+    descripcion: str,
+    cargar_normalizacion: Callable[[], ModuleType] = _importar_normalizacion,
+) -> list[PartidaSimilar]:
+    """Ayuda 1 (spec §3.7): partidas del catálogo parecidas a la descripción tecleada, para partir
+    de algo en vez de una tabla vacía (reutiliza la similitud semántica de UC-03,
+    `ml.normalization.NormalizadorPartidas`, desde la composición a mano).
+
+    Nunca decide por la persona ni llena ninguna tabla: solo devuelve la lista de propuestas
+    (posiblemente vacía) para que la página las muestre de solo lectura. La respuesta es una lista
+    vacía sin descripción, sin catálogo, o si `cargar_normalizacion` falla por cualquier motivo (el
+    extra `ml` ausente, sin red para el modelo, o cualquier otro error): la persona sigue con la
+    tabla en blanco, exactamente como sin esta ayuda.
+    """
+    if not descripcion.strip() or not partidas:
+        return []
+    try:
+        normalizacion = cargar_normalizacion()
+        normalizador = normalizacion.NormalizadorPartidas(partidas)
+        return list(normalizador.similares(descripcion))
+    except Exception:
+        return []
+
+
+def advertencia_precio_atipico(
+    historico: Mapping[str, Decimal],
+    precio_anterior: Decimal | None,
+    precio_nuevo: Decimal,
+    cargar_anomalia: Callable[[], ModuleType] = _importar_anomalia,
+) -> bool:
+    """Ayuda 2 (spec §3.7): si el precio recién tecleado resulta atípico frente al histórico de
+    variaciones de ese insumo (la página lo arma con `core.catalog.cambios_precio`).
+
+    Construye la variación implícita `(precio_nuevo - precio_anterior) / precio_anterior` y le
+    pide a `ml.anomaly.precios_atipicos` que la juzgue junto con el histórico real, exactamente
+    como esa función juzga cualquier otra variación (no hay un atajo de una sola observación: por
+    debajo de `ml.anomaly.MINIMO_OBSERVACIONES` el módulo ya se abstiene por su cuenta). Sin un
+    precio anterior conocido no hay variación que calcular y la respuesta es "no es atípico"
+    (`False`), igual que si `ml` fallara por cualquier motivo. Solo avisa; nunca corrige el precio
+    tecleado.
+    """
+    if precio_anterior is None or precio_anterior == 0:
+        return False
+    variacion = (precio_nuevo - precio_anterior) / precio_anterior
+    try:
+        anomalia = cargar_anomalia()
+        serie = {**historico, _ID_CANDIDATO_PRECIO: variacion}
+        atipicos = anomalia.precios_atipicos(serie)
+    except Exception:
+        return False
+    return any(atipico.id == _ID_CANDIDATO_PRECIO for atipico in atipicos)
+
+
+def veredicto_ml_rendimiento(
+    observados: Sequence[Decimal],
+    valor: Decimal,
+    cargar_anomalia: Callable[[], ModuleType] = _importar_anomalia,
+) -> VeredictoRendimiento | None:
+    """Ayuda 3 (spec §3.7): la lectura estadística de `ml.anomaly` sobre el rendimiento tecleado,
+    que se suma (no sustituye) al aviso por rango de `core.catalog.advertencia_rendimiento`
+    (Tarea 1, ya cableado en `ui/paginas/componer.py`).
+
+    `None` si no hay observaciones suficientes (el propio módulo se abstiene por debajo de
+    `ml.anomaly.MINIMO_OBSERVACIONES`, un juicio estadístico declarado) o si `ml` no está
+    disponible o falla por cualquier razón: en cualquiera de los dos casos el rendimiento se
+    registra igual, sin esta advertencia adicional.
+    """
+    try:
+        anomalia = cargar_anomalia()
+        return anomalia.evaluar_rendimiento(observados, valor)
+    except Exception:
+        return None
+
+
+@dataclass(frozen=True, slots=True)
+class ContrasteAace:
+    """El resultado de la ayuda 4: la técnica que dicta la compuerta G2 y el hallazgo AACE, si lo
+    hay. `hallazgo` es `None` cuando el precio construido cae dentro de la clase 3 declarada.
+    """
+
+    tecnica: str
+    pu_estimado: Decimal
+    hallazgo: Hallazgo | None
+
+
+def contrastar_precio_con_reglas(
+    codigo_partida: str,
+    pu_construido: Decimal,
+    pu_anterior: Decimal,
+    variaciones: Sequence[Decimal],
+    registros: int,
+    cargar_prediccion: Callable[[], ModuleType] = _importar_prediccion,
+) -> ContrasteAace | None:
+    """Ayuda 4 (spec §3.7): al terminar la composición, contrasta el precio unitario obtenido
+    contra la estimación por reglas (UC-07, compuerta G2) y devuelve el marco AACE del resultado.
+
+    `pu_anterior` es el PU vigente de la partida ANTES de esta edición: la regla de
+    `ml.prediction.predecir_por_reglas` no conoce la composición nueva (esa es la verdad de
+    terreno del motor de `core.costing`, contra la que se mide) y solo proyecta un precio base con
+    la variación media del histórico, declarado como limitación en `ml/prediction/reglas.py`. Sin
+    un PU anterior conocido (partida nueva, UC-10) no hay base que proyectar y esta ayuda no
+    aplica: la página no la invoca en ese caso. `None` también si `ml` no está disponible o el
+    cálculo falla por cualquier razón: el precio construido se guarda igual, con o sin este
+    contraste.
+    """
+    try:
+        prediccion_mod = cargar_prediccion()
+        (prediccion,) = prediccion_mod.predecir_por_reglas(
+            {codigo_partida: pu_anterior}, variaciones
+        )
+        hallazgo = prediccion_mod.contrastar_aace(
+            codigo_partida, pu_construido, prediccion.pu_estimado
+        )
+        tecnica = prediccion_mod.tecnica_para(registros)
+    except Exception:
+        return None
+    return ContrasteAace(
+        tecnica=str(tecnica), pu_estimado=prediccion.pu_estimado, hallazgo=hallazgo
+    )

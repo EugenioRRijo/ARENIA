@@ -20,8 +20,9 @@ unidades por dia": nunca la misma palabra para las dos cosas.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import streamlit as st
@@ -31,10 +32,12 @@ from sqlalchemy.orm import Session
 
 from core.catalog import (
     Catalogo,
+    CatalogoIncompleto,
     DispersionRendimiento,
     PropuestaRendimiento,
     abrir_sesion,
     advertencia_rendimiento,
+    cambios_precio,
     crear_esquema,
     crear_motor,
     dispersion_rendimientos,
@@ -45,14 +48,18 @@ from core.costing import calcular_apu
 from ui.composicion import (
     ComposicionInvalida,
     FilaReferencia,
+    advertencia_precio_atipico,
     buscar_referencia,
     composicion_desde_tablas,
+    contrastar_precio_con_reglas,
     decimal_desde_texto,
     etiqueta_referencia,
     fila_equipos_desde_referencia,
     fila_mano_obra_desde_referencia,
     fila_materiales_desde_referencia,
     formulario_vacio,
+    sugerir_partidas_similares,
+    veredicto_ml_rendimiento,
 )
 
 TITULO = "Componer partida (UC-10 / UC-11)"
@@ -102,6 +109,8 @@ def _pagina(sesion: Session) -> None:
     codigo, descripcion, unidad, dominio, fecha = _cabecera()
     catalogo = Catalogo(sesion)
 
+    _sugerencias_similares(catalogo, dominio, descripcion)
+
     rendimiento_texto = _rendimiento(sesion, codigo)
     condiciones = st.text_area(
         "Condiciones del rendimiento",
@@ -126,6 +135,10 @@ def _pagina(sesion: Session) -> None:
         filas_equipos,
         filas_mano_obra,
     )
+
+    if composicion is not None:
+        _advertencias_precios(sesion, composicion)
+        _contraste_aace(catalogo, sesion, codigo, dominio, composicion)
 
     st.subheader("Guardar")
     if st.button("Guardar composicion", type="primary", disabled=condiciones_vacias):
@@ -160,14 +173,17 @@ def _rendimiento(sesion: Session, codigo: str) -> str:
     `proponer_rendimiento` y `dispersion_rendimientos` exigen que la partida ya exista en el
     catalogo (`Catalogo.partida`, `KeyError` si no); una partida nueva (UC-10) no tiene historial
     todavia, asi que ese `KeyError` se trata igual que "sin historial": el campo queda vacio y el
-    aviso lo dice, sin ser un error.
+    aviso lo dice, sin ser un error. `observados` (los valores crudos del historico) alimenta la
+    ayuda 3 de AREN.IA (spec §3.7): la lectura adicional de `ml.anomaly` sobre el rendimiento.
     """
     propuesta: PropuestaRendimiento | None = None
     dispersion: DispersionRendimiento | None = None
+    observados: list[Decimal] = []
     if codigo.strip():
         try:
             propuesta = proponer_rendimiento(sesion, codigo)
             dispersion = dispersion_rendimientos(sesion, codigo)
+            observados = [r.valor for r in Catalogo(sesion).rendimientos(codigo)]
         except KeyError:
             propuesta = None
             dispersion = None
@@ -181,23 +197,40 @@ def _rendimiento(sesion: Session, codigo: str) -> str:
             "comportamiento correcto, no un error. Declare el rendimiento con sus condiciones."
         )
 
-    _advertir_si_corresponde(dispersion, rendimiento_texto)
+    _advertir_si_corresponde(dispersion, observados, rendimiento_texto)
     return rendimiento_texto
 
 
 def _advertir_si_corresponde(
-    dispersion: DispersionRendimiento | None, rendimiento_texto: str
+    dispersion: DispersionRendimiento | None,
+    observados: Sequence[Decimal],
+    rendimiento_texto: str,
 ) -> None:
-    """RF-27: avisa si el valor tecleado se aparta de lo observado, sin bloquear nunca."""
+    """RF-27: avisa si el valor tecleado se aparta de lo observado, sin bloquear nunca.
+
+    Dos avisos independientes, ninguno bloqueante: el rango observado
+    (`core.catalog.advertencia_rendimiento`, Tarea 1) y, cuando hay observaciones suficientes, la
+    lectura estadistica de `ml.anomaly` (ayuda 3 de AREN.IA, spec §3.7,
+    `ui.composicion.veredicto_ml_rendimiento`).
+    """
     if not rendimiento_texto.strip():
         return
     try:
         valor = decimal_desde_texto(rendimiento_texto, "rendimiento")
     except ComposicionInvalida:
         return  # el valor todavia no es un decimal valido: nada que advertir aun
+
     advertencia = advertencia_rendimiento(dispersion, valor)
     if advertencia:
         st.warning(advertencia)
+
+    veredicto = veredicto_ml_rendimiento(observados, valor)
+    if veredicto is not None and veredicto.atipico:
+        st.warning(
+            f"El bosque de aislamiento (ayuda 3 de AREN.IA, spec §3.7) tambien marca este "
+            f"rendimiento como atipico frente al historico de la partida (puntaje "
+            f"{veredicto.puntaje:.3f}); el registro no queda bloqueado por esto."
+        )
 
 
 def _buscador_de_referencia(
@@ -371,6 +404,165 @@ def _desglose_en_vivo(
     columnas[4].metric("Con administracion", str(resultado.con_administracion))
     columnas[5].metric("Precio unitario", str(resultado.precio_unitario))
     return composicion
+
+
+# ---------------------------------------------------------------------------------------------
+# Las cuatro ayudas de AREN.IA (Tarea 4, spec §3.7): sugieren, nunca deciden ni guardan por su
+# cuenta. La logica de cada una (que hacer con el resultado, como degradar si `ml` falla o no
+# esta instalado) vive en `ui/composicion.py`; esta pagina solo arma los datos planos que esas
+# funciones piden y pinta lo que devuelven.
+# ---------------------------------------------------------------------------------------------
+
+
+def _sugerencias_similares(catalogo: Catalogo, dominio: Dominio, descripcion: str) -> None:
+    """Ayuda 1: partidas del catalogo (del mismo dominio) parecidas a la descripcion tecleada.
+
+    Solo lectura: la persona copia a mano lo que le sirva en las tablas de abajo. Ninguna tabla se
+    llena por su cuenta (spec §3.7).
+    """
+    partidas = {partida.codigo: partida.descripcion for partida in catalogo.partidas(dominio)}
+    propuestas = sugerir_partidas_similares(partidas, descripcion)
+    if not propuestas:
+        return
+
+    st.subheader("Partidas similares del catalogo")
+    st.caption(
+        "Sugerencias de solo lectura (ayuda 1 de AREN.IA, spec §3.7): copie a mano lo que le "
+        "sirva en las tablas de abajo; el sistema no llena nada por su cuenta."
+    )
+    for propuesta in propuestas:
+        titulo = f"{propuesta.puntaje:.2f} · {propuesta.codigo} · {propuesta.descripcion}"
+        with st.expander(titulo, expanded=False):
+            try:
+                composicion = catalogo.composicion(propuesta.codigo)
+            except CatalogoIncompleto as error:
+                st.caption(f"Desglose incompleto en la lista vigente: {error}")
+                continue
+            st.caption(f"Rendimiento: {composicion.rendimiento} {composicion.unidad}/dia")
+            if composicion.materiales:
+                st.markdown("**Materiales**")
+                st.dataframe(
+                    DataFrame(
+                        [
+                            {
+                                "descripcion": linea.descripcion,
+                                "unidad": linea.unidad,
+                                "cantidad": str(linea.cantidad),
+                                "precio": str(linea.precio),
+                            }
+                            for linea in composicion.materiales
+                        ]
+                    ),
+                    hide_index=True,
+                )
+            if composicion.equipos:
+                st.markdown("**Equipos**")
+                st.dataframe(
+                    DataFrame(
+                        [
+                            {
+                                "descripcion": linea.descripcion,
+                                "cantidad": str(linea.cantidad),
+                                "precio": str(linea.precio),
+                                "depreciacion": str(linea.depreciacion),
+                            }
+                            for linea in composicion.equipos
+                        ]
+                    ),
+                    hide_index=True,
+                )
+            if composicion.mano_obra:
+                st.markdown("**Mano de obra**")
+                st.dataframe(
+                    DataFrame(
+                        [
+                            {
+                                "descripcion": linea.descripcion,
+                                "cantidad": str(linea.cantidad),
+                                "sueldo": str(linea.sueldo),
+                            }
+                            for linea in composicion.mano_obra
+                        ]
+                    ),
+                    hide_index=True,
+                )
+
+
+def _historico_de_insumo(
+    sesion: Session, descripcion: str
+) -> tuple[dict[str, Decimal], Decimal | None]:
+    """El historico de variaciones de un insumo y su ultimo precio conocido (ayuda 2).
+
+    `cambios_precio` filtra por descripcion exacta (`core/catalog/precios.py`); sin ningun cambio
+    registrado para esa descripcion no hay precio anterior del que partir, y la ayuda 2 se
+    abstiene (`ui.composicion.advertencia_precio_atipico` ya trata `None` como "nada que evaluar").
+    """
+    cambios = cambios_precio(sesion, insumo=descripcion)
+    historico = {str(cambio.id): cambio.variacion for cambio in cambios}
+    precio_anterior = cambios[-1].precio_nuevo if cambios else None
+    return historico, precio_anterior
+
+
+def _advertencias_precios(sesion: Session, composicion: ComposicionAPU) -> None:
+    """Ayuda 2: avisa, sin bloquear, si algun precio de la composicion en vivo resulta atipico
+    frente al historico de su insumo. Solo se evalua sobre lineas ya validas: mientras una fila
+    esta a medias no hay nada que contrastar todavia.
+    """
+    precios = [(linea.descripcion, linea.precio) for linea in composicion.materiales]
+    precios += [(linea.descripcion, linea.precio) for linea in composicion.equipos]
+    precios += [(linea.descripcion, linea.sueldo) for linea in composicion.mano_obra]
+
+    for descripcion, precio in precios:
+        historico, precio_anterior = _historico_de_insumo(sesion, descripcion)
+        if advertencia_precio_atipico(historico, precio_anterior, precio):
+            st.warning(
+                f"El precio de «{descripcion}» ({precio}) resulta atipico frente al historico "
+                "de ese insumo (ayuda 2 de AREN.IA, spec §3.7); reviselo, aunque el sistema no "
+                "bloquea el guardado por esto."
+            )
+
+
+def _contraste_aace(
+    catalogo: Catalogo,
+    sesion: Session,
+    codigo: str,
+    dominio: Dominio,
+    composicion: ComposicionAPU,
+) -> None:
+    """Ayuda 4: contrasta el PU obtenido contra la estimacion por reglas (UC-07, compuerta G2).
+
+    Solo aplica si la partida ya existe (hay un PU anterior del que partir: la regla no conoce la
+    composicion nueva, declarado en `ml/prediction/reglas.py`); una partida nueva (UC-10) no tiene
+    ese punto de partida y esta ayuda no aparece.
+    """
+    try:
+        pu_anterior = calcular_apu(catalogo.composicion(codigo), ParametrosCosto()).precio_unitario
+    except (KeyError, CatalogoIncompleto):
+        return
+
+    variaciones = [cambio.variacion for cambio in cambios_precio(sesion)]
+    registros = len(catalogo.partidas(dominio))
+    pu_construido = calcular_apu(composicion, ParametrosCosto()).precio_unitario
+
+    contraste = contrastar_precio_con_reglas(
+        codigo, pu_construido, pu_anterior, variaciones, registros
+    )
+    if contraste is None:
+        return
+
+    st.subheader("Contraste con la estimacion por reglas (AACE)")
+    st.caption(
+        f"Ayuda 4 de AREN.IA (spec §3.7): tecnica de la compuerta G2 para este dominio: "
+        f"{contraste.tecnica} ({registros} registro(s)). PU estimado por reglas: "
+        f"{contraste.pu_estimado}."
+    )
+    if contraste.hallazgo is None:
+        st.info(
+            "El precio construido cae dentro del rango de la clase 3 de AACE International "
+            "frente a la estimacion por reglas."
+        )
+    else:
+        st.warning(contraste.hallazgo.descripcion)
 
 
 def _guardar(
