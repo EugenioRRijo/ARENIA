@@ -30,18 +30,19 @@ similares, simulador y visor 3D—. El filtro es la funcion pura `paginas_visibl
 `PAGINAS` de `DefinicionPagina`, que no es de Streamlit: los `st.Page` se siguen construyendo solo
 dentro de `main()` (lo prueba `tests/unit/test_ui_app.py` sin Streamlit).
 
-Uso::
+Uso (con `python -m`: `streamlit run` a secas pone en `sys.path` la carpeta `ui/` y no la raiz
+del repositorio, y entonces `import ui` falla; `python -m` agrega el directorio actual)::
 
     uv sync --extra ui --extra api --extra civil
-    uv run streamlit run ui/app.py
+    uv run python -m streamlit run ui/app.py
 
 Modo entrega, en bash::
 
-    ARENIA_MODO_ENTREGA=1 uv run streamlit run ui/app.py
+    ARENIA_MODO_ENTREGA=1 uv run python -m streamlit run ui/app.py
 
 y en PowerShell::
 
-    $env:ARENIA_MODO_ENTREGA = "1"; uv run streamlit run ui/app.py
+    $env:ARENIA_MODO_ENTREGA = "1"; uv run python -m streamlit run ui/app.py
 """
 
 from __future__ import annotations
@@ -76,6 +77,15 @@ class DefinicionPagina:
     render: Callable[[], None]
     titulo: str
     investigacion: bool  # True: pantalla de la tesis que AREN.IA no necesita
+
+    @property
+    def ruta_url(self) -> str:
+        """Ruta URL de la pagina: el nombre de su modulo (`ui.paginas.componer` -> `componer`).
+
+        Sin ella Streamlit la infiere del nombre de la funcion, y como las nueve se llaman `render`
+        `st.navigation` rechaza la aplicacion entera por rutas repetidas.
+        """
+        return self.render.__module__.rsplit(".", 1)[-1]
 
 
 PAGINAS: tuple[DefinicionPagina, ...] = (
@@ -113,7 +123,9 @@ def main() -> None:
     """Punto de entrada de `streamlit run ui/app.py`: configura la pagina y arranca el enrutador."""
     st.set_page_config(page_title=TITULO_APP, layout="wide")
     paginas = [
-        st.Page(pagina.render, title=pagina.titulo, default=indice == 0)
+        st.Page(
+            pagina.render, title=pagina.titulo, url_path=pagina.ruta_url, default=indice == 0
+        )
         for indice, pagina in enumerate(paginas_visibles(modo_entrega_activo()))
     ]
     st.navigation(paginas).run()

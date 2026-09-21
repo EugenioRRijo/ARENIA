@@ -64,7 +64,7 @@ No hay más pasos (RNF‑07). Notas:
 2. **Abrir la interfaz** (se abre en el navegador, en el equipo local):
 
    ```
-   uv run streamlit run ui/app.py
+   uv run python -m streamlit run ui/app.py
    ```
 
    **Modo entrega.** Para mostrar solo las cinco pantallas que usa quien presupuesta
@@ -73,8 +73,8 @@ No hay más pasos (RNF‑07). Notas:
    la variable `ARENIA_MODO_ENTREGA` en `1` (exactamente `1`; cualquier otro valor la deja apagada):
 
    ```
-   ARENIA_MODO_ENTREGA=1 uv run streamlit run ui/app.py                  # bash
-   $env:ARENIA_MODO_ENTREGA = "1"; uv run streamlit run ui/app.py        # PowerShell
+   ARENIA_MODO_ENTREGA=1 uv run python -m streamlit run ui/app.py                  # bash
+   $env:ARENIA_MODO_ENTREGA = "1"; uv run python -m streamlit run ui/app.py        # PowerShell
    ```
 
 3. **API HTTP** (opcional, para integrar con otro software):

@@ -67,7 +67,7 @@ obtuvieron en Windows 11 con Python 3.13 y Streamlit 1.62.0.
 3. Abra la aplicación:
 
    ```
-   uv run streamlit run ui/app.py
+   uv run python -m streamlit run ui/app.py
    ```
 
    Se abre el navegador. En el menú lateral, elija **Componer partida (UC-10 / UC-11)**.
