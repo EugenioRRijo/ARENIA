@@ -224,6 +224,39 @@ def composicion_desde_tablas(
         raise ComposicionInvalida(str(error)) from error
 
 
+def _tabla_vacia(filas: Sequence[Mapping[str, str]]) -> bool:
+    """Ninguna fila de la tabla tiene todavía un solo carácter escrito (ayudante de
+    `formulario_vacio`; reutiliza `_texto` y `_fila_vacia`, las mismas fronteras que ya limpian
+    `None`/NaN antes de decidir qué es "vacío").
+    """
+    return all(_fila_vacia(tuple(_texto(fila, clave) for clave in fila)) for fila in filas)
+
+
+def formulario_vacio(
+    codigo: str,
+    descripcion: str,
+    filas_materiales: Sequence[Mapping[str, str]],
+    filas_equipos: Sequence[Mapping[str, str]],
+    filas_mano_obra: Sequence[Mapping[str, str]],
+) -> bool:
+    """El formulario está en su estado prístino: nadie ha tecleado nada todavía.
+
+    Se usa para distinguir la bienvenida (`ui/paginas/componer.py`, `_desglose_en_vivo`) del
+    aviso de "a medio llenar" que produce `composicion_desde_tablas` vía `ComposicionInvalida`:
+    ese aviso sigue siendo la funcionalidad principal (retroalimentación en vivo mientras se
+    teclea) y no debe ocultarse. Antes de este chequeo, una pantalla completamente en blanco
+    mostraba "rendimiento: '' no es un numero decimal valido" como primer mensaje, que es
+    correcto pero una mala bienvenida.
+    """
+    if codigo.strip() or descripcion.strip():
+        return False
+    return (
+        _tabla_vacia(filas_materiales)
+        and _tabla_vacia(filas_equipos)
+        and _tabla_vacia(filas_mano_obra)
+    )
+
+
 def item_desde_cantidad(
     codigo: str,
     descripcion: str,
@@ -348,3 +381,74 @@ def buscar_referencia(texto: str, tipo: str, raiz: Path | None = None) -> list[F
                     continue
                 encontradas.append(_fila_referencia_desde_csv(fila))
     return encontradas
+
+
+# --- Autocompletado de una fila de la pantalla desde una FilaReferencia (Tarea 3) --------------
+#
+# La página (`ui/paginas/componer.py`) pinta el buscador y decide cuándo agregar una fila; estas
+# funciones deciden QUÉ va en esa fila, que es la parte con lógica y por eso vive aquí, no allá
+# (spec §4). Los tres `fila_*_desde_referencia` dejan `cantidad` en blanco a propósito: la
+# referencia de mercado no puede saber cuánto de ese insumo consume ESTA partida, solo su precio
+# (y, para equipos, su factor de depreciación).
+
+
+def etiqueta_referencia(fila: FilaReferencia) -> str:
+    """Rótulo legible de una `FilaReferencia` para el selector de resultados de la búsqueda.
+
+    Un factor de depreciación o un bono de alimentación en cero es un dato (una fracción o un
+    bono declarados como cero), no una ausencia: por eso la comparación es `is not None` y no la
+    verdad de Python (`Decimal("0.00")` es falsy). Sin esto, las filas de mano de obra de
+    `referencia_sistemas.csv` (`bono_bs="0.00"`, a diferencia de las de civil e industrial, que
+    traen un monto real) se pintarían como "sin dato" cuando en realidad el dato es cero.
+    """
+    partes = [f"{fila.descripcion} — {fila.precio_usd} USD/{fila.unidad}"]
+    if fila.factor_depreciacion is not None:
+        partes.append(f"depreciación {fila.factor_depreciacion}")
+    if fila.bono_bs is not None:
+        partes.append(f"bono {fila.bono_bs} Bs")
+    partes.append(f"ref. {fila.ref_maprex}")
+    return " · ".join(partes)
+
+
+def fila_materiales_desde_referencia(fila: FilaReferencia) -> dict[str, str]:
+    """Autocompleta una fila de la tabla de materiales: descripción, unidad y precio.
+
+    El precio queda editable (spec §3.4, MaPreX es referencia de mercado y no verdad): esta
+    función solo propone el valor inicial de la celda en el `st.data_editor` de siempre.
+    """
+    return {
+        "descripcion": fila.descripcion,
+        "unidad": fila.unidad,
+        "cantidad": "",
+        "precio": str(fila.precio_usd),
+    }
+
+
+def fila_equipos_desde_referencia(fila: FilaReferencia) -> dict[str, str]:
+    """Autocompleta una fila de equipos, incluido el factor de depreciación (regla R6).
+
+    Tomar `depreciacion` de una sola fuente para todas las partidas es lo que evita que dos
+    personas le den un factor distinto al mismo equipo en dos APU
+    (`tests/integration/test_composicion_r6.py`).
+    """
+    depreciacion = "" if fila.factor_depreciacion is None else str(fila.factor_depreciacion)
+    return {
+        "descripcion": fila.descripcion,
+        "cantidad": "",
+        "precio": str(fila.precio_usd),
+        "depreciacion": depreciacion,
+    }
+
+
+def fila_mano_obra_desde_referencia(fila: FilaReferencia) -> dict[str, str]:
+    """Autocompleta una fila de mano de obra: `precio_usd` de la referencia es el sueldo diario.
+
+    `modalidad` queda en blanco (el contrato la interpreta como JORNAL, `ModalidadManoObra`):
+    a destajo o no es una decisión del proyecto, no un dato de la referencia de mercado.
+    """
+    return {
+        "descripcion": fila.descripcion,
+        "cantidad": "",
+        "sueldo": str(fila.precio_usd),
+        "modalidad": "",
+    }

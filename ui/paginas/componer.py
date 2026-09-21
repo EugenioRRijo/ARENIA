@@ -20,6 +20,7 @@ unidades por dia": nunca la misma palabra para las dos cosas.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 
@@ -41,7 +42,18 @@ from core.catalog import (
 )
 from core.contracts import ComposicionAPU, Dominio, ModalidadManoObra, ParametrosCosto
 from core.costing import calcular_apu
-from ui.composicion import ComposicionInvalida, composicion_desde_tablas, decimal_desde_texto
+from ui.composicion import (
+    ComposicionInvalida,
+    FilaReferencia,
+    buscar_referencia,
+    composicion_desde_tablas,
+    decimal_desde_texto,
+    etiqueta_referencia,
+    fila_equipos_desde_referencia,
+    fila_mano_obra_desde_referencia,
+    fila_materiales_desde_referencia,
+    formulario_vacio,
+)
 
 TITULO = "Componer partida (UC-10 / UC-11)"
 RUTA_BASE_POR_DEFECTO = "data/apu.db"
@@ -188,30 +200,108 @@ def _advertir_si_corresponde(
         st.warning(advertencia)
 
 
+def _buscador_de_referencia(
+    titulo: str,
+    tipo: str,
+    clave: str,
+    completar: Callable[[FilaReferencia], dict[str, str]],
+) -> dict[str, str] | None:
+    """El `st.text_input` + selector de resultados de `buscar_referencia` de una tabla (Tarea 3).
+
+    Devuelve la fila ya convertida (`completar(fila_elegida)`) si la persona pulsa "Usar esta
+    fila", o `None` si todavia no hay nada que agregar. Muestra la `ref_maprex` de la fila
+    elegida como `st.caption` junto al selector: es la procedencia del precio, y sin ella el
+    numero deja de ser trazable.
+    """
+    columna_texto, columna_resultado = st.columns([1, 2])
+    texto = columna_texto.text_input(
+        f"Buscar en la referencia MaPreX ({titulo.lower()})", key=f"{clave}__busqueda"
+    )
+    if not texto.strip():
+        return None
+
+    resultados = buscar_referencia(texto, tipo)
+    if not resultados:
+        columna_resultado.caption("Sin coincidencias en la referencia MaPreX.")
+        return None
+
+    fila_elegida = columna_resultado.selectbox(
+        "Resultado",
+        resultados,
+        format_func=etiqueta_referencia,
+        key=f"{clave}__resultado",
+    )
+    columna_resultado.caption(f"Referencia MaPreX: {fila_elegida.ref_maprex}")
+    if columna_resultado.button("Usar esta fila", key=f"{clave}__usar"):
+        return completar(fila_elegida)
+    return None
+
+
+def _tabla_con_busqueda(
+    titulo: str,
+    tipo: str,
+    columnas: tuple[str, ...],
+    clave: str,
+    completar: Callable[[FilaReferencia], dict[str, str]],
+    column_config: dict | None = None,
+) -> list[dict]:
+    """Una tabla dinamica de insumos con su buscador de la referencia MaPreX al lado (Tarea 3).
+
+    El buscador solo agrega una fila nueva ya rellena; la persona sigue editando cualquier celda
+    en la tabla de siempre, incluido el precio (spec 3.4: MaPreX es referencia, no verdad).
+    `st.data_editor` no admite imponerle un valor nuevo por asignacion directa a
+    `st.session_state[clave]` (esa entrada es la bitacora interna de ediciones, no el contenido);
+    la via documentada es borrar su clave y volver a crearlo, que es lo que pasa aqui cuando se
+    usa una fila de la referencia.
+    """
+    st.subheader(titulo)
+    clave_filas = f"{clave}__filas"
+    if clave_filas not in st.session_state:
+        st.session_state[clave_filas] = []
+
+    fila_nueva = _buscador_de_referencia(titulo, tipo, clave, completar)
+    if fila_nueva is not None:
+        st.session_state[clave_filas] = [*st.session_state[clave_filas], fila_nueva]
+        st.session_state.pop(clave, None)
+        st.rerun()
+
+    editado = st.data_editor(
+        DataFrame(st.session_state[clave_filas], columns=columnas).astype(str),
+        num_rows="dynamic",
+        hide_index=True,
+        column_config=column_config,
+        key=clave,
+    )
+    filas = editado.to_dict("records")
+    st.session_state[clave_filas] = filas
+    return filas
+
+
 def _tablas_de_insumos() -> tuple[list[dict], list[dict], list[dict]]:
     """Las tres tablas dinamicas de insumos (UC-10, pasos 2 a 4), como listas de diccionarios."""
-    st.subheader("Materiales")
-    materiales = st.data_editor(
-        DataFrame(columns=COLUMNAS_MATERIALES).astype(str),
-        num_rows="dynamic",
-        hide_index=True,
+    materiales = _tabla_con_busqueda(
+        "Materiales",
+        "material",
+        COLUMNAS_MATERIALES,
+        "componer_materiales",
+        fila_materiales_desde_referencia,
         column_config={"cantidad": st.column_config.TextColumn(CONSUMO_ETIQUETA)},
-        key="componer_materiales",
     )
 
-    st.subheader("Equipos")
-    equipos = st.data_editor(
-        DataFrame(columns=COLUMNAS_EQUIPOS).astype(str),
-        num_rows="dynamic",
-        hide_index=True,
-        key="componer_equipos",
+    equipos = _tabla_con_busqueda(
+        "Equipos",
+        "equipo",
+        COLUMNAS_EQUIPOS,
+        "componer_equipos",
+        fila_equipos_desde_referencia,
     )
 
-    st.subheader("Mano de obra")
-    mano_obra = st.data_editor(
-        DataFrame(columns=COLUMNAS_MANO_OBRA).astype(str),
-        num_rows="dynamic",
-        hide_index=True,
+    mano_obra = _tabla_con_busqueda(
+        "Mano de obra",
+        "mano_obra",
+        COLUMNAS_MANO_OBRA,
+        "componer_mano_obra",
+        fila_mano_obra_desde_referencia,
         column_config={
             # Sin `default`: una fila nueva debe quedar en blanco en las cuatro columnas (igual
             # que materiales y equipos) para que `_fila_vacia` (`ui/composicion.py`) la descarte
@@ -224,14 +314,9 @@ def _tablas_de_insumos() -> tuple[list[dict], list[dict], list[dict]]:
                 options=[modalidad.value for modalidad in ModalidadManoObra],
             )
         },
-        key="componer_mano_obra",
     )
 
-    return (
-        materiales.to_dict("records"),
-        equipos.to_dict("records"),
-        mano_obra.to_dict("records"),
-    )
+    return materiales, equipos, mano_obra
 
 
 def _desglose_en_vivo(
@@ -246,7 +331,11 @@ def _desglose_en_vivo(
     """El `ResultadoAPU` en vivo (UC-10, paso 6): nunca hace falta guardar para verlo.
 
     Una tabla a medio llenar es el estado normal mientras se teclea, no un fallo: por eso
-    `ComposicionInvalida` se muestra con `st.info`, no con `st.error`, y no se pinta nada mas.
+    `ComposicionInvalida` se muestra con `st.info`, no con `st.error`, y no se pinta nada mas. El
+    formulario en blanco es un caso distinto: sin `formulario_vacio`, la primera vez que se abre
+    la pantalla el mensaje que ve la persona es "rendimiento: '' no es un numero decimal valido",
+    tecnicamente correcto pero una mala bienvenida. Aqui se distingue de "a medio llenar" (que
+    sigue mostrando el aviso de siempre: es la funcionalidad principal, no se oculta).
     """
     st.subheader("Desglose en vivo")
     try:
@@ -260,7 +349,17 @@ def _desglose_en_vivo(
             filas_mano_obra,
         )
     except ComposicionInvalida as error:
-        st.info(str(error))
+        vacio = formulario_vacio(
+            codigo, descripcion, filas_materiales, filas_equipos, filas_mano_obra
+        )
+        if vacio:
+            st.info(
+                "Comience por la cabecera (codigo y descripcion) y declare al menos un insumo "
+                "en alguna de las tres tablas de abajo, o busquelo en la referencia MaPreX: el "
+                "desglose se calcula aqui automaticamente, sin necesidad de guardar."
+            )
+        else:
+            st.info(str(error))
         return None
 
     resultado = calcular_apu(composicion, ParametrosCosto())
