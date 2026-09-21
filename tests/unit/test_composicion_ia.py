@@ -394,6 +394,27 @@ class _SinExtraML:
         for nombre in _MODULOS_RELACIONADOS_CON_ML:
             sys.modules.pop(nombre, None)
         sys.modules.update(self._respaldo)
+        # Arreglo de la Tarea 1 (P4.1, `tests/unit/test_ui_componer.py`): `sys.modules.pop`/
+        # `.update` restauran la entrada de `sys.modules`, pero NO el atributo del paquete padre
+        # (p. ej. `ui.paginas.componer`, el atributo, no la clave del diccionario). El `import`
+        # perezoso de mas arriba (dentro del `with`) deja ese atributo apuntando a la copia fria
+        # sin `ml`; sin este paso queda asi para el resto de la sesion de pytest, y cualquier
+        # prueba posterior que resuelva por una ruta de texto (`monkeypatch.setattr("ui.paginas.
+        # componer.X", ...)`, que resuelve por ese atributo via `getattr`, no por `sys.modules`)
+        # parcha la copia huerfana en vez de la que de verdad se ejecuta. Se sincroniza cada
+        # atributo de paquete con lo que quedo en `sys.modules` (o se borra, si el modulo no
+        # existia antes de `__enter__`).
+        for nombre in _MODULOS_RELACIONADOS_CON_ML:
+            if "." not in nombre:
+                continue  # modulo de nivel superior: no hay atributo de paquete padre que fijar
+            nombre_paquete, atributo = nombre.rsplit(".", 1)
+            paquete = sys.modules.get(nombre_paquete)
+            if paquete is None:
+                continue  # el paquete padre tampoco esta cargado: nada que sincronizar
+            if nombre in sys.modules:
+                setattr(paquete, atributo, sys.modules[nombre])
+            elif hasattr(paquete, atributo):
+                delattr(paquete, atributo)
 
 
 def test_la_pagina_de_componer_se_importa_sin_el_extra_ml(monkeypatch):
