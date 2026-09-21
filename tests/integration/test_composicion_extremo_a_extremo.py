@@ -41,7 +41,7 @@ from openpyxl import load_workbook
 
 from core.budget import con_curva, elaborar, exportar_excel, generar_presupuesto, plan_secuencial
 from core.budget.excel import HOJA_APU, HOJA_AUDITORIA, HOJA_CURVA, HOJA_PRESUPUESTO
-from core.contracts import ComposicionAPU, ModalidadManoObra, Presupuesto, Severidad
+from core.contracts import ComposicionAPU, ModalidadManoObra, Presupuesto
 from core.verification import auditar
 from core.verification.informe import DECIMALES_PRESENTACION
 from scripts.seed_demo import CasoDemo, construir_caso_demo
@@ -51,6 +51,7 @@ from tests.fixtures.presupuesto_auditado import (
     items_con_trazas,
     presupuesto_con_siete_inconsistencias,
 )
+from tests.integration.test_auditoria_7_de_7 import _detectadas
 from ui.composicion import composicion_desde_tablas
 
 #: Tolerancia del total contra `TOTAL_PRESUPUESTO_AUDITADO`: un presupuesto se lee en centavos y
@@ -170,15 +171,6 @@ def _presupuesto_tecleado() -> Presupuesto:
         moneda=linea_base.MONEDA,
     )
     return con_curva(borrador, linea_base.CURVA_AUDITADA)
-
-
-def _detectadas(informe) -> set[tuple[str, str | None]]:
-    """Regla y partida de cada hallazgo grave, que es como se cuenta el 7 de 7."""
-    return {
-        (hallazgo.regla, informe.partida_de(hallazgo))
-        for hallazgo in informe.hallazgos
-        if hallazgo.severidad >= Severidad.ERROR
-    }
 
 
 @pytest.mark.parametrize(
