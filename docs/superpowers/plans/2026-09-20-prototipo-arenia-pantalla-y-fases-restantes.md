@@ -433,9 +433,17 @@ uv run --no-sync ruff check .
 git diff p-base --stat -- core/
 ```
 
-El último comando debe mostrar **exactamente los mismos cinco archivos** que ya mostraba al empezar
-este plan (`contracts/apu.py`, `costing/motor.py`, `catalog/repositorio.py`, `catalog/mapeo.py`,
-`models/entidades.py`) y ninguno más. Pega su salida en el informe.
+El último comando debe mostrar **exactamente los mismos seis archivos** que ya mostraba al empezar
+este plan y ninguno más: `contracts/__init__.py`, `contracts/apu.py`, `costing/motor.py`,
+`catalog/repositorio.py`, `catalog/mapeo.py` y `models/entidades.py`. Los seis vienen de las fases
+P0‑P1 y de las dos deudas saldadas antes de este plan; **ninguna tarea de este plan toca `core/`**,
+así que `git diff <base de tu tarea>..HEAD -- core/` debe salir **vacío**, y ese es el comando que
+de verdad prueba lo que aquí importa. Pega la salida de los dos en el informe.
+
+*(Corrección: una versión anterior de este paso decía «cinco archivos» y omitía
+`core/contracts/__init__.py`, que introdujo el commit `4ea15a1` de la fase P1. El implementador de
+la Tarea 4 lo detectó y lo reportó en vez de silenciarlo o de tocar `core/` para cuadrar la cifra,
+que era exactamente la conducta pedida.)*
 
 - [ ] **Step 5: Commit**
 
